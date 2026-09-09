@@ -320,7 +320,28 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TmsErrorResponse'
-  "/delegations/tokens":
+  "/delegations":
+    get:
+      tags:
+        - Delegations
+      summary: listDelegations
+      security:
+        - Bearer: [ ]
+      description: Get a list of delegations for the tms user
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DelegationListResponse'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TmsErrorResponse'
+
     post:
       tags:
         - Delegations
@@ -346,7 +367,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TmsErrorResponse'
-
 # ------------------------------------------------------------------------------
 # --- Components ---------------------------------------------------------------
 # ------------------------------------------------------------------------------
@@ -579,6 +599,16 @@ components:
         access_token:
           $ref: '#/components/schemas/Delegation'
 
+    DelegationListResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        result:
+          type: array
+          items:
+            $ref: '#/components/schemas/Delegation'
+
     Delegation:
       properties:
         id:
@@ -598,3 +628,4 @@ components:
           type: string
         rp_id:
           type: string
+

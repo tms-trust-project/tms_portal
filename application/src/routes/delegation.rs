@@ -1,12 +1,12 @@
 use axum::extract::State;
 use axum::{Json, Router};
-use axum::routing::{post};
+use axum::routing::{get, post};
 use http::StatusCode;
 use serde::Deserialize;
 use crate::AppState;
 use crate::routes::api_obj_model::delegations::Delegation;
 use crate::routes::api_obj_model::tms_response::TmsResponse;
-use crate::services::delegation_service::add_delegation;
+use crate::services::delegation_service::{add_delegation, get_delegations};
 use crate::utils::app_error::AppError;
 use crate::utils::jwt_utils::JwtValidator;
 
@@ -20,6 +20,7 @@ pub struct AddDelegationRequest {
 pub async fn router() -> Router<AppState> {
     Router::new()
         .route("/delegations", post(add_delegation_handler))
+        .route("/delegations", get(get_delegations_handler))
 }
 #[axum::debug_handler]
 pub async fn add_delegation_handler(State(app_state): State<AppState>,
@@ -30,4 +31,16 @@ pub async fn add_delegation_handler(State(app_state): State<AppState>,
         &security_context.client_id, &add_delegation_request.resource_provider_id,
         &add_delegation_request.resource_provider_account).await?;
     Ok(TmsResponse::builder(StatusCode::OK).entity(delegation.into()).build())
+}
+#[axum::debug_handler]
+pub async fn get_delegations_handler(State(app_state): State<AppState>,
+                                    JwtValidator(security_context): JwtValidator,
+) -> anyhow::Result<TmsResponse<Vec<Delegation>>, AppError> {
+    let delegations = get_delegations(&app_state.db_pool, &security_context.tms_identity,
+                                    &security_context.client_id).await?;
+    let mut result_delegations = Vec::with_capacity(delegations.len());
+    for delegation in delegations {
+        result_delegations.push(delegation.into());
+    }
+    Ok(TmsResponse::builder(StatusCode::OK).entity(result_delegations).build())
 }

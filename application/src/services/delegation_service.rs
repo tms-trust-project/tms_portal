@@ -2,7 +2,7 @@ use chrono::Utc;
 use sqlx::{PgPool, PgTransaction};
 use chrono::Duration;
 use tms_lib::utils::service_error::ServiceError::NotFound;
-use crate::db::delegations_dao::db_insert_delegation;
+use crate::db::delegations_dao::{db_get_delegations, db_insert_delegation};
 use crate::db::resource_provider_logins_dao::{db_get_resource_provider_login};
 use crate::obj_model::delegation::Delegation;
 use crate::utils::configuration::Configuration;
@@ -37,4 +37,14 @@ async fn ensure_recent_rp_login<'a>(tx: &mut PgTransaction<'a>, tms_identity:&St
     } else {
         return Err(NotFound("User must authenticate to delegate".to_string()).into());
     }
+}
+
+pub async fn get_delegations(
+    db_pool: &PgPool, tms_identity:&String, client_id:&String) -> anyhow::Result<Vec<Delegation>> {
+    let configuration = Configuration::get(&db_pool).await?;
+    let mut tx = db_pool.begin().await?;
+
+    let delegations = db_get_delegations(&mut tx, client_id, tms_identity).await?;
+    tx.commit().await?;
+    Ok(delegations)
 }

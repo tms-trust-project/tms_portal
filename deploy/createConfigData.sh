@@ -132,7 +132,7 @@ if [[ -n "${TMS_STATE_KID_TMP}" ]] ; then
   TMS_STATE_KID=${TMS_STATE_KID_TMP}
   echo Using state kid: ${TMS_STATE_KID}
 fi
-set -xv
+
 # generate token keys if needed
 if [[ "${GENERATE_TOKEN_KEYS}" == "true" ]] ; then
   if [[ -z "${TMS_TOKEN_PRIV_KEY}" ]] ; then 

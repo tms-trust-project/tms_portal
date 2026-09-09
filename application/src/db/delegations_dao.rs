@@ -22,8 +22,8 @@ pub async fn db_insert_delegation<'a>(
     client_id: & String, rp_account: & String, expires_at: &DateTime<Utc>,
     tms_identity: &String, rp_id: &String) -> anyhow::Result<Delegation> {
     // on conflict do update ... really does nothing, but it ensures that a record is returned
-    let row = query("insert into delegations (client_id, rp_account, expires_at,
-                         tms_identity, rp_id) values ($1, $2, $3, $4, $5) returning *")
+    let row = query("INSERT INTO delegations (client_id, rp_account, expires_at,
+                         tms_identity, rp_id) VALUES ($1, $2, $3, $4, $5) RETURNING *")
         .bind(client_id)
         .bind(rp_account)
         .bind(expires_at)
@@ -32,4 +32,19 @@ pub async fn db_insert_delegation<'a>(
         .fetch_one(&mut **tx)
         .await?;
     Ok(Delegation::from(&row))
+}
+pub async fn db_get_delegations<'a>(
+    tx: &mut PgTransaction<'a>,
+    client_id: & String, tms_identity: &String) -> anyhow::Result<Vec<Delegation>> {
+    // on conflict do update ... really does nothing, but it ensures that a record is returned
+    let rows = query("SELECT * FROM delegations WHERE client_id = $1 AND tms_identity = $2")
+        .bind(client_id)
+        .bind(tms_identity)
+        .fetch_all(&mut **tx)
+        .await?;
+    let mut delegations = Vec::with_capacity(rows.len());
+    for row in rows {
+        delegations.push(Delegation::from(&row));
+    }
+    Ok(delegations)
 }
