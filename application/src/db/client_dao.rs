@@ -18,14 +18,14 @@ impl From<&PgRow> for Client {
 }
 pub async fn db_get_client_by_id<'a>(
     tx: &mut PgTransaction<'a>,
-    id: &String,
+    client_id: &String,
 ) -> anyhow::Result<Client> {
-    let row = query("select * from clients where id = $1")
-        .bind(id)
+    let row = query("select * from clients where client_id = $1")
+        .bind(client_id)
         .fetch_one(&mut **tx)
         .await
         .map_err(|error| match error {
-            sqlx::Error::RowNotFound => NotFound(format!("Client id {} not found", id)).into(),
+            sqlx::Error::RowNotFound => NotFound(format!("Client id {} not found", client_id)).into(),
             _ => anyhow::anyhow!(error),
         })?;
     Ok(Client::from(&row))
@@ -33,18 +33,18 @@ pub async fn db_get_client_by_id<'a>(
 
 pub async fn db_get_client_by_credentials<'a>(
     tx: &mut PgTransaction<'a>,
-    id: &String,
+    client_id: &String,
     secret: &String,
 ) -> anyhow::Result<Client> {
     let row = query(
-        "select * from clients where id = $1 and secret = $2",
+        "select * from clients where client_id = $1 and secret = $2",
     )
-    .bind(id)
+    .bind(client_id)
     .bind(secret)
     .fetch_one(&mut **tx)
     .await
     .map_err(|error| match error {
-        sqlx::Error::RowNotFound => NotFound(format!("Client id {} not found", id)).into(),
+        sqlx::Error::RowNotFound => NotFound(format!("Client id {} not found", client_id)).into(),
         _ => anyhow::anyhow!(error),
     })?;
     Ok(Client::from(&row))
