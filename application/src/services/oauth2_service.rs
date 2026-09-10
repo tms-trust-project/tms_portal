@@ -156,8 +156,7 @@ pub async fn get_access_token_from_code(db_pool:&PgPool, client_id:&String, clie
     let idp = db_get_login_provider_by_id(&mut tx, &auth_code_data.idp_id).await?;
     tx.commit().await?;
 
-    let claims = from_value(auth_code_data.claims)?;
-    let tms_token_claims = get_tms_token_claims(&configuration, &client_id, &idp.id, &idp.identity_provider_type, &claims).await?;
+    let tms_token_claims = from_value(auth_code_data.claims)?;
     let tms_token_string = make_auth_token(db_pool, &tms_token_claims).await?;
 
     Ok(TokenResponse{

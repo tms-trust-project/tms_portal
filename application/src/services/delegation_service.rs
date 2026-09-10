@@ -41,7 +41,6 @@ async fn ensure_recent_rp_login<'a>(tx: &mut PgTransaction<'a>, tms_identity:&St
 
 pub async fn get_delegations(
     db_pool: &PgPool, tms_identity:&String, client_id:&String) -> anyhow::Result<Vec<Delegation>> {
-    let configuration = Configuration::get(&db_pool).await?;
     let mut tx = db_pool.begin().await?;
 
     let delegations = db_get_delegations(&mut tx, client_id, tms_identity).await?;

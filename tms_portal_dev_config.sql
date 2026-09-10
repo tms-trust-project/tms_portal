@@ -5,7 +5,7 @@ INSERT INTO identity_providers
                 scope, provider_type, supports_login, 
                 supports_resources)
 VALUES 
-        ('globus_idp', 'Globus IDP', '${GLOBUS_CLIENT_ID}',
+        ('globus', 'Globus IDP', '${GLOBUS_CLIENT_ID}',
                 '${GLOBUS_CLIENT_SECRET}',
                 'https://auth.globus.org/v2/oauth2/authorize', 
                 'https://auth.globus.org/v2/oauth2/token', 
@@ -55,7 +55,7 @@ INSERT INTO configuration (config_name, config_value)
 INSERT INTO configuration (config_name, config_value) 
         VALUES ('jwt_config', '{"default_expiration_minutes":"60", "signing_key_kid":"${TMS_TOKEN_KID}"}'::jsonb);
 INSERT INTO configuration (config_name, config_value) 
-        VALUES ('oauth_config', '{"login_oauth_provider":"globus_idp"}'::jsonb);
+        VALUES ('oauth_config', '{"login_oauth_provider":"globus"}'::jsonb);
 INSERT INTO configuration (config_name, config_value) 
 VALUES 
         ('http_config', '{"base_url":"${BASE_URL}/", 
