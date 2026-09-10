@@ -27,6 +27,7 @@ pub type ResourceProvider = IdentityProvider;
 pub enum IdentityProviderType {
     Globus,
     TaccTapis,
+    DangerMode,
 }
 
 impl FromStr for IdentityProviderType {
@@ -44,7 +45,8 @@ impl FromStr for IdentityProviderType {
         match value {
             idp_type if idp_type.eq_ignore_ascii_case("globus") => Ok(IdentityProviderType::Globus),
             idp_type if idp_type.eq_ignore_ascii_case("tacc_tapis") => Ok(IdentityProviderType::TaccTapis),
-            _ => Err(ServiceError::Internal(format!("Unknown provider {0}", value))),
+            idp_type if idp_type.eq_ignore_ascii_case("danger_mode") => Ok(IdentityProviderType::DangerMode),
+            _ => Err(ServiceError::Internal(format!("Unknown provider type {0}", value))),
         }
     }
 }
@@ -54,6 +56,7 @@ impl Display for IdentityProviderType {
         match self {
             IdentityProviderType::Globus => write!(f, "globus"),
             IdentityProviderType::TaccTapis => write!(f, "tacc_tapis"),
+            IdentityProviderType::DangerMode => write!(f, "danger_mode"),
         }
     }
 }
