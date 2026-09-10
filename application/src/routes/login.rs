@@ -21,6 +21,7 @@ use url::Url;
 use tms_lib::utils::oauth_utils::generate_nonce;
 use crate::utils::state_utils::{decode_state, encode_state};
 use time::OffsetDateTime;
+use tms_lib::utils::service_error::ServiceError;
 use crate::routes::api_obj_model::login::{AuthorizeByIdpRequest, IdentityProvider, WhoAmIResponse};
 use crate::routes::api_obj_model::tms_response::TmsResponse;
 use crate::utils::app_error::AppError;
@@ -66,11 +67,21 @@ pub async fn login_handler(
 
     match idp {
         Ok(idp) => {
+            let mut redirect_uri = Url::parse(&form_data.redirect_uri)?;
+            if let Some(client_return_uri) = &form_data.client_return_uri {
+                redirect_uri.query_pairs_mut()
+                    .append_pair("client_return_uri", client_return_uri.as_str());
+            }
+            if let Some(client_name) = &form_data.client_name {
+                redirect_uri.query_pairs_mut()
+                    .append_pair("client_name", client_name.as_str());
+            }
+
             let oauth_state = OAuth2State {
                 tms_identity: String::default(), // we don't have a tms identity at this point
                 client_id,
                 idp_id: form_data.idp_id.clone(),
-                redirect_uri: form_data.redirect_uri.clone(),
+                redirect_uri: redirect_uri.to_string(),
                 exp: SystemTime::now()
                     .duration_since(SystemTime::UNIX_EPOCH)?
                     .as_secs()

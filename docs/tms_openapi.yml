@@ -37,6 +37,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TmsErrorResponse'
+    get:
+      tags:
+        - Login
+      summary: Login
+      description: Login to TMS Portal using specified identity provider, and redirect back to redirect uri (must be |
+        configured as an allowed redirect uri)
+      parameters:
+        - name: idp_id
+          schema:
+            type: string
+          in: query
+          required: false
+        - name: redirect_uri
+          schema:
+            type: string
+          in: query
+          required: false
+        - name: client_return_uri
+          schema:
+            type: string
+          in: query
+          required: false
+        - name: client_name
+          schema:
+            type: string
+          in: query
+          required: false
+      responses:
+        "307":
+          description: Temporary redirect
+          headers:
+            location:
+              schema:
+                type: string
+              description: redirect url
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TmsErrorResponse'
   "/logout":
     post:
       tags:
@@ -163,8 +204,9 @@ paths:
               schema:
                 type: array
                 uniqueItems: true
-                items:
+                items: {
                   $ref: '#/components/schemas/ResourceProvider'
+                }
 
   "/resources/providers/links":
     get:
@@ -182,8 +224,9 @@ paths:
               schema:
                 type: array
                 uniqueItems: true
-                items:
+                items: {
                   $ref: '#/components/schemas/ResourceAccountLink'
+                }
 
   "/resources/providers/links/{resource_provider_link_id}":
     delete:
@@ -409,13 +452,19 @@ components:
       required:
         - idp_id
         - redirect_uri
+        - client_return_uri
+        - client_name
       type: object
       properties:
         idp_id:
           type: string
         redirect_uri:
           type: string
-          
+        client_return_uri:
+          type: string
+        client_name:
+          type: string
+
     TmsLogoutResponse:
       type: object
       properties:

@@ -69,4 +69,6 @@ impl From<&obj_model::identity_provider::IdentityProvider> for IdentityProvider 
 pub struct AuthorizeByIdpRequest {
     pub idp_id: String,
     pub redirect_uri: String,
+    pub client_return_uri: Option<String>,
+    pub client_name: Option<String>,
 }
