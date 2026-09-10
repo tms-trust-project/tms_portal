@@ -22,9 +22,10 @@ use tms_lib::utils::oauth_utils::generate_nonce;
 use crate::utils::state_utils::{decode_state, encode_state};
 use time::OffsetDateTime;
 use tms_lib::utils::service_error::ServiceError;
-use crate::routes::api_obj_model::login::{AuthorizeByIdpRequest, IdentityProvider, WhoAmIResponse};
+use crate::routes::api_obj_model::login::{AuthorizeRequest, IdentityProvider, WhoAmIResponse};
 use crate::routes::api_obj_model::tms_response::TmsResponse;
 use crate::utils::app_error::AppError;
+use crate::utils::configuration::Configuration;
 use crate::utils::jwt_utils::JwtValidator;
 /*
 This file handles the web part of logging into the TMS portal.  This includes tasks such as:
@@ -54,18 +55,22 @@ redirects allows for easier debugging - redirect back to localhost if debugging,
 pub async fn login_handler(
     State(app_state): State<AppState>,
     jar: CookieJar,
-    form_data: Form<AuthorizeByIdpRequest>,
+    form_data: Form<AuthorizeRequest>,
 ) -> Result<(CookieJar, TmsResponse<()>), AppError> {
     // Portal login will always be the tms client id
     let mut tx = app_state.db_pool.begin().await?;
-    let idp = db_get_login_provider_by_id(&mut tx, &form_data.idp_id).await;
     let client_id = String::from(CLIENT_ID_TMS);
+    let configuration = Configuration::get(&app_state.db_pool).await?;
+    // always use the login idp from our configuration
+    let login_idp_id = configuration.oauth_config.login_oauth_provider;
+    let login_idp = db_get_login_provider_by_id(&mut tx, &login_idp_id).await;
 
     // we will not use this value, but we need to make sure this redirect uri is in the database.
     let _ = db_get_allowed_redirect(&mut tx, &client_id, &form_data.redirect_uri).await?;
     tx.commit().await?;
 
-    match idp {
+
+    match login_idp {
         Ok(idp) => {
             let mut redirect_uri = Url::parse(&form_data.redirect_uri)?;
             if let Some(client_return_uri) = &form_data.client_return_uri {
@@ -80,7 +85,7 @@ pub async fn login_handler(
             let oauth_state = OAuth2State {
                 tms_identity: String::default(), // we don't have a tms identity at this point
                 client_id,
-                idp_id: form_data.idp_id.clone(),
+                idp_id: idp.id,
                 redirect_uri: redirect_uri.to_string(),
                 exp: SystemTime::now()
                     .duration_since(SystemTime::UNIX_EPOCH)?
@@ -96,9 +101,8 @@ pub async fn login_handler(
             };
 
             let mut tx = app_state.db_pool.begin().await?;
-            let http_config = db_get_http_config(&mut tx).await?;
             tx.commit().await?;
-            let callback_url = &http_config.get_identity_provider_callback_url();
+            let callback_url = &configuration.http_config.get_identity_provider_callback_url();
             let encoded_nonce = BASE64_STANDARD.encode(generate_nonce().to_ne_bytes());
             let mut query_params = vec![
                 ("response_type", "code"),
