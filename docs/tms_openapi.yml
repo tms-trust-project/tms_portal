@@ -44,11 +44,6 @@ paths:
       description: Login to TMS Portal using specified identity provider, and redirect back to redirect uri (must be |
         configured as an allowed redirect uri)
       parameters:
-        - name: idp_id
-          schema:
-            type: string
-          in: query
-          required: false
         - name: redirect_uri
           schema:
             type: string
@@ -450,14 +445,11 @@ components:
     
     TmsLoginRequest:
       required:
-        - idp_id
         - redirect_uri
         - client_return_uri
         - client_name
       type: object
       properties:
-        idp_id:
-          type: string
         redirect_uri:
           type: string
         client_return_uri:
