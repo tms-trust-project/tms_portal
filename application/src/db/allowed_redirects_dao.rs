@@ -32,3 +32,20 @@ pub async fn db_get_allowed_redirect<'a>(
         Err(error) => Err(anyhow!(error)),
     }
 }
+pub async fn db_get_allowed_redirect_by_client_name<'a>(
+    tx: &mut PgTransaction<'a>,
+    client_name: &String,
+    redirect_uri: &String,
+) -> Result<AllowedRedirect> {
+    match query(
+        "SELECT ar.uri, ar.client_id, ar.created, ar.updated FROM allowed_redirects ar INNER JOIN clients cl ON ar.client_id = cl.client_id WHERE cl.name = $1 and ar.uri = $2",
+    )
+        .bind(client_name)
+        .bind(redirect_uri)
+        .fetch_one(&mut **tx)
+        .await {
+        Ok(row) => Ok(AllowedRedirect::from(&row)),
+        Err(Error::RowNotFound) => Err(BadRequest(format!("Invalid uri for client name: {}", client_name)).into()),
+        Err(error) => Err(anyhow!(error)),
+    }
+}

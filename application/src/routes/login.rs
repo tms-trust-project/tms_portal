@@ -1,4 +1,4 @@
-use crate::db::allowed_redirects_dao::db_get_allowed_redirect;
+use crate::db::allowed_redirects_dao::{db_get_allowed_redirect, db_get_allowed_redirect_by_client_name};
 use crate::db::config_dao::db_get_http_config;
 use crate::db::identity_provider_dao::db_get_login_provider_by_id;
 use crate::services::login_service::{get_identity_providers, handle_callback, logout, whoami};
@@ -74,9 +74,20 @@ pub async fn login_handler(
         Ok(idp) => {
             let mut redirect_uri = Url::parse(&form_data.redirect_uri)?;
             if let Some(client_return_uri) = &form_data.client_return_uri {
+                if let Some(client_name) = &form_data.client_name {
+                    // check to make sure the client name / return uri are in the allowed list
+                    let mut tx = app_state.db_pool.begin().await?;
+                    let _ = db_get_allowed_redirect_by_client_name(
+                        &mut tx, client_name, &client_return_uri).await?;
+                    tx.commit();
+                } else {
+                    // if the client name was not specified, it's an error
+                    return Err(BadRequest("Unable to lookup client return uri.  No client name specified".to_string()).into())
+                }
                 redirect_uri.query_pairs_mut()
                     .append_pair("client_return_uri", client_return_uri.as_str());
             }
+            // It's ok if they give the client_name but no return uri
             if let Some(client_name) = &form_data.client_name {
                 redirect_uri.query_pairs_mut()
                     .append_pair("client_name", client_name.as_str());
