@@ -358,14 +358,69 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TmsErrorResponse'
-  "/delegations":
+
+  "/delegations/":
     get:
       tags:
         - Delegations
       summary: listDelegations
       security:
         - Bearer: [ ]
-      description: Get a list of delegations for the tms user
+      description: Get a list of delegations for the tms user for all clients.
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DelegationListResponse'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TmsErrorResponse'
+    post:
+      tags:
+        - Delegations
+      summary: addDelegation
+      security:
+        - Bearer: [ ]
+      description: Add delegation for resource from a resource provider
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DelegationRequest'
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DelegationResponse'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TmsErrorResponse'
+
+  "/delegations/{client_name}":
+    get:
+      tags:
+        - Delegations
+      summary: listDelegations
+      security:
+        - Bearer: [ ]
+      description: Get a list of delegations for the tms user.  Client name may be supplied to limit the list to delegations
+                   for a particular client.
+      parameters:
+        - name: client_name
+          schema:
+            type: string
+          in: path
+          required: false
       responses:
         "200":
           description: Success
@@ -380,18 +435,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/TmsErrorResponse'
 
-    post:
+  "/delegations/{client_id}/{delegation_id}":
+    delete:
       tags:
         - Delegations
-      summary: addDelegation
+      summary: deleteDelegation
       security:
         - Bearer: [ ]
-      description: Add delegation for resource from a resource provider
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DelegationRequest'
+      description: Deletes a delegation for resources from a resource provider
+      parameters:
+        - name: client_name
+          in: path
+          required: true
+          description: The name of the client for the delegation to delete
+          schema:
+            type: string
+        - name: delegation_id
+          in: path
+          required: true
+          description: The id of the delegation to delete
+          schema:
+            type: string
       responses:
         "200":
           description: Success
@@ -629,6 +693,8 @@ components:
 
     DelegationRequest:
       properties:
+        client_name:
+          type: string,
         resource_provider_id:
           type: string,
         resource_provider_account:

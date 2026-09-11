@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TMS Debug Page</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 40px auto;
+            max-width: 800px;
+            padding: 0 20px;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        tr:hover {
+            background-color: #f1f5f9;
+        }
+        .no-cookies {
+            padding: 20px;
+            background-color: #fdf2f2;
+            color: #9b1c1c;
+            border-radius: 4px;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .cookie-value {
+            font-family: monospace;
+            word-break: break-all;
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Stored Cookies</h1>
+<div id="cookie-container">
+    <!-- The table or fallback message will be loaded here -->
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const container = document.getElementById('cookie-container');
+
+        // 1. Fetch the raw cookie string
+        const rawCookies = document.cookie;
+
+        // 2. Check if cookies exist
+        if (!rawCookies || rawCookies.trim() === "") {
+            container.innerHTML = `<div class="no-cookies">No accessible cookies found for this domain.</div>`;
+            return;
+        }
+
+        // 3. Create the table framework
+        let tableHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Cookie Name</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+        // 4. Split individual cookies and populate rows
+        const cookieArray = rawCookies.split(';');
+
+        cookieArray.forEach(cookie => {
+            // Split into name and value
+            const parts = cookie.split('=');
+            const name = parts[0].trim();
+            // Rejoin the rest in case the value contains "=" signs
+            const value = parts.slice(1).join('=').trim();
+
+            tableHTML += `
+                    <tr>
+                        <td><strong>${escapeHtml(name)}</strong></td>
+                        <td><span class="cookie-value">${escapeHtml(decodeURIComponent(value))}</span></td>
+                    </tr>
+                `;
+        });
+
+        tableHTML += `</tbody></table>`;
+        container.innerHTML = tableHTML;
+    });
+
+    // Helper function to prevent XSS if cookie content contains HTML strings
+    function escapeHtml(string) {
+        return String(string).replace(/[&<>"']/g, function (s) {
+            return {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[s];
+        });
+    }
+</script>
+</body>
+</html>

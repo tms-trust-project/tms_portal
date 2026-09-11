@@ -1,0 +1,7 @@
+#!/bin/bash
+
+kubectl apply -f service.yml
+kubectl apply -f deploy.yml
+
+kubectl wait --timeout=120s --for=condition=available deploy/tms-portal
+
