@@ -22,7 +22,7 @@ use http::Request;
 use log::error;
 use sqlx::PgPool;
 use tokio::spawn;
-use tower_http::services::ServeDir;
+use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::{TraceLayer};
 use tracing::{instrument};
 use url::Url;
@@ -124,6 +124,7 @@ async fn main() {
         ))
         .layer(TraceLayer::new_for_http())
         .with_state(state)
+        .nest_service("/debug", ServeFile::new("dist/debug.html"))
         .nest_service("/assets", ServeDir::new("dist/assets"))
         .fallback_service(ServeDir::new("dist/").not_found_service(not_found.into_service()))
         .method_not_allowed_fallback(method_not_allowed);

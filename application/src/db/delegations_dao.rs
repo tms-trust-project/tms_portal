@@ -35,16 +35,39 @@ pub async fn db_insert_delegation<'a>(
 }
 pub async fn db_get_delegations<'a>(
     tx: &mut PgTransaction<'a>,
-    client_id: & String, tms_identity: &String) -> anyhow::Result<Vec<Delegation>> {
-    // on conflict do update ... really does nothing, but it ensures that a record is returned
-    let rows = query("SELECT * FROM delegations WHERE client_id = $1 AND tms_identity = $2")
-        .bind(client_id)
-        .bind(tms_identity)
-        .fetch_all(&mut **tx)
-        .await?;
+    client_id: & Option<String>, tms_identity: &String) -> anyhow::Result<Vec<Delegation>> {
+
+    let rows= match client_id {
+        Some(client_id) => {
+            query("SELECT * FROM delegations WHERE client_id = $1 AND tms_identity = $2")
+                .bind(client_id)
+                .bind(tms_identity)
+                .fetch_all(&mut **tx)
+                .await?
+        }
+        None => {
+            query("SELECT * FROM delegations WHERE tms_identity = $1")
+                .bind(tms_identity)
+                .fetch_all(&mut **tx)
+                .await?
+        }
+    };
+
     let mut delegations = Vec::with_capacity(rows.len());
     for row in rows {
         delegations.push(Delegation::from(&row));
     }
     Ok(delegations)
+}
+pub async fn db_delete_delegation<'a>(
+    tx: &mut PgTransaction<'a>,
+    tms_identity:&String, client_id: & String, delegation_id: i32) -> anyhow::Result<Delegation> {
+    // on conflict do update ... really does nothing, but it ensures that a record is returned
+    let row = query("DELETE FROM delegations WHERE tms_identity=$1 AND client_id=$2 AND id=$3 RETURNING *")
+        .bind(tms_identity)
+        .bind(client_id)
+        .bind(delegation_id)
+        .fetch_one(&mut **tx)
+        .await?;
+    Ok(Delegation::from(&row))
 }

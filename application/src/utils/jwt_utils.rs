@@ -277,6 +277,13 @@ fn get_datetime_from_value(value:&Value) -> Result<DateTime<Utc>> {
     else { return Err(Internal("Unable to determine expiration for token".to_string()).into())};
     Ok(datetime)
 }
+pub fn token_matches_client(security_context: &SecurityContext, client_id:&String) -> bool {
+    if security_context.is_tms_client {
+        true
+    } else {
+        security_context.client_id == *client_id
+    }
+}
 
 
 

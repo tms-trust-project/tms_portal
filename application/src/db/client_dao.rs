@@ -30,7 +30,20 @@ pub async fn db_get_client_by_id<'a>(
         })?;
     Ok(Client::from(&row))
 }
-
+pub async fn db_get_client_by_name<'a>(
+    tx: &mut PgTransaction<'a>,
+    client_name: &String,
+) -> anyhow::Result<Client> {
+    let row = query("select * from clients where name = $1")
+        .bind(client_name)
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(|error| match error {
+            sqlx::Error::RowNotFound => NotFound(format!("Client with name '{}' not found", client_name)).into(),
+            _ => anyhow::anyhow!(error),
+        })?;
+    Ok(Client::from(&row))
+}
 pub async fn db_get_client_by_credentials<'a>(
     tx: &mut PgTransaction<'a>,
     client_id: &String,
