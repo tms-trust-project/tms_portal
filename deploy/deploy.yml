@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tms-portal
+spec:
+  selector:
+    matchLabels:
+      app: tms-portal
+  template:
+    metadata:
+      labels:
+        app: tms-portal
+    spec:
+      containers:
+      - name: tms-portal
+        image: tapis/tms_portal:dev
+        imagePullPolicy: Always     
+        ports:
+        - name: tms-portal
+          containerPort: 8080
+        env:
+        - name: RUST_BACKTRACE
+          value: "1"
+        - name: TMS_PORTAL_DB_HOST
+          value: "tms-postgres-18"
+        - name: TMS_PORTAL_DB_NAME
+          value: "tmsdb"
+        - name: TMS_PORTAL_DB_USER
+          value: "tms"
+        - name: TMS_PORTAL_DB_PASSWORD 
+          valueFrom:
+            secretKeyRef:
+              name: tms-secrets
+              key: postgres-tms-user-password
