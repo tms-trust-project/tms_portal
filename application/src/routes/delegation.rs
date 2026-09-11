@@ -24,7 +24,7 @@ pub struct GetDelegationQueryParams {
 pub async fn router() -> Router<AppState> {
     Router::new()
         .route("/delegations", post(add_delegation_handler))
-        .route("/delegations/", get(get_delegations_handler))
+        .route("/delegations", get(get_delegations_handler))
         .route("/delegations/{client_name}", get(get_delegations_handler_with_client))
         .route("/delegations/{client_name}/{delegation_id}", delete(delete_delegations_handler))
 }
