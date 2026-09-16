@@ -1,5 +1,3 @@
-use crate::db::allowed_redirects_dao::{db_get_allowed_redirect, db_get_allowed_redirect_by_client_name};
-use crate::db::config_dao::db_get_http_config;
 use crate::db::identity_provider_dao::db_get_login_provider_by_id;
 use crate::services::login_service::{get_identity_providers, handle_callback, logout, whoami};
 use tms_lib::utils::service_error::ServiceError::{BadRequest, Internal, Unauthorized};
@@ -16,17 +14,18 @@ use base64::prelude::BASE64_STANDARD;
 use base64::Engine;
 use std::collections::{HashMap, HashSet};
 use std::time::SystemTime;
+use anyhow::Context;
 use chrono::{TimeDelta, Utc};
 use url::Url;
 use tms_lib::utils::oauth_utils::generate_nonce;
 use crate::utils::state_utils::{decode_state, encode_state};
 use time::OffsetDateTime;
-use tms_lib::utils::service_error::ServiceError;
 use crate::routes::api_obj_model::login::{AuthorizeRequest, IdentityProvider, WhoAmIResponse};
 use crate::routes::api_obj_model::tms_response::TmsResponse;
 use crate::utils::app_error::AppError;
 use crate::utils::configuration::Configuration;
 use crate::utils::jwt_utils::JwtValidator;
+use crate::utils::redirect_utils::{check_allowed_redirects, check_allowed_redirects_by_client_name};
 /*
 This file handles the web part of logging into the TMS portal.  This includes tasks such as:
 - getting the list of login identity providers
@@ -66,7 +65,8 @@ pub async fn login_handler(
     let login_idp = db_get_login_provider_by_id(&mut tx, &login_idp_id).await;
 
     // we will not use this value, but we need to make sure this redirect uri is in the database.
-    let _ = db_get_allowed_redirect(&mut tx, &client_id, &form_data.redirect_uri).await?;
+    check_allowed_redirects(&mut tx, &client_id, &form_data.redirect_uri).await
+        .with_context(||"Invalid login redirect")?;
     tx.commit().await?;
 
 
@@ -74,11 +74,11 @@ pub async fn login_handler(
         Ok(idp) => {
             let mut redirect_uri = Url::parse(&form_data.redirect_uri)?;
             if let Some(client_return_uri) = &form_data.client_return_uri {
-                if let Some(client_name) = &form_data.client_name {
+                if let Some(return_client_name) = &form_data.client_name {
                     // check to make sure the client name / return uri are in the allowed list
                     let mut tx = app_state.db_pool.begin().await?;
-                    let _ = db_get_allowed_redirect_by_client_name(
-                        &mut tx, client_name, &client_return_uri).await?;
+                    check_allowed_redirects_by_client_name(&mut tx, &return_client_name, &client_return_uri).await
+                        .with_context(|| "Invalid redirect url for login")?;
                     tx.commit();
                 } else {
                     // if the client name was not specified, it's an error
