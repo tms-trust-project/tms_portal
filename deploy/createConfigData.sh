@@ -212,6 +212,10 @@ export CONFIG_DIR
 #echo TAPIS_AUTH_CLIENT_ID $TAPIS_AUTH_CLIENT_ID
 #echo CONFIG_DIR $CONFIG_DIR
 
+# make a backup copy if the output file already exists (outputfile.create_config_bkup).
+if [[ -e ${OUTPUT_FILE_NAME} ]] ; then
+       cp ${OUTPUT_FILE_NAME} ${OUTPUT_FILE_NAME}.create_config_data_bkup
+fi
 # do envsubst
 export VARS_PARAM=$(IFS=,;echo "${VARS_TO_REPLACE[*]}")
 envsubst "'"${VARS_PARAM}"'" < ${SCRIPT_DIR}/../tms_portal_dev_config.sql > ${OUTPUT_FILE_NAME}
