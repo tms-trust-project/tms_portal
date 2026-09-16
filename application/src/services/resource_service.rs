@@ -1,5 +1,4 @@
 use std::collections::HashSet;
-use crate::db::allowed_redirects_dao::db_get_allowed_redirect;
 use crate::db::config_dao::db_get_http_config;
 use crate::db::identity_provider_dao::{db_get_resource_provider_by_id, db_get_resource_providers};
 use tms_lib::utils::service_error::ServiceError::{BadRequest, Internal};
@@ -21,6 +20,7 @@ use crate::obj_model::identity_provider::ResourceProvider;
 use crate::obj_model::resources::{ResourceAccountLink, ResourceProviderLogin};
 use crate::utils::app_error::AppError;
 use crate::utils::jwt_utils::{SecurityContext};
+use crate::utils::redirect_utils::check_allowed_redirects;
 use crate::utils::state_utils::encode_state;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -102,8 +102,10 @@ pub async fn get_authenticate_redirect_info(
     let mut tx = db_pool.begin().await?;
     let rp = db_get_resource_provider_by_id(&mut tx, provider_id).await
         .with_context(|| format!("Unable to find requested resource provider {0}", provider_id))?;
-    let _ = db_get_allowed_redirect(&mut tx, &client_id, &redirect_url).await
-        .with_context(||format!("Requested redirect url {1} is not found for this provider id {0}",  provider_id, redirect_url))?;
+
+    // Check the allowed redirect, but ignore query params
+    check_allowed_redirects(&mut tx, client_id, redirect_url).await
+        .with_context(||"Invalid redirect url for resource provider")?;
     tx.commit().await?;
 
     let mut url = Url::parse(redirect_url)?;

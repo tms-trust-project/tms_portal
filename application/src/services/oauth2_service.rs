@@ -11,7 +11,6 @@ use sqlx::{PgPool};
 use url::Url;
 use tms_lib::utils::oauth_utils::generate_nonce;
 use tms_lib::utils::service_error::ServiceError::{Internal, Unauthorized};
-use crate::db::allowed_redirects_dao::{db_get_allowed_redirect};
 use crate::db::auth_code_data_dao::{db_delete_auth_code_data, db_insert_auth_code_data};
 use crate::db::client_dao::{db_get_client_by_credentials,};
 use crate::db::config_dao::{db_get_http_config};
@@ -22,6 +21,7 @@ use crate::utils::configuration::Configuration;
 use crate::utils::jwt_utils::{get_tms_token_claims, make_auth_token, JwtClaims};
 use crate::utils::state_utils::{decode_state, encode_state};
 use crate::utils::oauth2_authorization_code_utils::{decode_access_token, get_token_for_provider, OAuth2State};
+use crate::utils::redirect_utils::check_allowed_redirects;
 
 pub struct AuthorizationResult {
     pub location: String,
@@ -55,7 +55,7 @@ pub async fn authorize_code(db_pool:&PgPool, state:&Option<String>, client_id:&S
     let idp = db_get_login_provider_by_id(&mut tx, &configuration.oauth_config.login_oauth_provider).await?;
 
     // Check redirect uri - this fails if the redirect doesnt exist
-    let _allowed_redirect = db_get_allowed_redirect(&mut tx, &client_id, &redirect_uri).await?;
+    check_allowed_redirects(&mut tx, &client_id, &redirect_uri).await.with_context(||"OAuth redirect is invalid")?;
     tx.commit().await?;
 
     // encode our state
@@ -143,9 +143,9 @@ pub async fn get_access_token_from_code(db_pool:&PgPool, client_id:&String, clie
     let mut tx = db_pool.begin().await?;
     let client = db_get_client_by_credentials(&mut tx, &client_id, client_secret).await?;
     let configuration = Configuration::get(db_pool).await?;
+
     // validate redirect uri
-    let _allowed_redirect =
-        db_get_allowed_redirect(&mut tx, &client.client_id, &redirect_uri).await?;
+    check_allowed_redirects(&mut tx,&client.client_id, &redirect_uri).await.with_context(||"OAuth redirect is invalid")?;
     // TODO: get time delta fron config (how recently the auth code must have been issued)
     let time_delta = TimeDelta::seconds(30);
 
