@@ -7,6 +7,8 @@ mod services;
 mod utils;
 mod obj_model;
 
+use std::sync::Arc;
+use std::time::Duration;
 use anyhow::Context;
 use axum::body::Body;
 use crate::config::{init_db, init_logging};
@@ -29,13 +31,22 @@ use url::Url;
 use uuid::Uuid;
 use crate::db::issued_tokens_dao::db_cleanup_tokens;
 use crate::utils::app_error::AppError;
-use crate::utils::configuration::Configuration;
+use crate::utils::configuration::{spawn_refresh_task, Configuration, ConfigCache};
+
+const CONFIG_REFRESH_INTERVAL: Duration = Duration::from_secs(60);
 
 #[derive(Debug, Clone)]
 struct AppState {
     // that holds the key used to encrypt cookies
     // key: Key,
     db_pool: PgPool,
+    config: ConfigCache,
+}
+
+impl AppState {
+    fn config(&self) -> Arc<Configuration> {
+        self.config.borrow().clone()
+    }
 }
 
 #[tokio::main]
@@ -57,17 +68,22 @@ async fn main() {
     let _database_url = Url::parse(database_url_string.as_str())
         .expect(format!("The database url {0} is not valid", &database_url_string).as_str());
 
+    let db_pool = init_db(&database_url_string).await;
+    let config_cache = spawn_refresh_task(db_pool.clone(), CONFIG_REFRESH_INTERVAL)
+        .await
+        .expect("Unable to read configuration from the database");
+
+    init_logging(&config_cache.borrow().runtime_config).await;
+
     let state = AppState {
         // // Generate a secure key
         // //
         // // TODO:  You probably don't wanna generate a new one each time the app starts though
         // key: Key::generate(),
-        db_pool: init_db(&database_url_string).await,
+        db_pool,
+        config: config_cache,
     };
 
-    let config = Configuration::get(&state.db_pool).await.expect("Unable to read configuration from the database");
-
-    init_logging(&config.runtime_config).await;
     let cleanup_db_pool = state.db_pool.clone();
     spawn(async move {
         // TODO: configuration setting

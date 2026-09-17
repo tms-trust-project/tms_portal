@@ -47,11 +47,10 @@ fn generate_code() -> String {
         .collect()
 }
 
-pub async fn authorize_code(db_pool:&PgPool, state:&Option<String>, client_id:&String, redirect_uri:&String) -> anyhow::Result<AuthorizationResult> {
+pub async fn authorize_code(db_pool:&PgPool, configuration:&Configuration, state:&Option<String>, client_id:&String, redirect_uri:&String) -> anyhow::Result<AuthorizationResult> {
     // get what we need from the database
     let mut tx = db_pool.begin().await?;
 
-    let configuration = Configuration::get(&db_pool).await?;
     let idp = db_get_login_provider_by_id(&mut tx, &configuration.oauth_config.login_oauth_provider).await?;
 
     // Check redirect uri - this fails if the redirect doesnt exist
@@ -63,7 +62,7 @@ pub async fn authorize_code(db_pool:&PgPool, state:&Option<String>, client_id:&S
                                   redirect_uri, &idp.id, state).await?;
 
     // compute the location url that will be used for the redirect
-    let location = get_login_redirect_location(&configuration, &idp, &encoded_state).await?;
+    let location = get_login_redirect_location(configuration, &idp, &encoded_state).await?;
 
     Ok(AuthorizationResult {
         location: location.to_string(),
@@ -142,7 +141,6 @@ pub async fn get_access_token_from_code(db_pool:&PgPool, client_id:&String, clie
     // validate client id
     let mut tx = db_pool.begin().await?;
     let client = db_get_client_by_credentials(&mut tx, &client_id, client_secret).await?;
-    let configuration = Configuration::get(db_pool).await?;
 
     // validate redirect uri
     check_allowed_redirects(&mut tx,&client.client_id, &redirect_uri).await.with_context(||"OAuth redirect is invalid")?;
@@ -193,12 +191,11 @@ pub async fn get_provider_token(
     Ok(token.id_token)
 }
 
-pub async fn process_authorization_callback(db_pool:&PgPool, internal_oauth_state:&String, client_state:&String, code:&String) -> anyhow::Result<AuthorizationCallbackResult> {
+pub async fn process_authorization_callback(db_pool:&PgPool, configuration:&Configuration, internal_oauth_state:&String, client_state:&String, code:&String) -> anyhow::Result<AuthorizationCallbackResult> {
     // redirect browser back to the post-login page (taken from state - validated in login step).
     let decoded_internal_state:OAuth2State = decode_state(db_pool, internal_oauth_state).await?;
 
     let mut tx = db_pool.begin().await?;
-    let configuration= Configuration::get(db_pool).await?;
     let identity_provider = db_get_login_provider_by_id(&mut tx, &decoded_internal_state.idp_id).await?;
     tx.commit().await?;
 
@@ -211,7 +208,7 @@ pub async fn process_authorization_callback(db_pool:&PgPool, internal_oauth_stat
     ).await?;
 
 
-    let location = generate_code_and_redirect(db_pool, &configuration, &identity_provider, &decoded_internal_state, &provider_token).await?;
+    let location = generate_code_and_redirect(db_pool, configuration, &identity_provider, &decoded_internal_state, &provider_token).await?;
     Ok(AuthorizationCallbackResult{
         location: location.to_string(),
     })

@@ -23,7 +23,6 @@ use time::OffsetDateTime;
 use crate::routes::api_obj_model::login::{AuthorizeRequest, IdentityProvider, WhoAmIResponse};
 use crate::routes::api_obj_model::tms_response::TmsResponse;
 use crate::utils::app_error::AppError;
-use crate::utils::configuration::Configuration;
 use crate::utils::jwt_utils::JwtValidator;
 use crate::utils::redirect_utils::{check_allowed_redirects, check_allowed_redirects_by_client_name};
 /*
@@ -59,9 +58,8 @@ pub async fn login_handler(
     // Portal login will always be the tms client id
     let mut tx = app_state.db_pool.begin().await?;
     let client_id = String::from(CLIENT_ID_TMS);
-    let configuration = Configuration::get(&app_state.db_pool).await?;
     // always use the login idp from our configuration
-    let login_idp_id = configuration.oauth_config.login_oauth_provider;
+    let login_idp_id = app_state.config().oauth_config.login_oauth_provider.clone();
     let login_idp = db_get_login_provider_by_id(&mut tx, &login_idp_id).await;
 
     // we will not use this value, but we need to make sure this redirect uri is in the database.
@@ -113,7 +111,7 @@ pub async fn login_handler(
 
             let mut tx = app_state.db_pool.begin().await?;
             tx.commit().await?;
-            let callback_url = &configuration.http_config.get_identity_provider_callback_url();
+            let callback_url = &app_state.config().http_config.get_identity_provider_callback_url();
             let encoded_nonce = BASE64_STANDARD.encode(generate_nonce().to_ne_bytes());
             let mut query_params = vec![
                 ("response_type", "code"),
@@ -208,6 +206,7 @@ pub async fn callback_handler(
     // exchange code for token (state validated in handle_callback)
     let (token, expires_in) = handle_callback(
         &app_state.db_pool,
+        &app_state.config(),
         &query_params.state,
         &query_params.code,
         &state_cookie.value().to_owned(),
