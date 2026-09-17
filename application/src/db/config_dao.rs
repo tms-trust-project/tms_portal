@@ -87,12 +87,15 @@ pub async fn db_get_jwt_config(tx: &mut PgTransaction<'_>) -> anyhow::Result<Jwt
         .await?;
     JwtConfig::try_from(&row)
 }
-pub async fn db_get_runtime_config(tx: &mut PgTransaction<'_>) -> anyhow::Result<RuntimeConfig> {
-    let row = query("select config_value from configuration where config_name = $1")
+pub async fn db_get_runtime_config (tx: &mut PgTransaction<'_>) -> anyhow::Result<RuntimeConfig> {
+    match query("select config_value from configuration where config_name = $1")
         .bind(CONFIG_NAME_RUNTIME_CONFIG)
         .fetch_one(&mut **tx)
-        .await?;
-    RuntimeConfig::try_from(&row)
+        .await{
+        Ok(result) => RuntimeConfig::try_from(&result),
+        Err(sqlx::Error::RowNotFound) => Ok(RuntimeConfig::default()),
+        Err(error) => Err(anyhow!(error)),
+    }
 }
 pub async fn db_get_delegation_policy_config(tx: &mut PgTransaction<'_>) -> anyhow::Result<DelegationPolicyConfig> {
     match query("select config_value from configuration where config_name = $1")

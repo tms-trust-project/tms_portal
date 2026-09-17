@@ -26,6 +26,14 @@ pub struct RuntimeConfig {
     pub logging_config_file_name: String,
     // TODO:  put db host and db port in here?
 }
+impl Default for RuntimeConfig {
+    fn default() -> Self {
+        RuntimeConfig {
+            config_directory:"./config".to_string(),
+            logging_config_file_name: "log4rs.yaml".to_string(),
+        }
+    }
+}
 #[derive(Debug, Clone, Deserialize)]
 pub struct DelegationPolicyConfig {
     pub delegation_expiration: String,

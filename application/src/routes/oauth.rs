@@ -129,7 +129,7 @@ async fn authorize_handler(State(app_state): State<AppState>, jar:CookieJar,
     match query_params.response_type {
         // code - oauth authorization code flow
         ResponseType::Code => {
-            let authorization_result = authorize_code(&app_state.db_pool, &query_params.state, &query_params.client_id, &query_params.redirect_uri).await?;
+            let authorization_result = authorize_code(&app_state.db_pool, &app_state.config(), &query_params.state, &query_params.client_id, &query_params.redirect_uri).await?;
 
             let updated_jar = jar.add(
                 Cookie::build((STATE_COOKIE_NAME, authorization_result.encoded_state))
@@ -191,7 +191,7 @@ async fn callback_handler(
 
     // handle the callback logic
     let authorization_callback_result = process_authorization_callback(
-        &app_state.db_pool, &state_cookie.value().to_owned(), &query_params.state, &query_params.code).await?;
+        &app_state.db_pool, &app_state.config(), &state_cookie.value().to_owned(), &query_params.state, &query_params.code).await?;
 
     let removal_cookie = Cookie::build(
         (STATE_COOKIE_NAME, String::from("")))

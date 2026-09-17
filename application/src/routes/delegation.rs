@@ -33,7 +33,7 @@ pub async fn add_delegation_handler(State(app_state): State<AppState>,
                                     JwtValidator(security_context): JwtValidator,
                                     Json(add_delegation_request): Json<AddDelegationRequest>,
                                     ) -> anyhow::Result<TmsResponse<Delegation>, AppError> {
-    let delegation = add_delegation(&app_state.db_pool, &security_context,
+    let delegation = add_delegation(&app_state.db_pool, &app_state.config(), &security_context,
         &add_delegation_request.client_name, &add_delegation_request.resource_provider_id,
         &add_delegation_request.resource_provider_account).await?;
     Ok(TmsResponse::builder(StatusCode::OK).entity(delegation.into()).build())

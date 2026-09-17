@@ -47,6 +47,7 @@ pub async fn get_identity_providers(pool: &PgPool) -> Result<HashSet<IdentityPro
 
 pub async fn handle_callback(
     db_pool: &PgPool,
+    configuration: &Configuration,
     state: &String,
     code: &String,
     cookie_state: &String,
@@ -63,7 +64,6 @@ pub async fn handle_callback(
     let idp = db_get_login_provider_by_id(&mut tx, &decoded_state.idp_id)
         .await
         .context("Unable to get idp for database")?;
-    let configuration = Configuration::get(db_pool).await?;
     tx.commit().await?;
 
 
@@ -74,7 +74,7 @@ pub async fn handle_callback(
     // TODO: get iss from config
     claims.insert("iss".to_string(), Value::from("https://tms.tacc.edu/"));
 
-    let tms_token_claims = get_tms_token_claims(&configuration, &decoded_state.client_id, &idp.id, &idp.identity_provider_type, &claims).await?;
+    let tms_token_claims = get_tms_token_claims(configuration, &decoded_state.client_id, &idp.id, &idp.identity_provider_type, &claims).await?;
 
     // make sure the tms_identity is stored in the db
     let mut tx = db_pool.begin().await?;

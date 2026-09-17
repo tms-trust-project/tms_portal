@@ -10,10 +10,9 @@ use crate::utils::configuration::Configuration;
 use crate::utils::jwt_utils::{token_matches_client, SecurityContext};
 
 pub async fn add_delegation(
-    db_pool: &PgPool, security_context: &SecurityContext, client_name:&String, rp_id:&String, rp_account:&String
+    db_pool: &PgPool, configuration: &Configuration, security_context: &SecurityContext, client_name:&String, rp_id:&String, rp_account:&String
 ) -> anyhow::Result<Delegation> {
     let tms_identity = &security_context.tms_identity;
-    let configuration = Configuration::get(&db_pool).await?;
     let expiration = &configuration.delegation_policy_config.get_delegation_expiration()?;
     let mut tx = db_pool.begin().await?;
 
@@ -86,7 +85,6 @@ pub async fn get_delegations(
 pub async fn delete_delegation(
     db_pool: &PgPool, security_context: &SecurityContext, client_name:&String, delegation_id:i32) -> anyhow::Result<Delegation> {
     let tms_identity = &security_context.tms_identity;
-    // let configuration = Configuration::get(&db_pool).await?;
     let mut tx = db_pool.begin().await?;
 
     // I feel like we don't need a recent auth for this ...  but I could be wrong
