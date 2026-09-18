@@ -60,7 +60,7 @@ function LinkIdentityModal() {
   function constructLinkState(providerId: string) {
     return encodeURIComponent(
       JSON.stringify({
-        result: "success",
+        result: returnUri ? "success" : undefined,
         providerId,
         returnUri,
         clientName,
