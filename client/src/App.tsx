@@ -1,5 +1,7 @@
-import React from "react"
-import { InfoIcon, Plus, Server } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert"
+
+import { useState } from "react"
+import { InfoIcon, Plus, RefreshCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -16,14 +18,15 @@ import {
   useListProviders,
   useListResources,
 } from "./tms-hooks"
-//import { ResourceCard } from "./components/tms-ui/ResourceCard"
+import { ResourceCard } from "./components/tms-ui/ResourceCard"
 import { ProviderCard } from "./components/tms-ui/ProviderCard"
 import { UserMenu } from "./components/tms-ui/UserMenu"
 import { useAuth } from "./tms-hooks/useAuth"
 import { Separator } from "./components/ui/separator"
+import { LinkSuccessAlert } from "./components/tms-ui/LinkSuccessAlert"
+import { UnlinkButton } from "./components/tms-ui/UnlinkButton"
 //import { ProviderWizard } from "./components/tms-ui/ProviderWizard"
 
-/*
 function ResourceCardGrid({
   userId,
   providerId,
@@ -43,18 +46,47 @@ function ResourceCardGrid({
     </>
   )
 }
-*/
 
 function LinkIdentityModal() {
   const { data: providerList } = useListProviders()
+  const { data: providerLinkList } = useListProviderLinks()
+  const returnUri = new URLSearchParams(window.location.search).get(
+    "client_return_uri"
+  )
+  const clientName = new URLSearchParams(window.location.search).get(
+    "client_name"
+  )
+
+  function constructLinkState(providerId: string) {
+    return encodeURIComponent(
+      JSON.stringify({
+        result: returnUri ? "success" : undefined,
+        providerId,
+        returnUri,
+        clientName,
+      })
+    )
+  }
+
+  const linkStateRawParam = new URLSearchParams(window.location.search).get(
+    "state"
+  )
+  const linkStateParams = linkStateRawParam
+    ? JSON.parse(linkStateRawParam)
+    : undefined
+
+  const [openState, setOpenState] = useState(
+    !!returnUri && linkStateParams?.result !== "success"
+  )
+
   return (
-    <Dialog>
+    <Dialog open={openState} onOpenChange={setOpenState}>
       <DialogTrigger asChild>
         <Button size="sm" variant="outline">
           <Plus /> Add Provider
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Link a New Provider Identity</DialogTitle>
         </DialogHeader>
@@ -68,17 +100,44 @@ function LinkIdentityModal() {
               <span>
                 {provider.name} ({provider.id})
               </span>
-              <Button size="sm" asChild>
-                <a
-                  href={`/resources/providers/authorize?provider_id=${provider.id}&redirect_url=${window.location.origin}`}
-                >
-                  Connect
-                </a>
-              </Button>
+              {providerLinkList?.some(
+                (p) => p.resource_provider_id == provider.id
+              ) ? (
+                <div className="inline-flex gap-1">
+                  <Button variant="outline" asChild>
+                    <a
+                      href={`/resources/providers/authorize?provider_id=${provider.id}&redirect_url=${window.location.origin}&state=${constructLinkState(provider.id)}`}
+                    >
+                      <RefreshCcw className="mr-1 size-4" />
+                      Refresh
+                    </a>
+                  </Button>
+                  <UnlinkButton
+                    providerLinkId={
+                      providerLinkList.find(
+                        (p) => p.resource_provider_id === provider.id
+                      )?.id ?? -1
+                    }
+                  />
+                </div>
+              ) : (
+                <Button size="sm" asChild>
+                  <a
+                    href={`/resources/providers/authorize?provider_id=${provider.id}&redirect_url=${window.location.origin}&state=${constructLinkState(provider.id)}`}
+                  >
+                    Connect
+                  </a>
+                </Button>
+              )}
             </div>
           )
         })}
         <Separator />
+        {returnUri && (
+          <Button asChild>
+            <a href={returnUri}>Return to Science Gateway</a>
+          </Button>
+        )}
         <DialogFooter>
           <DialogClose asChild>
             <Button variant="outline">Cancel</Button>
@@ -108,80 +167,13 @@ function ProviderCardList() {
 
   return providerList.map((provider) => (
     <ProviderCard key={`${provider.id}`} provider={provider}>
-      {/* <ResourceCardGrid userId={"ok"} providerId={provider.id} />  */}
-      <ResourceCardSelector providerId={provider.resource_provider_id} />
+      <ResourceCardGrid
+        userId={"ok"}
+        providerId={provider.resource_provider_id}
+      />
+      {/* <ResourceCardSelector providerId={provider.resource_provider_id} /> */}
     </ProviderCard>
   ))
-}
-
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-  FieldTitle,
-} from "@/components/ui/field"
-import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert"
-
-function ResourceCardSelector({ providerId }: { providerId: string }) {
-  const { data: resourceList } = useListResources({ providerId, userId: "ok" })
-  const [selectedResources, setSelectedResources] = React.useState<Set<string>>(
-    new Set()
-  )
-  React.useEffect(
-    () => setSelectedResources(new Set(resourceList?.map((r) => r.id))),
-    [resourceList]
-  )
-
-  if (!resourceList) return null
-
-  function handleSelect(id: string, checked: boolean) {
-    const newSelectedResources = new Set(selectedResources)
-    if (!checked) {
-      newSelectedResources.delete(id)
-    } else {
-      newSelectedResources.add(id)
-    }
-    setSelectedResources(newSelectedResources)
-  }
-
-  return (
-    <div className="flex flex-col items-center gap-4">
-      <FieldGroup className="grid gap-2 sm:grid-cols-[repeat(auto-fit,minmax(400px,1fr))]">
-        {resourceList.map((resource) => (
-          <FieldLabel key={resource.id}>
-            <Field
-              orientation="horizontal"
-              onChange={() => console.log("change fired")}
-            >
-              <Checkbox
-                id="toggle-checkbox-2"
-                name="toggle-checkbox-2"
-                checked={selectedResources.has(resource.id)}
-                onCheckedChange={(e: boolean) => handleSelect(resource.id, e)}
-              />
-              <FieldContent>
-                <FieldTitle className="text-xl">
-                  <Server className="mr-1 inline size-5" />
-                  <span className="inline-block align-middle break-all">
-                    {resource.name}
-                  </span>{" "}
-                </FieldTitle>
-                <FieldDescription>{resource.description}</FieldDescription>
-              </FieldContent>
-            </Field>
-          </FieldLabel>
-        ))}
-      </FieldGroup>
-      <Button asChild>
-        <a href="http://localhost:8000">
-          Confirm Delegation and Return to Science Gateway
-        </a>
-      </Button>
-    </div>
-  )
 }
 
 function App() {
@@ -221,6 +213,7 @@ function App() {
           </>
         )}
       </main>
+      <LinkSuccessAlert />
     </div>
   )
 }
