@@ -36,7 +36,7 @@ export function UserMenu() {
         <DropdownMenuGroup>
           <DropdownMenuLabel>Provider: {whoami.organization}</DropdownMenuLabel>
           <DropdownMenuItem>
-            <a href="#" className="flex items-center gap-2">
+            <a href="/logout" className="flex items-center gap-2">
               <LogOut /> Log Out
             </a>
           </DropdownMenuItem>

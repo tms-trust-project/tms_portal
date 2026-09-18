@@ -7,16 +7,15 @@ import {
   CardAction,
   CardDescription,
 } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 
-import { Building2, Unplug, UserRound } from "lucide-react"
-import { useUnlinkProvider, type ProviderLink } from "@/tms-hooks"
+import { Building2, UserRound } from "lucide-react"
+import { type ProviderLink } from "@/tms-hooks"
+import { UnlinkButton } from "./UnlinkButton"
 
 export function ProviderCard({
   provider,
   children,
 }: React.PropsWithChildren<{ provider: ProviderLink; identity?: string }>) {
-  const { mutate } = useUnlinkProvider({ id: provider.id })
   return (
     <Card className="border-border/60 shadow-sm">
       <CardHeader>
@@ -35,10 +34,7 @@ export function ProviderCard({
         </CardDescription>
 
         <CardAction>
-          <Button variant="destructive" onClick={() => mutate()}>
-            <Unplug className="mr-2 size-4" />
-            Disconnect
-          </Button>
+          <UnlinkButton providerLinkId={provider.id} />
         </CardAction>
       </CardHeader>
 
