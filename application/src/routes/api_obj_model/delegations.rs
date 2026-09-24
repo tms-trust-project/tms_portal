@@ -5,6 +5,7 @@ use crate::obj_model;
 pub struct Delegation {
     pub id: i32,
     pub client_id: String,
+    pub client_name: String,
     pub rp_account: String,
     pub expires_at: String,
     pub created: String,
@@ -18,6 +19,7 @@ impl From<obj_model::delegation::Delegation> for Delegation {
         Delegation {
             id: value.id,
             client_id: value.client_id,
+            client_name: value.client_name,
             rp_account: value.rp_account,
             expires_at: value.expires_at.to_rfc3339(),
             created: value.created.to_rfc3339(),

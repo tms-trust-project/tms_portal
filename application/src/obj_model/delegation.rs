@@ -3,6 +3,7 @@ use chrono::{DateTime, Utc};
 pub struct Delegation {
     pub id: i32,
     pub client_id: String,
+    pub client_name: String,
     pub rp_account: String,
     pub expires_at: DateTime<Utc>,
     pub created: DateTime<Utc>,
