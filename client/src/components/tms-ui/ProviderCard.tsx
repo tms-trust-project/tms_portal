@@ -28,9 +28,7 @@ export function ProviderCard({
         </CardTitle>
         <CardDescription className="flex min-w-0 gap-2">
           <UserRound />
-          <span className="break-all">
-            {provider.resource_provider_account}
-          </span>
+          <span className="break-all">{provider.rp_account}</span>
         </CardDescription>
 
         <CardAction>
@@ -40,9 +38,9 @@ export function ProviderCard({
 
       <CardContent className="space-y-4">
         <div>
-          <h2 className="text-base font-semibold">Available Resources</h2>
+          <h2 className="text-base font-semibold">Current Delegations</h2>
           <p className="text-sm text-muted-foreground">
-            Link or unlink resources associated with this facility.
+            View and manage delegations associated with this resource provider.
           </p>
         </div>
 

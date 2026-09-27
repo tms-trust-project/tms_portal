@@ -27,7 +27,6 @@ export function ResourceCardField({ resource }: { resource: Resource }) {
             {resource.name}
           </span>{" "}
         </CardTitle>
-
       </CardHeader>
       <CardContent>
         <CardDescription>

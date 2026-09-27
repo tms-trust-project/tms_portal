@@ -4,7 +4,7 @@ const providerStubs = [
   {
     id: "tacc",
     name: "TACC Resource Provider",
-    clientId: "tms_dev_client_id",
+    clientId: "tms_dev_client_id_2",
     oauth2TokenUrl: "https://tacc.tapis.io/v3/oauth2/tokens",
     userInfoUrl: "",
   },
@@ -12,8 +12,7 @@ const providerStubs = [
 
 const whoamiStub = {
   name: "Jake Rosenberg",
-  username:
-    "dbddf86d-a94e-4dc8-aa3e-19fe8a58fa7f@f2f321a2-b33a-451f-84a3-9f6d212cf902",
+  username: "dbddf86d-a94e-4dc8-aa3e-19fe8a58fa7f@globus",
   idpDisplayName: "University of Texas at Austin",
   organization: "University of Texas at Austin",
 }
@@ -46,14 +45,30 @@ const providerLinksStub = {
   status: "200 OK",
   result: [
     {
-      id: 8,
-      tms_identity: "dbddf86d-a94e-4dc8-aa3e-19fe8a58fa7f@globus_idp",
-      resource_provider_account: "jarosenb@tacc",
-      resource_provider_uuid: "079164ad-daa9-4790-846d-73049848c41f",
-      resource_provider_id: "tacc",
+      id: 110,
+      tms_identity: "dbddf86d-a94e-4dc8-aa3e-19fe8a58fa7f@globus",
+      rp_account: "jarosenb@tacc",
+      rp_id: "tacc",
       resource_provider_name: "TACC Resource Provider",
-      last_login: "2026-08-05T20:00:10.326842+00:00",
-      enabled: false,
+      last_login: "2026-09-18T16:41:52.290532+00:00",
+      enabled: true,
+    },
+  ],
+}
+
+const delegationsStub = {
+  status: "200 OK",
+  result: [
+    {
+      id: 103,
+      client_id: "cae18f23-f67c-49e2-926c-695f496c9c58",
+      client_name: "Link Test",
+      rp_account: "jarosenb@tacc",
+      expires_at: "2026-10-24T22:25:40.895247+00:00",
+      created: "2026-09-24T22:25:40.918287+00:00",
+      updated: "2026-09-24T22:25:40.918287+00:00",
+      tms_identity: "dbddf86d-a94e-4dc8-aa3e-19fe8a58fa7f@globus",
+      rp_id: "tacc",
     },
   ],
 }
@@ -69,8 +84,17 @@ export const handlers = [
   http.get("/resources/providers/links", () => {
     return HttpResponse.json(providerLinksStub)
   }),
+  http.get("/delegations", () => {
+    return HttpResponse.json(delegationsStub)
+  }),
+  http.delete("/delegations/:clientName/:id", () => {
+    return HttpResponse.json({})
+  }),
   http.delete<{ id: string }>("/resources/providers/links/:id", () => {
     return HttpResponse.json(providerLinksStub)
+  }),
+  http.post("/delegations", () => {
+    return HttpResponse.json({})
   }),
 
   http.get<{ provider: string; userId: string }>(
