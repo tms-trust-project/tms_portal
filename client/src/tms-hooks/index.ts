@@ -1,5 +1,5 @@
 export { useListProviders } from "./useListProviders"
-export { useListResources } from "./useListResources"
+//export { useListResources } from "./useListResources"
 export { useListProviderLinks } from "./useListProviderLinks"
 export { useWhoami } from "./useWhoami"
 

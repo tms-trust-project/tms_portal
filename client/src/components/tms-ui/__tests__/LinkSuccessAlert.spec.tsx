@@ -1,11 +1,11 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { HttpResponse, http } from "msw"
 import { delegations } from "@/stubs/collections"
 import { server } from "@/stubs/server"
 import { LinkSuccessAlert } from "../LinkSuccessAlert"
 
-const returnUri = "https://gateway.example/jobs"
+const returnUri = "https://gateway.example/jobs/?mode=success"
 const linkState = {
   result: "success",
   returnUri,
@@ -26,11 +26,11 @@ const testDelegation = {
   rp_id: "tacc",
 }
 
-function renderAlert(state = linkState) {
+function renderAlert(state: Partial<typeof linkState> | null = linkState) {
   window.history.replaceState(
     {},
     "",
-    `/?state=${encodeURIComponent(JSON.stringify(state))}`
+    state ? `/?state=${encodeURIComponent(JSON.stringify(state))}` : "/"
   )
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -40,6 +40,7 @@ function renderAlert(state = linkState) {
       <LinkSuccessAlert />
     </QueryClientProvider>
   )
+  return queryClient
 }
 
 afterEach(() => {
@@ -48,6 +49,15 @@ afterEach(() => {
 })
 
 describe("LinkSuccessAlert", () => {
+  test("renders nothing without callback state", async () => {
+    const queryClient = renderAlert(null)
+    await waitFor(() =>
+      expect(queryClient.getQueryData(["providerLinks"])).toBeDefined()
+    )
+
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
+  })
+
   test("shows the linked account and return destination", async () => {
     renderAlert()
 
@@ -61,6 +71,12 @@ describe("LinkSuccessAlert", () => {
     expect(
       screen.getByRole("button", { name: "Return to Science Gateway" })
     ).toHaveAttribute("href", returnUri)
+  })
+
+  test("uses a generic provider label when no name is supplied", async () => {
+    renderAlert({ ...linkState, providerName: undefined })
+
+    expect(await screen.findByText(/this provider/)).toBeInTheDocument()
   })
 
   test("shows an existing delegation without offering to create another", async () => {

@@ -1,153 +1,15 @@
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert"
 
-import { useState } from "react"
-import { InfoIcon, Plus, RefreshCcw } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+import { InfoIcon } from "lucide-react"
 
-import { useListProviderLinks, useListProviders } from "./tms-hooks"
+import { useListProviderLinks } from "./tms-hooks"
 import { ProviderCard } from "./components/tms-ui/ProviderCard"
 import { UserMenu } from "./components/tms-ui/UserMenu"
 import { useAuth } from "./tms-hooks/useAuth"
-import { Separator } from "./components/ui/separator"
 import { LinkSuccessAlert } from "./components/tms-ui/LinkSuccessAlert"
-import { UnlinkButton } from "./components/tms-ui/UnlinkButton"
 import { DelegationsListing } from "./components/tms-ui/DelegationsListing"
+import { LinkIdentityModal } from "./components/tms-ui/LinkIdentityModal"
 //import { ProviderWizard } from "./components/tms-ui/ProviderWizard"
-
-function LinkIdentityModal() {
-  const { data: providerList } = useListProviders()
-  const { data: providerLinkList } = useListProviderLinks()
-  const returnUri = new URLSearchParams(window.location.search).get(
-    "client_return_uri"
-  )
-  const clientName = new URLSearchParams(window.location.search).get(
-    "client_name"
-  )
-
-  function constructLinkState(provider: { id: string; name: string }) {
-    return encodeURIComponent(
-      JSON.stringify({
-        result: returnUri ? "success" : undefined,
-        providerId: provider.id,
-        providerName: provider.name,
-        returnUri,
-        clientName,
-      })
-    )
-  }
-
-  const linkStateRawParam = new URLSearchParams(window.location.search).get(
-    "state"
-  )
-  const linkStateParams = linkStateRawParam
-    ? JSON.parse(linkStateRawParam)
-    : undefined
-
-  const [openState, setOpenState] = useState(
-    !!returnUri && linkStateParams?.result !== "success"
-  )
-
-  return (
-    <Dialog open={openState} onOpenChange={setOpenState}>
-      {clientName && returnUri && (
-        <DialogTrigger
-          render={
-            <Button size="sm" variant="outline">
-              <Plus /> Add Provider
-            </Button>
-          }
-        />
-      )}
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Link a New Provider Identity</DialogTitle>
-        </DialogHeader>
-        <Separator />
-        {providerLinkList?.map((providerLink) => (
-          <div
-            key={providerLink.id}
-            className="flex items-center justify-between gap-4"
-          >
-            <span>
-              {providerLink.resource_provider_name} ({providerLink.rp_id})
-            </span>
-
-            <div className="inline-flex gap-1">
-              <Button
-                nativeButton={false}
-                variant="outline"
-                render={
-                  <a
-                    href={
-                      `/resources/providers/authorize?provider_id=${providerLink.rp_id}` +
-                      `&redirect_url=${window.location.origin}` +
-                      `&state=${constructLinkState({ id: providerLink.rp_id, name: providerLink.resource_provider_name })}`
-                    }
-                  >
-                    <RefreshCcw className="mr-1 size-4" />
-                    Refresh
-                  </a>
-                }
-              />
-              <UnlinkButton providerLinkId={providerLink.id} />
-            </div>
-          </div>
-        ))}
-        {providerList
-          ?.filter(
-            (p) => !providerLinkList?.some((link) => link.rp_id === p.id) // Iterate over providers that haven't been linked.
-          )
-          .map((provider) => (
-            <div
-              key={provider.id}
-              className="flex items-center justify-between gap-4"
-            >
-              <span>
-                {provider.name} ({provider.id})
-              </span>
-
-              <div className="inline-flex gap-1">
-                <Button
-                  nativeButton={false}
-                  render={
-                    <a
-                      href={
-                        `/resources/providers/authorize?provider_id=${provider.id}` +
-                        `&redirect_url=${window.location.origin}` +
-                        `&state=${constructLinkState(provider)}`
-                      }
-                    >
-                      Connect
-                    </a>
-                  }
-                />
-              </div>
-            </div>
-          ))}
-
-        <Separator />
-        {returnUri && (
-          <Button
-            nativeButton={false}
-            render={<a href={returnUri}>Return to Science Gateway</a>}
-          />
-        )}
-        <DialogFooter>
-          <DialogClose render={<Button variant="outline">Cancel</Button>} />
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
-}
 
 function ProviderCardList() {
   const { data: providerList } = useListProviderLinks()

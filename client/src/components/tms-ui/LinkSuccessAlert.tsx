@@ -7,7 +7,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Alert,
@@ -16,44 +15,48 @@ import {
   AlertTitle,
 } from "@/components/ui/alert"
 import { CheckCircle2Icon, InfoIcon } from "lucide-react"
+import { useState } from "react"
 import { useDelegateProvider } from "@/tms-hooks/useDelegate"
-import { Spinner } from "../ui/spinner"
 import { useListDelegations, useListProviderLinks } from "@/tms-hooks"
+import { Spinner } from "@/components/ui/spinner"
 import { DelegationCard } from "./DelegationsListing"
 
-export function LinkSuccessAlert() {
-  const linkStateRawParam = new URLSearchParams(window.location.search).get(
-    "state"
-  )
+type LinkState = {
+  result?: string
+  returnUri?: string
+  clientName?: string
+  providerName?: string
+  providerId?: string
+}
 
-  const linkStateParams = linkStateRawParam
-    ? JSON.parse(linkStateRawParam)
-    : undefined
-  const returnUrl = linkStateParams?.returnUri
-  const clientName = linkStateParams?.clientName
-  const isSuccessState = linkStateParams?.result === "success"
-  const providerName = linkStateParams?.providerName
-  const providerId = linkStateParams?.providerId
-  const [isOpen, setIsOpen] = useState(isSuccessState)
+export function LinkSuccessAlert() {
+  const stateParam = new URLSearchParams(window.location.search).get("state")
+  const linkState = stateParam ? (JSON.parse(stateParam) as LinkState) : null
+  const { clientName, providerId, providerName, returnUri } = linkState ?? {}
+  const [isOpen, setIsOpen] = useState(linkState?.result === "success")
 
   const { data: delegations } = useListDelegations()
   const { data: linkedProviders } = useListProviderLinks()
-  const mostRecentProvider = (linkedProviders ?? [])
-    .filter((p) => p.rp_id === providerId)
-    .sort((p1, p2) =>
-      new Date(p1.last_login) > new Date(p2.last_login) ? -1 : 1
+  const mostRecentProvider = linkedProviders
+    ?.filter((provider) => provider.rp_id === providerId)
+    .sort(
+      (left, right) =>
+        Date.parse(right.last_login) - Date.parse(left.last_login)
     )[0]
-
-  const existingDelegation = (delegations ?? []).find(
-    (d) => d.client_name === clientName && d.rp_id === providerId
+  const existingDelegation = delegations?.find(
+    (delegation) =>
+      delegation.client_name === clientName && delegation.rp_id === providerId
   )
 
   const { mutate, isSuccess, isError, isPending } = useDelegateProvider({
-    clientName,
-    providerId,
+    clientName: clientName ?? "",
+    providerId: providerId ?? "",
     providerAccount: mostRecentProvider?.rp_account ?? "",
   })
-  if (!mostRecentProvider) return null
+  if (!mostRecentProvider || !returnUri || !clientName) return null
+
+  const returnOrigin = new URL(returnUri).origin
+  const confirmDelegation = () => mutate()
 
   return (
     <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
@@ -63,8 +66,7 @@ export function LinkSuccessAlert() {
           <AlertDialogDescription>
             You can now delegate access to resources at{" "}
             {providerName ?? "this provider"} so that they are available to user{" "}
-            {mostRecentProvider.rp_account} at {clientName} (
-            {new URL(returnUrl).origin}).{" "}
+            {mostRecentProvider.rp_account} at {clientName} ({returnOrigin}).{" "}
             <strong>
               This action will permit the client to submit jobs and manage data
               on your behalf.
@@ -83,14 +85,11 @@ export function LinkSuccessAlert() {
         )}
 
         {existingDelegation && (
-          <DelegationCard
-            delegation={existingDelegation}
-            key={existingDelegation.id}
-          />
+          <DelegationCard delegation={existingDelegation} />
         )}
 
         {!existingDelegation && (
-          <Button onClick={() => mutate()}>
+          <Button onClick={confirmDelegation}>
             Confirm Delegation {isPending && <Spinner />}
           </Button>
         )}
@@ -103,7 +102,7 @@ export function LinkSuccessAlert() {
               An error occurred while attempting to delegate resource access.
             </AlertDescription>
             <AlertAction>
-              <Button size="xs" variant="secondary" onClick={() => mutate()}>
+              <Button size="xs" variant="secondary" onClick={confirmDelegation}>
                 Try again?
               </Button>
             </AlertAction>
@@ -114,7 +113,7 @@ export function LinkSuccessAlert() {
           <AlertDialogCancel>Close Dialog</AlertDialogCancel>
           <Button
             nativeButton={false}
-            render={<a href={returnUrl}>Return to Science Gateway</a>}
+            render={<a href={returnUri}>Return to Science Gateway</a>}
           />
         </AlertDialogFooter>
       </AlertDialogContent>

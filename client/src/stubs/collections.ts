@@ -14,3 +14,15 @@ export const delegations = new Collection({
     rp_id: z.string(),
   }),
 })
+
+export const providerLinks = new Collection({
+  schema: z.object({
+    id: z.number(),
+    tms_identity: z.string(),
+    rp_account: z.string(),
+    rp_id: z.string(),
+    resource_provider_name: z.string(),
+    last_login: z.string(),
+    enabled: z.boolean(),
+  }),
+})

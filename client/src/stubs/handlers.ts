@@ -1,5 +1,5 @@
-import { http, HttpResponse } from "msw"
-import { delegations } from "./collections"
+import { http, HttpResponse, delay } from "msw"
+import { delegations, providerLinks } from "./collections"
 
 const providerStubs = [
   {
@@ -57,6 +57,14 @@ const providerLinksStub = {
   ],
 }
 
+export function initializeCollections() {
+  delegations.clear()
+  providerLinks.clear()
+  providerLinks.create(providerLinksStub.result[0])
+}
+
+initializeCollections()
+
 const delegationsStub = {
   status: "200 OK",
   result: [
@@ -75,6 +83,10 @@ const delegationsStub = {
 }
 
 export const handlers = [
+  // Add global delay of 5ms to prevent skipping render of loading states
+  http.all("*", async () => {
+    await delay(5)
+  }),
   http.get("/login/whoami", () => {
     return HttpResponse.json({ result: whoamiStub })
   }),
@@ -83,7 +95,8 @@ export const handlers = [
     return HttpResponse.json({ result: providerStubs })
   }),
   http.get("/resources/providers/links", () => {
-    return HttpResponse.json(providerLinksStub)
+    const providerLinksList = providerLinks.findMany()
+    return HttpResponse.json({ status: "200 OK", result: providerLinksList })
   }),
   http.get("/delegations", async () => {
     const delegationList = delegations.findMany()
@@ -98,9 +111,13 @@ export const handlers = [
       return HttpResponse.json({})
     }
   ),
-  http.delete<{ id: string }>("/resources/providers/links/:id", () => {
-    return HttpResponse.json(providerLinksStub)
-  }),
+  http.delete<{ id: string }>(
+    "/resources/providers/links/:id",
+    ({ params }) => {
+      providerLinks.delete((q) => q.where({ id: parseInt(params.id) }))
+      return HttpResponse.json(providerLinksStub)
+    }
+  ),
   http.post("/delegations", async () => {
     await delegations.create(delegationsStub.result[0])
     return HttpResponse.json({})
