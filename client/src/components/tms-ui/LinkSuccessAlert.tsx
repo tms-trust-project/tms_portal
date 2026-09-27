@@ -59,7 +59,7 @@ export function LinkSuccessAlert() {
 
   return (
     <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-      <AlertDialogContent>
+      <AlertDialogContent className="data-[size=default]:sm:max-w-xl">
         <AlertDialogHeader>
           <AlertDialogTitle>Authentication Successful</AlertDialogTitle>
           <AlertDialogDescription>
@@ -110,9 +110,10 @@ export function LinkSuccessAlert() {
 
         <AlertDialogFooter>
           <AlertDialogCancel>Close Dialog</AlertDialogCancel>
-          <Button asChild>
-            <a href={returnUrl}>Return to Science Gateway</a>
-          </Button>
+          <Button
+            nativeButton={false}
+            render={<a href={returnUrl}>Return to Science Gateway</a>}
+          />
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

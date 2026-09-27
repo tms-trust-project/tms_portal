@@ -16,22 +16,29 @@ export function UserMenu() {
   const { data: whoami } = useWhoami({ enabled: !!isAuthenticated })
   if (!isAuthenticated || !whoami)
     return (
-      <Button variant="outline" role="link" asChild>
-        <a href="/login?idp_id=globus_idp&redirect_uri=https://tms-portal.savanna.tacc.cloud/">
-          <LogIn /> Log In
-        </a>
-      </Button>
+      <Button
+        variant="outline"
+        role="link"
+        nativeButton={false}
+        render={
+          <a href="/login?idp_id=globus_idp&redirect_uri=https://tms-portal.savanna.tacc.cloud/">
+            <LogIn /> Log In
+          </a>
+        }
+      />
     )
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="h-12">
-          <UserCircle2 className="size-6 text-muted-foreground" />
-          <span className="hidden md:block">{whoami.name}</span>
+      <DropdownMenuTrigger
+        render={
+          <Button variant="outline" className="h-12">
+            <UserCircle2 className="size-6 text-muted-foreground" />
+            <span className="hidden md:block">{whoami.name}</span>
 
-          <EllipsisVertical className="size-5 text-muted-foreground md:ml-3" />
-        </Button>
-      </DropdownMenuTrigger>
+            <EllipsisVertical className="size-5 text-muted-foreground md:ml-3" />
+          </Button>
+        }
+      />
       <DropdownMenuContent>
         <DropdownMenuGroup>
           <DropdownMenuLabel>Provider: {whoami.organization}</DropdownMenuLabel>

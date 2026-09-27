@@ -59,11 +59,13 @@ function LinkIdentityModal() {
   return (
     <Dialog open={openState} onOpenChange={setOpenState}>
       {clientName && returnUri && (
-        <DialogTrigger asChild>
-          <Button size="sm" variant="outline">
-            <Plus /> Add Provider
-          </Button>
-        </DialogTrigger>
+        <DialogTrigger
+          render={
+            <Button size="sm" variant="outline">
+              <Plus /> Add Provider
+            </Button>
+          }
+        />
       )}
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
@@ -80,18 +82,22 @@ function LinkIdentityModal() {
             </span>
 
             <div className="inline-flex gap-1">
-              <Button variant="outline" asChild>
-                <a
-                  href={
-                    `/resources/providers/authorize?provider_id=${providerLink.rp_id}` +
-                    `&redirect_url=${window.location.origin}` +
-                    `&state=${constructLinkState({ id: providerLink.rp_id, name: providerLink.resource_provider_name })}`
-                  }
-                >
-                  <RefreshCcw className="mr-1 size-4" />
-                  Refresh
-                </a>
-              </Button>
+              <Button
+                nativeButton={false}
+                variant="outline"
+                render={
+                  <a
+                    href={
+                      `/resources/providers/authorize?provider_id=${providerLink.rp_id}` +
+                      `&redirect_url=${window.location.origin}` +
+                      `&state=${constructLinkState({ id: providerLink.rp_id, name: providerLink.resource_provider_name })}`
+                    }
+                  >
+                    <RefreshCcw className="mr-1 size-4" />
+                    Refresh
+                  </a>
+                }
+              />
               <UnlinkButton providerLinkId={providerLink.id} />
             </div>
           </div>
@@ -110,31 +116,33 @@ function LinkIdentityModal() {
               </span>
 
               <div className="inline-flex gap-1">
-                <Button asChild>
-                  <a
-                    href={
-                      `/resources/providers/authorize?provider_id=${provider.id}` +
-                      `&redirect_url=${window.location.origin}` +
-                      `&state=${constructLinkState(provider)}`
-                    }
-                  >
-                    Connect
-                  </a>
-                </Button>
+                <Button
+                  nativeButton={false}
+                  render={
+                    <a
+                      href={
+                        `/resources/providers/authorize?provider_id=${provider.id}` +
+                        `&redirect_url=${window.location.origin}` +
+                        `&state=${constructLinkState(provider)}`
+                      }
+                    >
+                      Connect
+                    </a>
+                  }
+                />
               </div>
             </div>
           ))}
 
         <Separator />
         {returnUri && (
-          <Button asChild>
-            <a href={returnUri}>Return to Science Gateway</a>
-          </Button>
+          <Button
+            nativeButton={false}
+            render={<a href={returnUri}>Return to Science Gateway</a>}
+          />
         )}
         <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
-          </DialogClose>
+          <DialogClose render={<Button variant="outline">Cancel</Button>} />
         </DialogFooter>
       </DialogContent>
     </Dialog>
