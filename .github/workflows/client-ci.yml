@@ -1,0 +1,33 @@
+name: Client CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  client:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/setup@v2
+        with:
+          version: 12.6.0
+          runtime: node@24
+          package-json-file: client/package.json
+          cache: true
+          cache-dependency-path: client/pnpm-lock.yaml
+          install: false
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm run lint
+      - name: Check formatting
+        run: pnpm exec prettier --check '**/*.{ts,tsx}'
+      - name: Test
+        run: pnpm exec vitest run

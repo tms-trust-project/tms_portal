@@ -41,20 +41,18 @@ export function LinkSuccessAlert() {
   const mostRecentProvider = (linkedProviders ?? [])
     .filter((p) => p.rp_id === providerId)
     .sort((p1, p2) =>
-      new Date(p1.last_login) > new Date(p2.last_login) ? 1 : -1
+      new Date(p1.last_login) > new Date(p2.last_login) ? -1 : 1
     )[0]
 
-  const existingDelegation = (delegations ?? []).filter(
+  const existingDelegation = (delegations ?? []).find(
     (d) => d.client_name === clientName && d.rp_id === providerId
   )
 
-  const { mutate, isSuccess, isError, isIdle, isPending } = useDelegateProvider(
-    {
-      clientName,
-      providerId,
-      providerAccount: mostRecentProvider?.rp_account ?? "",
-    }
-  )
+  const { mutate, isSuccess, isError, isPending } = useDelegateProvider({
+    clientName,
+    providerId,
+    providerAccount: mostRecentProvider?.rp_account ?? "",
+  })
   if (!mostRecentProvider) return null
 
   return (
@@ -73,17 +71,7 @@ export function LinkSuccessAlert() {
             </strong>
           </AlertDialogDescription>
         </AlertDialogHeader>
-
-        {existingDelegation.map((d) => (
-          <DelegationCard delegation={d} key={d.id} />
-        ))}
-
-        {(isIdle || isPending) && !(existingDelegation.length > 0) && (
-          <Button onClick={() => mutate()}>
-            Confirm Delegation {isPending && <Spinner />}
-          </Button>
-        )}
-        {isSuccess && (
+        {isSuccess && !!existingDelegation && (
           <Alert className="text-green-700">
             <CheckCircle2Icon />
             <AlertTitle>Delegation successful</AlertTitle>
@@ -93,6 +81,20 @@ export function LinkSuccessAlert() {
             </AlertDescription>
           </Alert>
         )}
+
+        {existingDelegation && (
+          <DelegationCard
+            delegation={existingDelegation}
+            key={existingDelegation.id}
+          />
+        )}
+
+        {!existingDelegation && (
+          <Button onClick={() => mutate()}>
+            Confirm Delegation {isPending && <Spinner />}
+          </Button>
+        )}
+
         {isError && (
           <Alert className="text-red-700">
             <InfoIcon />

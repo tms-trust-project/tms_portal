@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw"
+import { delegations } from "./collections"
 
 const providerStubs = [
   {
@@ -84,16 +85,24 @@ export const handlers = [
   http.get("/resources/providers/links", () => {
     return HttpResponse.json(providerLinksStub)
   }),
-  http.get("/delegations", () => {
-    return HttpResponse.json(delegationsStub)
+  http.get("/delegations", async () => {
+    const delegationList = delegations.findMany()
+    return HttpResponse.json({ status: "200 OK", result: delegationList })
   }),
-  http.delete("/delegations/:clientName/:id", () => {
-    return HttpResponse.json({})
-  }),
+  http.delete<{ clientName: string; id: string }>(
+    "/delegations/:clientName/:id",
+    ({ params }) => {
+      delegations.delete((q) =>
+        q.where({ client_name: params.clientName, id: parseInt(params.id) })
+      )
+      return HttpResponse.json({})
+    }
+  ),
   http.delete<{ id: string }>("/resources/providers/links/:id", () => {
     return HttpResponse.json(providerLinksStub)
   }),
-  http.post("/delegations", () => {
+  http.post("/delegations", async () => {
+    await delegations.create(delegationsStub.result[0])
     return HttpResponse.json({})
   }),
 
