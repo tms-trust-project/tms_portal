@@ -30,4 +30,4 @@ jobs:
       - name: Check formatting
         run: pnpm exec prettier --check '**/*.{ts,tsx}'
       - name: Test
-        run: pnpm exec vitest run
+        run: pnpm exec vitest run --coverage

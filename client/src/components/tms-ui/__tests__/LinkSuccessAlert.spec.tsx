@@ -1,9 +1,9 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { fireEvent, screen, waitFor } from "@testing-library/react"
 import { HttpResponse, http } from "msw"
 import { delegations } from "@/stubs/collections"
 import { server } from "@/stubs/server"
 import { LinkSuccessAlert } from "../LinkSuccessAlert"
+import { renderWithQueryClient } from "./renderWithQueryClient"
 
 const returnUri = "https://gateway.example/jobs/?mode=success"
 const linkState = {
@@ -32,15 +32,7 @@ function renderAlert(state: Partial<typeof linkState> | null = linkState) {
     "",
     state ? `/?state=${encodeURIComponent(JSON.stringify(state))}` : "/"
   )
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  })
-  render(
-    <QueryClientProvider client={queryClient}>
-      <LinkSuccessAlert />
-    </QueryClientProvider>
-  )
-  return queryClient
+  return renderWithQueryClient(<LinkSuccessAlert />).queryClient
 }
 
 afterEach(() => {

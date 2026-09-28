@@ -1,25 +1,14 @@
-import { fireEvent, render, screen } from "@testing-library/react"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { fireEvent, screen } from "@testing-library/react"
 import Cookies from "js-cookie"
 import { UserMenu } from "../UserMenu"
-
-function renderMenu() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  })
-  render(
-    <QueryClientProvider client={queryClient}>
-      <UserMenu />
-    </QueryClientProvider>
-  )
-}
+import { renderWithQueryClient } from "./renderWithQueryClient"
 
 beforeEach(() => Cookies.remove("tmstoken"))
 afterEach(() => Cookies.remove("tmstoken"))
 
 describe("UserMenu", () => {
   test("shows Log In when the tmstoken cookie is absent", async () => {
-    renderMenu()
+    renderWithQueryClient(<UserMenu />)
 
     expect(
       await screen.findByRole("link", { name: /Log In/i })
@@ -32,7 +21,7 @@ describe("UserMenu", () => {
 
   test("shows the user menu when the tmstoken cookie is present", async () => {
     Cookies.set("tmstoken", "test-token")
-    renderMenu()
+    renderWithQueryClient(<UserMenu />)
 
     const trigger = await screen.findByRole("button", {
       name: "Jake Rosenberg",

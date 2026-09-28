@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { fireEvent, screen, waitFor } from "@testing-library/react"
 import { initializeCollections } from "@/stubs/handlers"
 import { LinkIdentityModal } from "../LinkIdentityModal"
+import { renderWithQueryClient } from "./renderWithQueryClient"
 
 const returnUri = "https://gateway.example/jobs/?mode=success"
 const clientName = "Link Test"
@@ -39,15 +39,7 @@ function renderModal({
   if (state) params.set("state", JSON.stringify(state))
   window.history.replaceState({}, "", `/?${params}`)
 
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  })
-  render(
-    <QueryClientProvider client={queryClient}>
-      <LinkIdentityModal />
-    </QueryClientProvider>
-  )
-  return queryClient
+  return renderWithQueryClient(<LinkIdentityModal />).queryClient
 }
 
 describe("link identity modal", () => {

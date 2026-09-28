@@ -19,6 +19,12 @@ export default defineConfig({
     setupFiles: ["./vitest.setup.ts"],
     coverage: {
       exclude: ["src/components/ui/**", "src/stubs/**", "src/lib/utils.ts"],
+      thresholds: {
+        statements: 80,
+        branches: 85,
+        functions: 80,
+        lines: 80,
+      },
     },
   },
 })
