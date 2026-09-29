@@ -13,10 +13,10 @@ const fetchWhoami = async () => {
   return data?.result
 }
 
-export const useWhoami = ({ enabled }: { enabled?: boolean }) => {
+export const useWhoami = ({ enabled = true }: { enabled?: boolean } = {}) => {
   return useQuery({
     queryKey: ["auth", "whoami"],
     queryFn: () => fetchWhoami(),
-    enabled: enabled ?? true,
+    enabled,
   })
 }

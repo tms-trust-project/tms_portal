@@ -4,12 +4,11 @@ import { httpClient } from "./httpClient"
 export type ProviderLink = {
   id: number
   tms_identity: string
-  resource_provider_account: string
-  resource_provider_uuid: string
-  resource_provider_id: string
+  rp_account: string
+  rp_id: string
   resource_provider_name: string
   last_login: string
-  enabled: false
+  enabled: boolean
 }
 
 const fetchProviderLinks = async () => {
