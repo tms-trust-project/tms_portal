@@ -40,12 +40,13 @@ impl From<&PgRow> for ResourceAccountLink {
 pub async fn db_add_or_update_resource_account_login<'a>(
     tx: &mut PgTransaction<'a>, tms_identity: String, rp_account: String,
     rp_id: String, last_login: DateTime<Utc>,
+    rp_token: String, rp_token_refresh: String
 ) -> anyhow::Result<ResourceProviderLogin> {
     // login - insert implies enabled, but update will not change the enabled flag
     match query(
         "INSERT INTO resource_provider_logins
             (tms_identity, rp_account, rp_id,
-             last_login, enabled) VALUES ($1, $2, $3, $4, true)
+             last_login, enabled, rp_token, rp_token_refresh) VALUES ($1, $2, $3, $4, true, $5, $6)
                       ON CONFLICT (tms_identity, rp_id, rp_account)
                           DO UPDATE SET last_login=excluded.last_login, updated=now()
              returning *",
@@ -54,6 +55,8 @@ pub async fn db_add_or_update_resource_account_login<'a>(
     .bind(rp_account)
     .bind(rp_id)
     .bind(last_login)
+    .bind(rp_token)
+    .bind(rp_token_refresh)
     .fetch_one(&mut **tx)
     .await {
         Ok(row) => Ok(ResourceProviderLogin::from(&row)),

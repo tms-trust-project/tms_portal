@@ -177,6 +177,7 @@ pub async fn get_resource_provider_token(
             .await?;
 
     let access_token = reponse.result.access_token;
+    let refresh_token = reponse.result.refresh_token;
 
     let decoded_token:Value = JwtDecoderBuilder::builder()
         .jwks_url(&rp.oauth2_jwks_url)
@@ -192,9 +193,6 @@ pub async fn get_resource_provider_token(
         _ => return Err(BadRequest("Unable to retreive subject from access token".to_string()).into())
     };
 
-    // TODO: I don't think we need this, right?
-//    let refresh_token = reponse.result.refresh_token;
-
     let mut tx = db_pool.begin().await?;
 
     let tms_identity = tms_identity.to_string();
@@ -202,8 +200,11 @@ pub async fn get_resource_provider_token(
     let resource_provider_id = rp.id;
     let last_login = Utc::now();
 
+    // TODO: Use token to retrieve list of resources and save to db
+
     db_add_or_update_resource_account_login(&mut tx, tms_identity, resource_provider_account.to_string(),
-                                            resource_provider_id, last_login).await?;
+                                            resource_provider_id, last_login, 
+                                            access_token.access_token, refresh_token.refresh_token).await?;
     tx.commit().await?;
 
     Ok(())
