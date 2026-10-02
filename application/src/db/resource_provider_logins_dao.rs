@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use sqlx::{query, Error, PgTransaction, Row};
 use sqlx::postgres::PgRow;
 use tms_lib::utils::service_error::ServiceError::{BadRequest};
-use crate::obj_model::resources::{ResourceAccountLink, ResourceProviderLogin};
+use crate::obj_model::resources::{Resource, ResourceAccountLink, ResourceProviderLogin, Username};
 
 impl From<&PgRow> for ResourceProviderLogin {
     fn from(row: &PgRow) -> Self {
@@ -17,9 +17,40 @@ impl From<&PgRow> for ResourceProviderLogin {
             enabled:row.get("enabled"),
             created:row.get("created"),
             updated:row.get("updated"),
+            rp_token: row.get("rp_token"),
+            rp_token_refresh: row.get("rp_token_refresh")
         }
     }
 }
+
+impl From<&PgRow> for Resource {
+    fn from(row: &PgRow) -> Self {
+        Resource { 
+            id: row.get("id"), 
+            resource_local_id: row.get("resource_local_id"), 
+            name: row.get("name"), 
+            url: row.get("url"), 
+            description: row.get("description"), 
+            rp_id: row.get("rp_id"), 
+            created: row.get("created"), 
+            updated: row.get("updated") 
+        }
+    }
+}
+
+impl From<&PgRow> for Username {
+    fn from(row: &PgRow) -> Self {
+        Username { 
+            id: row.get("id"), 
+            resource_id: row.get("resource_id"), 
+            resource_provider_login_id: row.get("resource_provider_login_id"), 
+            username: row.get("username"), 
+            created: row.get("created"), 
+            updated: row.get("updated") 
+        }
+    }
+}
+
 impl From<&PgRow> for ResourceAccountLink {
     fn from(row: &PgRow) -> Self {
         ResourceAccountLink {
