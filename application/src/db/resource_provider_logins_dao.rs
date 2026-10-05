@@ -206,8 +206,9 @@ pub async fn db_get_resource_provider_links_for_identity<'a>(
     Ok(HashSet::from_iter(account_logins))
 }
 
+#[cfg(test)]
 mod tests {
-    use crate::{config::init_db, database_url, db::resource_provider_logins_dao::{db_add_or_update_resource, db_add_or_update_username}};
+    use crate::{config::init_db, database_url, db::resource_provider_logins_dao::db_add_or_update_resource};
 
     #[tokio::test]
     async fn test_db_resource() -> anyhow::Result<()> {
