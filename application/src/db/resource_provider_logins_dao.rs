@@ -205,3 +205,24 @@ pub async fn db_get_resource_provider_links_for_identity<'a>(
 
     Ok(HashSet::from_iter(account_logins))
 }
+
+mod tests {
+    use crate::{config::init_db, database_url, db::resource_provider_logins_dao::{db_add_or_update_resource, db_add_or_update_username}};
+
+    #[tokio::test]
+    async fn test_db_resource() -> anyhow::Result<()> {
+        let db_string = database_url()?;
+        let db_pool = init_db(&db_string).await;
+        let mut tx = db_pool.begin().await?;
+        let rsrc = db_add_or_update_resource(
+            &mut tx, 
+            "local_id".to_string(), 
+            "Name of Resource".to_string(), 
+            "http://example.org".to_string(), 
+           "Description of Resource".to_string(), 
+           "implicit_mode_tacc_rp".to_string()).await?;
+        dbg!(&rsrc);
+        tx.commit().await?;
+        Ok(())
+    }
+}
