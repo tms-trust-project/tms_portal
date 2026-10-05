@@ -15,11 +15,12 @@ VALUES
 -- Add the tacc identity provider (as resource provider)
 INSERT INTO identity_providers (id, name, client_id, client_secret, identity_redirect_url, 
 oauth2_token_url, oauth2_jwks_url, oidc_user_info_url, scope, provider_type, supports_login, 
-supports_resources) VALUES ('tacc', 'TACC Resource Provider', '${TACC_RP_CLIENT_ID}',
+supports_resources, resources_services_url) 
+VALUES ('tacc', 'TACC Resource Provider', '${TACC_RP_CLIENT_ID}',
 '${TACC_RP_CLIENT_SECRET}',
 'https://tacc.tapis.io/v3/oauth2/authorize', 'https://tacc.tapis.io/v3/oauth2/tokens', 
 'https://tacc.tapis.io/v3/tokens/.well-known/jwks.json', '',
-'openid profile email', 'tacc_tapis', false, true);
+'openid profile email', 'tacc_tapis', false, true, '${RESOURCES_ENDPOINT}');
 
 -- token signing key - tms
 INSERT INTO keys (kid, jwt_public_key, jwt_private_key) 
