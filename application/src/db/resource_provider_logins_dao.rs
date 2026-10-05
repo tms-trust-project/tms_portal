@@ -133,7 +133,11 @@ pub async fn db_add_or_update_resource_account_login<'a>(
             (tms_identity, rp_account, rp_id,
              last_login, enabled, rp_token, rp_token_refresh) VALUES ($1, $2, $3, $4, true, $5, $6)
                       ON CONFLICT (tms_identity, rp_id, rp_account)
-                          DO UPDATE SET last_login=excluded.last_login, updated=now()
+                          DO UPDATE SET 
+                            last_login=excluded.last_login, 
+                            updated=now(),
+                            rp_token=excluded.rp_token,
+                            rp_token_refresh=excluded.rp_token_refresh
              returning *",
     )
     .bind(tms_identity)
