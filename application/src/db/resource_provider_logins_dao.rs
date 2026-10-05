@@ -67,6 +67,60 @@ impl From<&PgRow> for ResourceAccountLink {
     }
 }
 
+pub async fn db_add_or_update_resource<'a>(
+    tx: &mut PgTransaction<'a>, resource_local_id: String,
+    name: String, url: String, description: String,
+    rp_id: String
+) -> anyhow::Result<Resource> {
+    match query(
+        "INSERT INTO resources
+            (resource_local_id, name, url, description, rp_id)
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (rp_id, resource_local_id)
+            DO UPDATE SET
+                name = excluded.name,
+                url = excluded.url,
+                description = excluded.description,
+                updated = now()
+            RETURNING *
+        ",
+    )
+    .bind(resource_local_id)
+    .bind(name)
+    .bind(url)
+    .bind(description)
+    .bind(rp_id)
+    .fetch_one(&mut **tx)
+    .await {
+        Ok(row) => Ok(Resource::from(&row)),
+        Err(error) => Err(anyhow!(error)),
+    }
+}
+
+pub async fn db_add_or_update_username<'a>(
+    tx: &mut PgTransaction<'a>, resource_id: i32,
+    resource_provider_login_id: i32, username: String
+) -> anyhow::Result<Username> {
+    match query(
+        "INSERT INTO usernames
+            (resource_id, resource_provider_login_id, username)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (resource_id, resource_provider_login_id)
+            DO UPDATE SET
+                username = excluded.username,
+                updated = now()
+            RETURNING *
+    ") 
+    .bind(resource_id)
+    .bind(resource_provider_login_id)
+    .bind(username)
+    .fetch_one(&mut **tx)
+    .await
+    {
+        Ok(row) => Ok(Username::from(&row)),
+        Err(error) => Err(anyhow!(error)),
+    }
+}
 
 pub async fn db_add_or_update_resource_account_login<'a>(
     tx: &mut PgTransaction<'a>, tms_identity: String, rp_account: String,
