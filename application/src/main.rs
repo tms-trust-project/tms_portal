@@ -63,23 +63,8 @@ fn database_url() -> anyhow::Result<String> {
 #[tokio::main]
 #[instrument]
 async fn main() -> anyhow::Result<()> {
-    let database_host = std::env::var("TMS_PORTAL_DB_HOST").expect("TMS_PORTAL_DB_HOST must be set");
-    let database_port = std::env::var("TMS_PORTAL_DB_PORT").unwrap_or(String::from("5432"));
-    let database_name = std::env::var("TMS_PORTAL_DB_NAME").unwrap_or(String::from("tms_db"));
-    let database_user = std::env::var("TMS_PORTAL_DB_USER").unwrap_or(String::from("tms"));
-    let database_password =
-        std::env::var("TMS_PORTAL_DB_PASSWORD").expect("TMS_PORTAL_DB_PASSWORD must be set");
-
-    let database_url_string = format!(
-        "postgres://{0}:{1}@{2}:{3}/{4}",
-        &database_user, &database_password, &database_host, &database_port, &database_name
-    );
-
-    // just parsing the db url to determine if it seems valid.  We actually use database_url_string.
-    let _database_url = Url::parse(database_url_string.as_str())
-        .expect(format!("The database url {0} is not valid", &database_url_string).as_str());
-
     let database_url_string = database_url()?;
+    dbg!(&database_url_string);
     let state = AppState {
         // // Generate a secure key
         // //
