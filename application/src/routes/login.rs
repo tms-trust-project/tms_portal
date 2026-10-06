@@ -1,4 +1,4 @@
-use crate::db::identity_provider_dao::db_get_login_provider_by_id;
+use crate::db::{config_dao::db_get_http_config, identity_provider_dao::db_get_login_provider_by_id};
 use crate::services::login_service::{get_identity_providers, handle_callback, logout, whoami};
 use tms_lib::utils::service_error::ServiceError::{BadRequest, Internal, Unauthorized};
 use crate::utils::oauth2_authorization_code_utils::{AuthCodeQueryParams, OAuth2State, CLIENT_ID_TMS, ROOT_COOKIE_PATH, STATE_COOKIE_NAME, TOKEN_COOKIE_NAME};
@@ -166,10 +166,14 @@ pub async fn logout_handler(State(app_state): State<AppState>,
         (TOKEN_COOKIE_NAME, String::from("")))
         .path(ROOT_COOKIE_PATH));
 
+    let mut tx = app_state.db_pool.begin().await?;
+    let http_config = db_get_http_config(&mut tx).await?;
+    let mut headers = HashMap::new();
+    headers.insert("location".to_string(), http_config.base_url);
     Ok((
         updated_jar,
-        TmsResponse::builder(StatusCode::OK)
-            .entity("Successfully Logged out".to_string())
+        TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT)
+            .headers(headers)
             .build()
     ))
 }
