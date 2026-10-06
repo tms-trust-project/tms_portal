@@ -233,7 +233,7 @@ pub async fn db_get_resource_provider_links_for_identity<'a>(
 
 #[cfg(test)]
 mod tests {
-    use crate::{config::init_db, database_url, db::resource_provider_logins_dao::db_add_or_update_resource};
+    use crate::{config::init_db, database_url, db::{allowed_redirects_dao::db_get_allowed_redirect, identity_provider_dao::db_get_login_provider_by_id, resource_provider_logins_dao::db_add_or_update_resource}};
 
     #[tokio::test]
     async fn test_db_resource() -> anyhow::Result<()> {
@@ -249,6 +249,30 @@ mod tests {
            "implicit_mode_tacc_rp".to_string()).await?;
         dbg!(&rsrc);
         tx.commit().await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_redirect() -> anyhow::Result<()> {
+        let db_string = database_url()?;
+        let db_pool = init_db(&db_string).await;
+        let mut tx = db_pool.begin().await?;
+        let x = db_get_allowed_redirect(
+            &mut tx, &"tms".to_string(), &"http://localhost:8080/".to_string()
+        ).await?;
+        dbg!(x);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_provider() -> anyhow::Result<()> {
+        let db_string = database_url()?;
+        let db_pool = init_db(&db_string).await;
+        let mut tx = db_pool.begin().await?;
+        let x = db_get_login_provider_by_id(
+            &mut tx, &"globus".to_string()
+        ).await?;
+        dbg!(x);
         Ok(())
     }
 }

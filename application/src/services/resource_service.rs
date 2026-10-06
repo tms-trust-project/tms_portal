@@ -206,7 +206,7 @@ pub async fn get_resource_provider_token(
                                             resource_provider_id.clone(), last_login, 
                                             access_token.access_token.clone(), refresh_token.refresh_token).await?;
 
-    if let Some(resources_url) = rp.resources_endpoint {
+    if let Some(resources_url) = rp.resources_services_url {
         let resources = get_resources(
             &resources_url, &access_token.access_token).await?;
         db_add_or_update_resources_with_username(
