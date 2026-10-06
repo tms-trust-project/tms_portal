@@ -18,6 +18,7 @@ pub struct IdentityProvider {
     pub scope: Option<String>,
     pub identity_provider_type: IdentityProviderType,
     pub supports_login: bool,
+    pub resources_endpoint: Option<String>,
     pub supports_resources: bool,
     pub created: DateTime<Utc>,
     pub updated: DateTime<Utc>,

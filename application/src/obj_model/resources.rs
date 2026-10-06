@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Hash, Eq, PartialEq, Clone)]
 pub struct ResourceProviderLogin {
@@ -34,6 +35,15 @@ pub struct Username {
     pub username: String,
     pub created: DateTime<Utc>,
     pub updated: DateTime<Utc>,
+}
+
+#[derive(Debug, Hash, Eq, PartialEq, Clone, Default, Serialize, Deserialize)]
+pub struct ResourceForUser {
+    pub resource_id: String,
+    pub name: String,
+    pub url: String,
+    pub description: String,
+    pub username: String
 }
 
 #[derive(Debug, Hash, Eq, PartialEq, Clone)]

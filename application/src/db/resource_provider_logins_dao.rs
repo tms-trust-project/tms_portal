@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use sqlx::{query, Error, PgTransaction, Row};
 use sqlx::postgres::PgRow;
 use tms_lib::utils::service_error::ServiceError::{BadRequest};
-use crate::obj_model::resources::{Resource, ResourceAccountLink, ResourceProviderLogin, Username};
+use crate::obj_model::resources::{Resource, ResourceAccountLink, ResourceProviderLogin, Username, ResourceForUser};
 
 impl From<&PgRow> for ResourceProviderLogin {
     fn from(row: &PgRow) -> Self {
@@ -120,6 +120,27 @@ pub async fn db_add_or_update_username<'a>(
         Ok(row) => Ok(Username::from(&row)),
         Err(error) => Err(anyhow!(error)),
     }
+}
+
+pub async fn db_add_or_update_resources_with_username<'a>(
+    tx: &mut PgTransaction<'a>, resources: Vec<ResourceForUser>,
+    rp_id: String, resource_provider_login_id: i32
+) -> anyhow::Result<()> {
+    for resource_for_user in resources {
+        let resource = db_add_or_update_resource(
+            tx, 
+            resource_for_user.resource_id , 
+            resource_for_user.name, 
+            resource_for_user.url, 
+            resource_for_user.description, 
+            rp_id.clone()).await?;
+        let _username = db_add_or_update_username(
+            tx, 
+            resource.id, 
+            resource_provider_login_id, 
+            resource_for_user.username).await?;
+    }
+    Ok(())
 }
 
 pub async fn db_add_or_update_resource_account_login<'a>(

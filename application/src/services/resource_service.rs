@@ -1,6 +1,7 @@
 use std::collections::HashSet;
-use crate::db::config_dao::db_get_http_config;
+use crate::{db::{config_dao::db_get_http_config, resource_provider_logins_dao::db_add_or_update_resources_with_username}, obj_model::resources::ResourceForUser};
 use crate::db::identity_provider_dao::{db_get_resource_provider_by_id, db_get_resource_providers};
+use log::warn;
 use tms_lib::utils::service_error::ServiceError::{BadRequest, Internal};
 use crate::utils::oauth2_authorization_code_utils::{get_token_for_provider, OAuth2State};
 use anyhow::{Context, Result};
@@ -161,6 +162,7 @@ pub async fn get_authenticate_redirect_info(
         client_secret: rp.client_secret,
     })
 }
+
 pub async fn get_resource_provider_token(
     db_pool: &PgPool,
     provider_id: &String,
@@ -200,12 +202,52 @@ pub async fn get_resource_provider_token(
     let resource_provider_id = rp.id;
     let last_login = Utc::now();
 
-    // TODO: Use token to retrieve list of resources and save to db
+    let rp_login = db_add_or_update_resource_account_login(&mut tx, tms_identity, resource_provider_account.to_string(),
+                                            resource_provider_id.clone(), last_login, 
+                                            access_token.access_token.clone(), refresh_token.refresh_token).await?;
 
-    db_add_or_update_resource_account_login(&mut tx, tms_identity, resource_provider_account.to_string(),
-                                            resource_provider_id, last_login, 
-                                            access_token.access_token, refresh_token.refresh_token).await?;
+    if let Some(resources_url) = rp.resources_endpoint {
+        let resources = get_resources(
+            &resources_url, &access_token.access_token).await?;
+        db_add_or_update_resources_with_username(
+            &mut tx, 
+            resources, resource_provider_id, rp_login.id).await?;
+    } else {
+        warn!("Provider {} doesn't have a resources endpoint", rp.name);
+    }
+
     tx.commit().await?;
 
     Ok(())
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct ResourcesWithUsers {
+    data: Vec<ResourceForUser>
+}
+
+async fn get_resources(url: &str, token: &str) -> anyhow::Result<Vec<ResourceForUser>> {
+    let client = reqwest::Client::new();
+    let resp: ResourcesWithUsers = client.get(url)
+        .bearer_auth(token)
+        .send()
+        .await?
+        .json()
+        .await?;
+    Ok(resp.data)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::services::resource_service::get_resources;
+
+    #[tokio::test] 
+    async fn test_get_resources() -> anyhow::Result<()> {
+        let resp = get_resources(
+            "http://localhost:9000/resources", 
+            "<token>")
+            .await?;
+        dbg!(resp);
+        Ok(())
+    }
 }

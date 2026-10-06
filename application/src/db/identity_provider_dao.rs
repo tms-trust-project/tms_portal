@@ -30,6 +30,7 @@ impl TryFrom<&PgRow> for IdentityProvider {
             identity_provider_type: IdentityProviderType::from_str(provider)?,
             supports_login: row.get("supports_login"),
             supports_resources: row.get("supports_resources"),
+            resources_endpoint: row.get("resources_endpoint"),
             created: row.get("created"),
             updated: row.get("updated"),
         })
@@ -45,7 +46,7 @@ pub async fn db_get_login_providers<'a>(
         "select id, name, client_id, client_secret, identity_redirect_url,
                      oauth2_token_url, oauth2_jwks_url, oidc_user_info_url,
                      oauth2_public_key, scope, provider_type,
-                     supports_login, supports_resources, created, updated
+                     supports_login, supports_resources, resources_endpoint, created, updated
                      from identity_providers where supports_login = true",
     )
     .fetch_all(&mut **tx)
@@ -69,7 +70,7 @@ pub async fn db_get_login_provider_by_id<'a>(
         "select id, name, client_id, client_secret, identity_redirect_url,
                      oauth2_token_url, oauth2_jwks_url, oidc_user_info_url,
                      oauth2_public_key, scope, provider_type,
-                     supports_login, supports_resources, created, updated
+                     supports_login, supports_resources, resources_endpoint, created, updated 
                      from identity_providers where id = $1 and supports_login = true",
     )
     .bind(id)
