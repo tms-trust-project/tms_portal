@@ -188,7 +188,7 @@ paths:
         - name: linked_only
           description: If set to true, only previously linked providers will be returned
           schema:
-            type: bool
+            type: boolean
             default: false
           in: query
       responses:
@@ -420,7 +420,7 @@ paths:
           schema:
             type: string
           in: path
-          required: false
+          required: true
       responses:
         "200":
           description: Success
@@ -694,11 +694,11 @@ components:
     DelegationRequest:
       properties:
         client_name:
-          type: string,
+          type: string
         resource_provider_id:
-          type: string,
+          type: string
         resource_provider_account:
-          type: string,
+          type: string
 
     DelegationResponse:
       type: object
