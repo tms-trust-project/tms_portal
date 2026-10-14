@@ -199,9 +199,8 @@ paths:
               schema:
                 type: array
                 uniqueItems: true
-                items: {
+                items: 
                   $ref: '#/components/schemas/ResourceProvider'
-                }
 
   "/resources/providers/links":
     get:
@@ -219,9 +218,8 @@ paths:
               schema:
                 type: array
                 uniqueItems: true
-                items: {
+                items: 
                   $ref: '#/components/schemas/ResourceAccountLink'
-                }
 
   "/resources/providers/links/{resource_provider_link_id}":
     delete:
