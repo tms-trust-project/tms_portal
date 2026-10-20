@@ -41,7 +41,7 @@ pub async fn get_identity_providers(pool: &PgPool) -> Result<HashSet<IdentityPro
 
     let mut idp_result = HashSet::new();
     idps.iter().for_each(|idp| {
-        idp_result.insert(idp.clone().into());
+        idp_result.insert(idp.clone());
     });
     Ok(idp_result)
 }
@@ -81,7 +81,7 @@ pub async fn handle_callback(
     claims.insert("iss".to_string(), Value::from("https://tms.tacc.edu/"));
 
     let tms_token_claims = get_tms_token_claims(
-        &configuration,
+        configuration,
         &decoded_state.client_id,
         &idp.id,
         &idp.identity_provider_type,
@@ -100,7 +100,7 @@ pub async fn handle_callback(
 
 pub async fn logout(db_pool: &PgPool, token: &String) -> Result<()> {
     let mut tx = db_pool.begin().await?;
-    db_revoke_token(&mut tx, &token).await?;
+    db_revoke_token(&mut tx, token).await?;
     tx.commit().await?;
     Ok(())
 }

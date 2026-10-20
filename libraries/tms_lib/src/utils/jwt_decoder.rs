@@ -33,7 +33,7 @@ impl JwtDecoderBuilder {
     }
 
     pub fn validate_aud(mut self, validate_aud: bool) -> Self {
-        self.validate_aud = validate_aud.clone();
+        self.validate_aud = validate_aud;
         self
     }
 
@@ -50,13 +50,13 @@ impl JwtDecoderBuilder {
         // if jwks url is provided, use that.
         let decoding_key = match self.jwks_url {
             Some(ref jwks_url) => {
-                let jwks = get_public_key(&jwks_url).await?;
+                let jwks = get_public_key(jwks_url).await?;
                 let token_header = decode_header(token)?;
                 algorithm = token_header.alg;
 
                 let jwk = match token_header.kid {
                     Some(kid) => jwks.find(&kid),
-                    None => jwks.keys.get(0),
+                    None => jwks.keys.first(),
                 };
 
                 match jwk {
@@ -80,7 +80,7 @@ impl JwtDecoderBuilder {
         let mut validation = Validation::new(algorithm);
         if self.validate_aud {
             validation.validate_aud = false;
-        } else if let Some(_) = &self.audience {
+        } else if self.audience.is_some() {
             validation.aud = self.audience.to_owned();
         }
 
@@ -88,9 +88,9 @@ impl JwtDecoderBuilder {
         Ok(decoded.claims)
     }
 }
-async fn get_public_key(pub_key_url: &String) -> anyhow::Result<JwkSet> {
+async fn get_public_key(pub_key_url: &str) -> anyhow::Result<JwkSet> {
     let client = reqwest::Client::new();
-    let response = client.get(pub_key_url.as_str()).send().await?;
+    let response = client.get(pub_key_url).send().await?;
     let jwks_string = response.text().await?;
     serde_json::from_str(jwks_string.as_str()).map_err(|error| error.into())
 }

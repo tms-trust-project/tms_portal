@@ -77,7 +77,7 @@ pub async fn get_resource_providers(
 
     let mut resource_provider_result = HashSet::new();
     rps.iter().for_each(|rp| {
-        resource_provider_result.insert(rp.clone().into());
+        resource_provider_result.insert(rp.clone());
     });
     Ok(resource_provider_result)
 }
@@ -90,12 +90,12 @@ pub async fn unlink_resource_provider(
     let rps = db_delete_resource_provider_link(
         &mut tx,
         &security_context.tms_identity,
-        &resource_provider_link_id,
+        resource_provider_link_id,
     )
     .await?;
     tx.commit().await?;
 
-    Ok(rps.into())
+    Ok(rps)
 }
 pub async fn get_linked_resource_providers(
     security_context: &SecurityContext,
@@ -109,17 +109,17 @@ pub async fn get_linked_resource_providers(
 
     let mut resource_provider_result = HashSet::new();
     links.iter().for_each(|rp| {
-        resource_provider_result.insert(rp.clone().into());
+        resource_provider_result.insert(rp.clone());
     });
     Ok(resource_provider_result)
 }
 pub async fn get_authenticate_redirect_info(
     configuration: &Configuration,
-    tms_identity: &String,
+    tms_identity: &str,
     db_pool: &PgPool,
-    client_id: &String,
-    provider_id: &String,
-    redirect_url: &String,
+    client_id: &str,
+    provider_id: &str,
+    redirect_url: &str,
     client_state: &Option<String>,
 ) -> Result<ResourceProviderAuthorizeInfo, AppError> {
     let mut tx = db_pool.begin().await?;
@@ -145,8 +145,8 @@ pub async fn get_authenticate_redirect_info(
     }
 
     let oauth_state = OAuth2State {
-        tms_identity: tms_identity.clone(),
-        client_id: client_id.clone(),
+        tms_identity: tms_identity.to_owned(),
+        client_id: client_id.to_owned(),
         idp_id: rp.id,
         redirect_uri: url.to_string(),
         exp: SystemTime::now()
@@ -193,8 +193,8 @@ pub async fn get_authenticate_redirect_info(
 pub async fn get_resource_provider_token(
     configuration: &Configuration,
     db_pool: &PgPool,
-    provider_id: &String,
-    tms_identity: &String,
+    provider_id: &str,
+    tms_identity: &str,
     code: &String,
 ) -> Result<(), AppError> {
     let mut tx = db_pool.begin().await?;

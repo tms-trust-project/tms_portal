@@ -25,7 +25,7 @@ pub async fn db_get_token<'a>(
         .fetch_one(&mut **tx)
         .await
         .map_err(|error| match error {
-            sqlx::Error::RowNotFound => NotFound(format!("Token not found")).into(),
+            sqlx::Error::RowNotFound => NotFound("Token not found".to_string()).into(),
             _ => anyhow::anyhow!(error),
         })?;
     Ok(IssuedToken::from(&row))

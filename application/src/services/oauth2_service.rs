@@ -53,8 +53,8 @@ pub async fn authorize_code(
     configuration: &Configuration,
     db_pool: &PgPool,
     state: &Option<String>,
-    client_id: &String,
-    redirect_uri: &String,
+    client_id: &str,
+    redirect_uri: &str,
 ) -> anyhow::Result<AuthorizationResult> {
     // get what we need from the database
     let mut tx = db_pool.begin().await?;
@@ -64,16 +64,16 @@ pub async fn authorize_code(
             .await?;
 
     // Check redirect uri - this fails if the redirect doesnt exist
-    check_allowed_redirects(&mut tx, &client_id, &redirect_uri)
+    check_allowed_redirects(&mut tx, client_id, redirect_uri)
         .await
         .with_context(|| "OAuth redirect is invalid")?;
     tx.commit().await?;
 
     // encode our state
-    let encoded_state = get_state(configuration, &client_id, redirect_uri, &idp.id, state).await?;
+    let encoded_state = get_state(configuration, client_id, redirect_uri, &idp.id, state).await?;
 
     // compute the location url that will be used for the redirect
-    let location = get_login_redirect_location(&configuration, &idp, &encoded_state).await?;
+    let location = get_login_redirect_location(configuration, &idp, &encoded_state).await?;
 
     Ok(AuthorizationResult {
         location: location.to_string(),
@@ -90,7 +90,7 @@ pub async fn generate_code_and_redirect(
 ) -> anyhow::Result<Url> {
     let auth_code = generate_code();
 
-    let mut claims: JwtClaims = decode_access_token(&identity_provider, &provider_token).await?;
+    let mut claims: JwtClaims = decode_access_token(identity_provider, provider_token).await?;
     // TODO: get iss from config
     claims.insert("iss".to_string(), Value::from("https://tms.tacc.edu/"));
     let tms_token_claims = get_tms_token_claims(
@@ -117,7 +117,7 @@ pub async fn generate_code_and_redirect(
 
     let mut location = Url::parse(&state.redirect_uri)?;
     if let Some(state) = &state.client_state {
-        location.query_pairs_mut().append_pair("state", &state);
+        location.query_pairs_mut().append_pair("state", state);
     }
     location.query_pairs_mut().append_pair("code", &auth_code);
     Ok(location)
@@ -126,7 +126,7 @@ pub async fn generate_code_and_redirect(
 async fn get_login_redirect_location(
     configuration: &Configuration,
     identity_provider: &IdentityProvider,
-    encoded_state: &String,
+    encoded_state: &str,
 ) -> anyhow::Result<Url> {
     let callback_url = &configuration.http_config.get_oauth_provider_callback_url();
     let encoded_nonce = BASE64_STANDARD.encode(generate_nonce().to_ne_bytes());
@@ -134,7 +134,7 @@ async fn get_login_redirect_location(
         ("response_type", "code"),
         ("client_id", &identity_provider.client_id),
         ("redirect_uri", callback_url),
-        ("state", &encoded_state),
+        ("state", encoded_state),
         ("nonce", &encoded_nonce),
         ("access_type", "offline"),
     ];
@@ -150,17 +150,17 @@ async fn get_login_redirect_location(
 }
 async fn get_state(
     configuration: &Configuration,
-    client_id: &String,
-    redirect_uri: &String,
-    idp_id: &String,
+    client_id: &str,
+    redirect_uri: &str,
+    idp_id: &str,
     state: &Option<String>,
 ) -> anyhow::Result<String> {
     // populate state structure
     let oauth_state = OAuth2State {
         tms_identity: String::default(), // we don't have a tms identity at this point
-        client_id: client_id.clone(),
-        idp_id: idp_id.clone(),
-        redirect_uri: redirect_uri.clone(),
+        client_id: client_id.to_owned(),
+        idp_id: idp_id.to_owned(),
+        redirect_uri: redirect_uri.to_owned(),
         exp: SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)?
             .as_secs()
@@ -190,10 +190,10 @@ pub async fn get_access_token_from_code(
 ) -> anyhow::Result<TokenResponse> {
     // validate client id
     let mut tx = db_pool.begin().await?;
-    let client = db_get_client_by_credentials(&mut tx, &client_id, client_secret).await?;
+    let client = db_get_client_by_credentials(&mut tx, client_id, client_secret).await?;
 
     // validate redirect uri
-    check_allowed_redirects(&mut tx, &client.client_id, &redirect_uri)
+    check_allowed_redirects(&mut tx, &client.client_id, redirect_uri)
         .await
         .with_context(|| "OAuth redirect is invalid")?;
     // TODO: get time delta fron config (how recently the auth code must have been issued)
@@ -203,7 +203,7 @@ pub async fn get_access_token_from_code(
     // don't want it hanging around.
     // TODO: we could invalidate the record insted if we think it might help debuging / tracking errors down.  They would still need to be removed at some point, but we could do that once a day or whatever.  I prefer just deleting them I think.
     let auth_code_data =
-        db_delete_auth_code_data(&mut tx, code, &client_id, &redirect_uri, time_delta).await?;
+        db_delete_auth_code_data(&mut tx, code, client_id, redirect_uri, time_delta).await?;
     // let idp = db_get_login_provider_by_id(&mut tx, &auth_code_data.idp_id).await?;
     tx.commit().await?;
 
@@ -275,7 +275,7 @@ pub async fn process_authorization_callback(
 
     let location = generate_code_and_redirect(
         db_pool,
-        &configuration,
+        configuration,
         &identity_provider,
         &decoded_internal_state,
         &provider_token,

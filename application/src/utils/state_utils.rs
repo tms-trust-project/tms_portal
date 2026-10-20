@@ -18,7 +18,7 @@ where
 
     JwtEncoderBuilder::builder(
         oauth_state,
-        &keys.jwt_private_key.as_bytes(),
+        keys.jwt_private_key.as_bytes(),
         DEFAULT_STATE_ALGORITHM,
         keys.kid.as_str(),
     )
@@ -38,8 +38,8 @@ where
     // let decoding_key = Some(DecodingKey::from_rsa_pem(&keys.jwt_public_key.as_bytes())?);
 
     JwtDecoderBuilder::builder()
-        .public_key(&keys.jwt_public_key.as_bytes())
+        .public_key(keys.jwt_public_key.as_bytes())
         .validate_aud(false)
-        .decode::<T>(&state_string)
+        .decode::<T>(state_string)
         .await
 }

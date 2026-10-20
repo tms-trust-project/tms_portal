@@ -206,9 +206,7 @@ pub async fn db_get_resource_provider_login<'a>(
         .bind(rp_id)
         .bind(last_login)
         .fetch_optional(&mut **tx)
-        .await.map_err( |error| match error {
-            _ => anyhow::anyhow!(error),
-        })?;
+        .await.map_err( |error| anyhow::anyhow!(error))?;
     match row {
         Some(row) => Ok(Some(ResourceProviderLogin::from(&row))),
         None => Ok(None),

@@ -66,7 +66,7 @@ pub async fn login_handler(
     let configuration = &app_state.config;
     // always use the login idp from our configuration
     let login_idp_id = &configuration.oauth_config.login_oauth_provider;
-    let login_idp = db_get_login_provider_by_id(&mut tx, &login_idp_id).await;
+    let login_idp = db_get_login_provider_by_id(&mut tx, login_idp_id).await;
 
     // we will not use this value, but we need to make sure this redirect uri is in the database.
     check_allowed_redirects(&mut tx, &client_id, &form_data.redirect_uri)
@@ -83,8 +83,8 @@ pub async fn login_handler(
                     let mut tx = app_state.db_pool.begin().await?;
                     check_allowed_redirects_by_client_name(
                         &mut tx,
-                        &return_client_name,
-                        &client_return_uri,
+                        return_client_name,
+                        client_return_uri,
                     )
                     .await
                     .with_context(|| "Invalid redirect url for login")?;
@@ -238,7 +238,7 @@ pub async fn callback_handler(
     let decoded_state: OAuth2State =
         decode_state(&app_state.config, &state_cookie.value().to_owned()).await?;
     let headers: HashMap<String, String> =
-        HashMap::from_iter(vec![(LOCATION.to_string(), decoded_state.redirect_uri)].into_iter());
+        HashMap::from_iter(vec![(LOCATION.to_string(), decoded_state.redirect_uri)]);
 
     // Build a new cookie and save it with the TMS token.
     let token_cookie = Cookie::build((TOKEN_COOKIE_NAME, token))
@@ -277,7 +277,7 @@ pub async fn get_idp_handler(
         .entity(
             idp_result
                 .iter()
-                .map(|i| IdentityProvider::from(i))
+                .map(IdentityProvider::from)
                 .collect(),
         )
         .build())

@@ -179,7 +179,7 @@ async fn tokens_handler(
                     &app_state.db_pool,
                     &oauth_token_request.client_id,
                     &oauth_token_request.client_secret,
-                    &code,
+                    code,
                     &oauth_token_request.redirect_uri,
                 )
                 .await?;
@@ -223,9 +223,10 @@ async fn callback_handler(
 
     let updated_jar = jar.remove(removal_cookie);
 
-    let headers: HashMap<String, String> = HashMap::from_iter(
-        vec![(LOCATION.to_string(), authorization_callback_result.location)].into_iter(),
-    );
+    let headers: HashMap<String, String> = HashMap::from_iter(vec![(
+        LOCATION.to_string(),
+        authorization_callback_result.location,
+    )]);
 
     Ok((
         updated_jar,

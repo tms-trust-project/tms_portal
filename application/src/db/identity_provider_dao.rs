@@ -123,7 +123,7 @@ Returns an identity provider by id if it supports resources
  */
 pub async fn db_get_resource_provider_by_id<'a>(
     tx: &mut PgTransaction<'a>,
-    provider_id: &String,
+    provider_id: &str,
 ) -> Result<IdentityProvider> {
     match query(
         "select * from identity_providers

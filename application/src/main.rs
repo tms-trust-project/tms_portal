@@ -130,8 +130,7 @@ async fn main() -> anyhow::Result<()> {
             |request: Request<Body>, next: Next| async move {
                 let request_id = Uuid::new_v4().to_string();
                 log_mdc::insert("request_id", request_id.clone());
-                let res = next.run(request).await;
-                res
+                next.run(request).await
             },
         ))
         .layer(TraceLayer::new_for_http())

@@ -82,7 +82,7 @@ where
     let audience = HashSet::from([idp.client_id.to_owned()]);
     let mut builder = JwtDecoderBuilder::builder().jwks_url(&idp.oauth2_jwks_url);
     if let Some(key) = &idp.oauth2_public_key {
-        builder = builder.public_key(&key.as_bytes());
+        builder = builder.public_key(key.as_bytes());
     }
     builder
         .audience(audience)

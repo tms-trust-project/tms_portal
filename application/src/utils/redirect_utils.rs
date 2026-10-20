@@ -7,13 +7,13 @@ use url::Url;
 
 pub async fn check_allowed_redirects<'a>(
     tx: &mut PgTransaction<'a>,
-    client_id: &String,
-    url: &String,
+    client_id: &str,
+    url: &str,
 ) -> Result<()> {
     // Check the allowed redirect, but ignore query params
     let mut bare_url = Url::parse(url)?;
     bare_url.set_query(None);
-    let _ = db_get_allowed_redirect(tx, &client_id, &bare_url.to_string())
+    let _ = db_get_allowed_redirect(tx, client_id, bare_url.as_ref())
         .await
         .with_context(|| {
             format!(
@@ -26,13 +26,13 @@ pub async fn check_allowed_redirects<'a>(
 
 pub async fn check_allowed_redirects_by_client_name<'a>(
     tx: &mut PgTransaction<'a>,
-    client_name: &String,
-    url: &String,
+    client_name: &str,
+    url: &str,
 ) -> Result<()> {
     // Check the allowed redirect, but ignore query params
     let mut bare_url = Url::parse(url)?;
     bare_url.set_query(None);
-    let _ = db_get_allowed_redirect_by_client_name(tx, &client_name, &bare_url.to_string())
+    let _ = db_get_allowed_redirect_by_client_name(tx, client_name, bare_url.as_ref())
         .await
         .with_context(|| {
             format!(

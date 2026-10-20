@@ -39,10 +39,10 @@ where
             builder = builder.header(http::header::CONTENT_TYPE, "application/json");
         };
 
-        if let Ok(json_string) = serde_json::ser::to_string(&result) {
-            if let Ok(response) = builder.body(Body::from(json_string)) {
-                return response;
-            };
+        if let Ok(json_string) = serde_json::ser::to_string(&result)
+            && let Ok(response) = builder.body(Body::from(json_string))
+        {
+            return response;
         };
 
         internal_error_response("Unable to build response")

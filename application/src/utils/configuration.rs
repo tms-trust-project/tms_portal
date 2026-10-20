@@ -35,7 +35,7 @@ impl Configuration {
                 "TMS_PORTAL_SIGNING_KEY_PUB",
                 "TMS_PORTAL_SIGNING_KEY_SEC",
             )?,
-            signing_key_kid: signing_key_kid,
+            signing_key_kid,
             ..Default::default()
         };
         if let Ok(v) = std::env::var("TMS_PORTAL_KEY_EXPIRATION_MINUTES") {

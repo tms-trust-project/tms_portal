@@ -115,12 +115,12 @@ pub async fn list_resource_provider_handler(
     query_params: Query<ListResourceProviderRequestParams>,
     JwtValidator(security_context): JwtValidator,
 ) -> Result<TmsResponse<HashSet<ResourceProvider>>, AppError> {
-    let linked_only = query_params.linked_only.unwrap_or_else(|| false);
+    let linked_only = query_params.linked_only.unwrap_or(false);
     let result =
         get_resource_providers(&security_context, &app_state.db_pool, &linked_only).await?;
     let response = result
         .iter()
-        .map(|value| ResourceProvider::from(value))
+        .map(ResourceProvider::from)
         .collect();
     Ok(TmsResponse::builder(StatusCode::OK)
         .entity(response)
@@ -150,7 +150,7 @@ pub async fn get_linked_resource_provider_handler(
     let result = get_linked_resource_providers(&security_context, &app_state.db_pool).await?;
     let response = result
         .iter()
-        .map(|value| ResourceAccountLink::from(value))
+        .map(ResourceAccountLink::from)
         .collect();
     Ok(TmsResponse::builder(StatusCode::OK)
         .entity(response)
@@ -227,7 +227,7 @@ pub async fn get_resource_provider_callback_handler(
 
     // redirect browser back to the post-login page (taken from state - validated in login step).
     let headers: HashMap<String, String> =
-        HashMap::from_iter(vec![(LOCATION.to_string(), decoded_state.redirect_uri)].into_iter());
+        HashMap::from_iter(vec![(LOCATION.to_string(), decoded_state.redirect_uri)]);
 
     let removal_cookie = Cookie::build((
         get_rp_state_cookie_name(&resource_provider_id),

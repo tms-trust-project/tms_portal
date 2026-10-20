@@ -236,8 +236,8 @@ pub async fn make_auth_token(
 }
 pub async fn get_tms_token_claims(
     configuration: &Configuration,
-    client_id: &String,
-    idp_id: &String,
+    client_id: &str,
+    idp_id: &str,
     idp_type: &IdentityProviderType,
     claims: &JwtClaims,
 ) -> Result<TmsTokenClaims> {
@@ -252,7 +252,7 @@ pub async fn get_tms_token_claims(
         jti: Value::from(Uuid::new_v4().to_string()),
         iss: Value::from(issuer.clone()),
         sub: Value::from(tms_subject),
-        aud: Value::from(client_id.clone()),
+        aud: Value::from(client_id),
         tms_token_type: Value::from("access"),
         tms_username: Value::from(tms_username),
         tms_grant_type: Value::from("password"),

@@ -36,10 +36,10 @@ pub async fn add_delegation(
     .await
     {
         Ok(recent_login) => Some(recent_login),
-        Err(e) => return Err(e.into()),
+        Err(e) => return Err(e),
     };
 
-    let client = db_get_client_by_name(&mut tx, &client_name).await?;
+    let client = db_get_client_by_name(&mut tx, client_name).await?;
     let client_id = client.client_id;
     if !token_matches_client(security_context, &client_id) {
         return Err(BadRequest(format!(
@@ -53,7 +53,7 @@ pub async fn add_delegation(
         &mut tx,
         &client_id,
         rp_account,
-        &expiration,
+        expiration,
         tms_identity,
         rp_id,
     )
@@ -70,13 +70,13 @@ async fn ensure_recent_rp_login<'a>(
     max_mins_since_login: i64,
 ) -> anyhow::Result<()> {
     let last_allowed_login = Utc::now() - Duration::minutes(max_mins_since_login);
-    if let Some(_) =
-        db_get_resource_provider_login(tx, tms_identity, rp_account, rp_id, last_allowed_login)
-            .await?
+    if db_get_resource_provider_login(tx, tms_identity, rp_account, rp_id, last_allowed_login)
+        .await?
+        .is_some()
     {
-        return Ok(());
+        Ok(())
     } else {
-        return Err(NotFound("User must authenticate to delegate".to_string()).into());
+        Err(NotFound("User must authenticate to delegate".to_string()).into())
     }
 }
 
@@ -101,7 +101,7 @@ pub async fn get_delegations(
         // Since we have a client name, it must match what's in the token or the token must be for the
         // tms portal (which is allowed to view all delegations for a user)
         Some(client_name) => {
-            let client = db_get_client_by_name(&mut tx, &client_name).await?;
+            let client = db_get_client_by_name(&mut tx, client_name).await?;
             let client_id = client.client_id;
 
             if !token_matches_client(security_context, &client_id) {
@@ -140,7 +140,7 @@ pub async fn delete_delegation(
     //     Err(e) => return Err(e.into()),
     // };
 
-    let client = db_get_client_by_name(&mut tx, &client_name).await?;
+    let client = db_get_client_by_name(&mut tx, client_name).await?;
     let client_id = client.client_id;
     if !token_matches_client(security_context, &client_id) {
         return Err(BadRequest(format!(
