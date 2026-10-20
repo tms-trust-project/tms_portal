@@ -1,23 +1,3 @@
-use std::collections::HashMap;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use tms_lib::utils::service_error::ServiceError::{BadRequest, Internal, Unauthorized};
-use anyhow::{Context, Result};
-use jsonwebtoken::decode_header;
-use axum::extract::{FromRequestParts, State};
-use axum_extra::extract::CookieJar;
-use axum_extra::headers::Authorization;
-use axum_extra::headers::authorization::Bearer;
-use axum_extra::TypedHeader;
-use chrono::{DateTime, Utc};
-use http::request::Parts;
-use log::{info, trace};
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use sqlx::PgPool;
-use tracing::{enabled, Level};
-use uuid::{Uuid};
-use tms_lib::utils::jwt_decoder::JwtDecoderBuilder;
-use tms_lib::utils::jwt_encoder::JwtEncoderBuilder;
 use crate::AppState;
 use crate::db::issued_tokens_dao::{db_get_token, db_insert_token};
 use crate::db::keys_dao::db_get_key_by_id;
@@ -25,6 +5,26 @@ use crate::obj_model::identity_provider::IdentityProviderType;
 use crate::utils::app_error::AppError;
 use crate::utils::configuration::Configuration;
 use crate::utils::oauth2_authorization_code_utils::CLIENT_ID_TMS;
+use anyhow::{Context, Result};
+use axum::extract::{FromRequestParts, State};
+use axum_extra::TypedHeader;
+use axum_extra::extract::CookieJar;
+use axum_extra::headers::Authorization;
+use axum_extra::headers::authorization::Bearer;
+use chrono::{DateTime, Utc};
+use http::request::Parts;
+use jsonwebtoken::decode_header;
+use log::{info, trace};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use sqlx::PgPool;
+use std::collections::HashMap;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use tms_lib::utils::jwt_decoder::JwtDecoderBuilder;
+use tms_lib::utils::jwt_encoder::JwtEncoderBuilder;
+use tms_lib::utils::service_error::ServiceError::{BadRequest, Internal, Unauthorized};
+use tracing::{Level, enabled};
+use uuid::Uuid;
 
 const DEFAULT_ALGORITHM: &str = "RS256";
 
@@ -139,36 +139,48 @@ async fn get_token_claims(db_pool: &PgPool, token: &String) -> Result<TmsTokenCl
 
     Ok(tms_token_claims)
 }
-impl FromRequestParts<AppState> for JwtValidator
-where {
+impl FromRequestParts<AppState> for JwtValidator {
     type Rejection = AppError;
 
-    async fn from_request_parts(req_parts: &mut Parts, app_state: &AppState) -> Result<Self, Self::Rejection> {
-        let bearer = match TypedHeader::<Authorization<Bearer>>::from_request_parts(req_parts, &app_state).await {
-            Ok(bearer) => bearer.token().to_string(),
-            Err(_) => {
-                let mut result:String = String::default();
-                let Ok(app_state) = State::<AppState>::from_request_parts(req_parts, app_state).await;
-                let Ok(jar) = CookieJar::from_request_parts(req_parts, &app_state).await;
-                if let Some(token) = jar.get(TMS_TOKEN_COOKIE_NAME) {
-                    result = token.value().to_string();
-                };
-                result
-            },
-        };
+    async fn from_request_parts(
+        req_parts: &mut Parts,
+        app_state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
+        let bearer =
+            match TypedHeader::<Authorization<Bearer>>::from_request_parts(req_parts, &app_state)
+                .await
+            {
+                Ok(bearer) => bearer.token().to_string(),
+                Err(_) => {
+                    let mut result: String = String::default();
+                    let Ok(app_state) =
+                        State::<AppState>::from_request_parts(req_parts, app_state).await;
+                    let Ok(jar) = CookieJar::from_request_parts(req_parts, &app_state).await;
+                    if let Some(token) = jar.get(TMS_TOKEN_COOKIE_NAME) {
+                        result = token.value().to_string();
+                    };
+                    result
+                }
+            };
 
         if bearer.is_empty() {
             Err(Unauthorized(String::from("Unable to find TMS token")).into())
         } else {
             let jwt_claims = get_token_claims(&app_state.db_pool, &bearer).await?;
             let tms_identity = jwt_claims.get_sub()?;
-            info!("Request uri: {} TMS Identity: {}", req_parts.uri, tms_identity);
+            info!(
+                "Request uri: {} TMS Identity: {}",
+                req_parts.uri, tms_identity
+            );
             if enabled!(Level::TRACE) {
-                req_parts.headers.iter().for_each(|(header_name, header_value)| {
-                    trace!("Begin Headers");
-                    trace!("Header: {} Value: {:?}", header_name, header_value);
-                    trace!("End Headers");
-                })
+                req_parts
+                    .headers
+                    .iter()
+                    .for_each(|(header_name, header_value)| {
+                        trace!("Begin Headers");
+                        trace!("Header: {} Value: {:?}", header_name, header_value);
+                        trace!("End Headers");
+                    })
             }
             let client_id = jwt_claims.get_aud()?;
             let is_tms_client = jwt_claims.is_tms_client()?;
@@ -181,7 +193,7 @@ where {
                 is_tms_client,
                 client_id,
                 // we can add more to this if we need to
-//                tms_token_claims: jwt_claims,
+                //                tms_token_claims: jwt_claims,
             }))
         }
     }
@@ -209,19 +221,26 @@ pub async fn make_auth_token(
         DEFAULT_ALGORITHM,
         kid,
     )
-        .encode()
-        .await?;
+    .encode()
+    .await?;
 
     let mut tx = db_pool.begin().await?;
-    db_insert_token(&mut tx, &tms_token_string, &tms_token_claims.get_expires_at_dt()?).await?;
+    db_insert_token(
+        &mut tx,
+        &tms_token_string,
+        &tms_token_claims.get_expires_at_dt()?,
+    )
+    .await?;
     tx.commit().await?;
     Ok(tms_token_string)
 }
-pub async fn get_tms_token_claims(configuration:&Configuration,
-                                  client_id: &String,
-                                  idp_id: &String,
-                                  idp_type: &IdentityProviderType,
-                                  claims: &JwtClaims,) -> Result<TmsTokenClaims> {
+pub async fn get_tms_token_claims(
+    configuration: &Configuration,
+    client_id: &String,
+    idp_id: &String,
+    idp_type: &IdentityProviderType,
+    claims: &JwtClaims,
+) -> Result<TmsTokenClaims> {
     let issuer = &configuration.http_config.base_url;
     let subject = claims.get_string_claim(CLAIM_SUB)?;
     let tms_subject = format!("{0}@{1}", &subject, &idp_id);
@@ -254,33 +273,36 @@ impl Claims for JwtClaims {
         get_string_claim(self, name)
     }
 }
-fn get_string_claim(claims:&JwtClaims, name: &str) -> Result<String> {
-    let value = claims.get(name).ok_or(Unauthorized(format!(
-        "Unable to find '{0}' claim in identity token",
-        name
-    ))).context(format!("Claim name: {0}", name))?;
+fn get_string_claim(claims: &JwtClaims, name: &str) -> Result<String> {
+    let value = claims
+        .get(name)
+        .ok_or(Unauthorized(format!(
+            "Unable to find '{0}' claim in identity token",
+            name
+        )))
+        .context(format!("Claim name: {0}", name))?;
     get_string_from_value(value)
 }
-fn get_string_from_value(value:&Value) -> Result<String> {
+fn get_string_from_value(value: &Value) -> Result<String> {
     let string_slice_value = value
         .as_str()
         .ok_or(Unauthorized(format!("Value '{0}' is not a string", value)))?;
     Ok(String::from(string_slice_value))
 }
-fn get_datetime_from_value(value:&Value) -> Result<DateTime<Utc>> {
-    let timestamp = value.as_i64()
-        .ok_or(Unauthorized(format!("Value '{0}' is not a timestamp", value)))?;
-    let Some(datetime) = DateTime::from_timestamp_millis(timestamp)
-    else { return Err(Internal("Unable to determine expiration for token".to_string()).into())};
+fn get_datetime_from_value(value: &Value) -> Result<DateTime<Utc>> {
+    let timestamp = value.as_i64().ok_or(Unauthorized(format!(
+        "Value '{0}' is not a timestamp",
+        value
+    )))?;
+    let Some(datetime) = DateTime::from_timestamp_millis(timestamp) else {
+        return Err(Internal("Unable to determine expiration for token".to_string()).into());
+    };
     Ok(datetime)
 }
-pub fn token_matches_client(security_context: &SecurityContext, client_id:&String) -> bool {
+pub fn token_matches_client(security_context: &SecurityContext, client_id: &String) -> bool {
     if security_context.is_tms_client {
         true
     } else {
         security_context.client_id == *client_id
     }
 }
-
-
-

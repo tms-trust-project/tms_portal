@@ -1,7 +1,7 @@
-use std::fmt::Display;
-use std::str::FromStr;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
+use std::str::FromStr;
 use tms_lib::utils::service_error::ServiceError;
 
 #[derive(Debug, Hash, Eq, PartialEq, Clone)]
@@ -45,9 +45,16 @@ impl FromStr for IdentityProviderType {
          */
         match value {
             idp_type if idp_type.eq_ignore_ascii_case("globus") => Ok(IdentityProviderType::Globus),
-            idp_type if idp_type.eq_ignore_ascii_case("tacc_tapis") => Ok(IdentityProviderType::TaccTapis),
-            idp_type if idp_type.eq_ignore_ascii_case("danger_mode") => Ok(IdentityProviderType::DangerMode),
-            _ => Err(ServiceError::Internal(format!("Unknown provider type {0}", value))),
+            idp_type if idp_type.eq_ignore_ascii_case("tacc_tapis") => {
+                Ok(IdentityProviderType::TaccTapis)
+            }
+            idp_type if idp_type.eq_ignore_ascii_case("danger_mode") => {
+                Ok(IdentityProviderType::DangerMode)
+            }
+            _ => Err(ServiceError::Internal(format!(
+                "Unknown provider type {0}",
+                value
+            ))),
         }
     }
 }

@@ -3,16 +3,16 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Hash, Eq, PartialEq, Clone)]
 pub struct ResourceProviderLogin {
-    pub id:i32,
-    pub tms_identity:String,
-    pub enabled:bool,
-    pub created:DateTime<Utc>,
-    pub updated:DateTime<Utc>,
-    pub rp_id:String,
-    pub rp_account:String,
-    pub last_login:DateTime<Utc>,
+    pub id: i32,
+    pub tms_identity: String,
+    pub enabled: bool,
+    pub created: DateTime<Utc>,
+    pub updated: DateTime<Utc>,
+    pub rp_id: String,
+    pub rp_account: String,
+    pub last_login: DateTime<Utc>,
     pub rp_token: String,
-    pub rp_token_refresh: String
+    pub rp_token_refresh: String,
 }
 
 #[derive(Debug, Hash, Eq, PartialEq, Clone)]
@@ -43,18 +43,18 @@ pub struct ResourceForUser {
     pub name: String,
     pub url: String,
     pub description: String,
-    pub username: String
+    pub username: String,
 }
 
 #[derive(Debug, Hash, Eq, PartialEq, Clone)]
 pub struct ResourceAccountLink {
-    pub id:i32,
-    pub tms_identity:String,
-    pub rp_account:String,
-    pub rp_id:String,
-    pub rp_name:String,
-    pub last_login:DateTime<Utc>,
-    pub enabled:bool,
-    pub created:DateTime<Utc>,
-    pub updated:DateTime<Utc>,
+    pub id: i32,
+    pub tms_identity: String,
+    pub rp_account: String,
+    pub rp_id: String,
+    pub rp_name: String,
+    pub last_login: DateTime<Utc>,
+    pub enabled: bool,
+    pub created: DateTime<Utc>,
+    pub updated: DateTime<Utc>,
 }

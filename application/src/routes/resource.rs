@@ -1,35 +1,52 @@
-use crate::services::resource_service::{get_authenticate_redirect_info, get_linked_resource_providers, get_resource_provider_token, get_resource_providers, unlink_resource_provider};
-use tms_lib::utils::service_error::ServiceError::Unauthorized;
-use crate::utils::oauth2_authorization_code_utils::{AuthCodeQueryParams, ListResourceProviderRequestParams, OAuth2State, CLIENT_ID_TMS};
-use crate::{AppState};
+use crate::AppState;
+use crate::routes::api_obj_model::resources::{
+    Resource, ResourceAccountLink, ResourceAccountLogin, ResourceProvider,
+    ResourceProviderAuthorizeRequest,
+};
+use crate::routes::api_obj_model::tms_response::TmsResponse;
+use crate::services::resource_service::{
+    get_authenticate_redirect_info, get_linked_resource_providers, get_resource_provider_token,
+    get_resource_providers, unlink_resource_provider,
+};
+use crate::utils::app_error::AppError;
+use crate::utils::jwt_utils::JwtValidator;
+use crate::utils::oauth2_authorization_code_utils::{
+    AuthCodeQueryParams, CLIENT_ID_TMS, ListResourceProviderRequestParams, OAuth2State,
+};
+use crate::utils::state_utils::decode_state;
 use anyhow::Result;
 use axum::extract::{Path, Query, State};
 use axum::http::header::LOCATION;
 use axum::routing::{delete, get};
-use axum::{debug_handler, Router};
-use axum_extra::extract::cookie::Cookie;
+use axum::{Router, debug_handler};
 use axum_extra::extract::CookieJar;
-use base64::prelude::BASE64_STANDARD;
+use axum_extra::extract::cookie::Cookie;
 use base64::Engine;
+use base64::prelude::BASE64_STANDARD;
 use reqwest::StatusCode;
 use std::collections::{HashMap, HashSet};
 use std::string::ToString;
+use tms_lib::utils::service_error::ServiceError::Unauthorized;
 use uuid::Uuid;
-use crate::routes::api_obj_model::resources::{Resource, ResourceAccountLink, ResourceAccountLogin, ResourceProvider, ResourceProviderAuthorizeRequest};
-use crate::routes::api_obj_model::tms_response::TmsResponse;
-use crate::utils::app_error::AppError;
-use crate::utils::jwt_utils::JwtValidator;
-use crate::utils::state_utils::decode_state;
 
-const RP_STATE_PREFIX:&str = "state_rp_id_";
-const RP_COOKIE_PATH:&str = "/resources/providers";
+const RP_STATE_PREFIX: &str = "state_rp_id_";
+const RP_COOKIE_PATH: &str = "/resources/providers";
 
 pub async fn router() -> Router<AppState> {
     Router::new()
         .route("/resources/providers", get(list_resource_provider_handler))
-        .route("/resources/{provider_id}/{provider_account_id}", get(get_resource_handler))
-        .route("/resources/providers/links/{resource_provider_link_id}", delete(unlink_resource_provider_handler))
-        .route("/resources/providers/links", get(get_linked_resource_provider_handler))
+        .route(
+            "/resources/{provider_id}/{provider_account_id}",
+            get(get_resource_handler),
+        )
+        .route(
+            "/resources/providers/links/{resource_provider_link_id}",
+            delete(unlink_resource_provider_handler),
+        )
+        .route(
+            "/resources/providers/links",
+            get(get_linked_resource_provider_handler),
+        )
         .route("/resources/providers/authorize", get(authorize_handler))
         .route(
             "/resources/providers/callback",
@@ -88,7 +105,7 @@ pub async fn authorize_handler(
     ))
 }
 
-fn get_rp_state_cookie_name(rp_name:&String) -> String {
+fn get_rp_state_cookie_name(rp_name: &String) -> String {
     format!("{RP_STATE_PREFIX}{rp_name}")
 }
 
@@ -99,28 +116,45 @@ pub async fn list_resource_provider_handler(
     JwtValidator(security_context): JwtValidator,
 ) -> Result<TmsResponse<HashSet<ResourceProvider>>, AppError> {
     let linked_only = query_params.linked_only.unwrap_or_else(|| false);
-    let result = get_resource_providers(&security_context, &app_state.db_pool, &linked_only).await?;
-    let response = result.iter().map(|value| ResourceProvider::from(value)).collect();
-    Ok(TmsResponse::builder(StatusCode::OK).entity(response).build())
+    let result =
+        get_resource_providers(&security_context, &app_state.db_pool, &linked_only).await?;
+    let response = result
+        .iter()
+        .map(|value| ResourceProvider::from(value))
+        .collect();
+    Ok(TmsResponse::builder(StatusCode::OK)
+        .entity(response)
+        .build())
 }
 #[debug_handler]
-pub async fn unlink_resource_provider_handler (
+pub async fn unlink_resource_provider_handler(
     State(app_state): State<AppState>,
-    Path(resource_provider_link_id):Path<i64>,
+    Path(resource_provider_link_id): Path<i64>,
     JwtValidator(security_context): JwtValidator,
 ) -> Result<TmsResponse<ResourceAccountLogin>, AppError> {
-    let result = unlink_resource_provider(&security_context, &app_state.db_pool,
-                                          &resource_provider_link_id).await?;
-    Ok(TmsResponse::builder(StatusCode::OK).entity(result.into()).build())
+    let result = unlink_resource_provider(
+        &security_context,
+        &app_state.db_pool,
+        &resource_provider_link_id,
+    )
+    .await?;
+    Ok(TmsResponse::builder(StatusCode::OK)
+        .entity(result.into())
+        .build())
 }
 #[debug_handler]
-pub async fn get_linked_resource_provider_handler (
+pub async fn get_linked_resource_provider_handler(
     State(app_state): State<AppState>,
     JwtValidator(security_context): JwtValidator,
 ) -> Result<TmsResponse<HashSet<ResourceAccountLink>>, AppError> {
     let result = get_linked_resource_providers(&security_context, &app_state.db_pool).await?;
-    let response = result.iter().map(|value| ResourceAccountLink::from(value)).collect();
-    Ok(TmsResponse::builder(StatusCode::OK).entity(response).build())
+    let response = result
+        .iter()
+        .map(|value| ResourceAccountLink::from(value))
+        .collect();
+    Ok(TmsResponse::builder(StatusCode::OK)
+        .entity(response)
+        .build())
 }
 #[debug_handler]
 pub async fn get_resource_handler(
@@ -166,12 +200,12 @@ pub async fn get_resource_provider_callback_handler(
     jar: CookieJar,
     query_params: Query<AuthCodeQueryParams>,
 ) -> anyhow::Result<(CookieJar, TmsResponse<()>), AppError> {
-    let decoded_state:OAuth2State = decode_state(
-        &app_state.config, &query_params.state).await?;
+    let decoded_state: OAuth2State = decode_state(&app_state.config, &query_params.state).await?;
     let resource_provider_id = decoded_state.idp_id;
 
     // Get the state cookie set during the login process.
-    let Some(state_cookie) = jar.get(get_rp_state_cookie_name(&resource_provider_id).as_str()) else {
+    let Some(state_cookie) = jar.get(get_rp_state_cookie_name(&resource_provider_id).as_str())
+    else {
         return Err(Unauthorized("No state cookies were found".to_string()).into());
     };
 
@@ -179,8 +213,8 @@ pub async fn get_resource_provider_callback_handler(
         return Err(Unauthorized("State cookies do not match".to_string()).into());
     }
 
-    let decoded_state:OAuth2State = decode_state(
-        &app_state.config, &state_cookie.value().to_string()).await?;
+    let decoded_state: OAuth2State =
+        decode_state(&app_state.config, &state_cookie.value().to_string()).await?;
 
     get_resource_provider_token(
         &app_state.config,
@@ -195,9 +229,11 @@ pub async fn get_resource_provider_callback_handler(
     let headers: HashMap<String, String> =
         HashMap::from_iter(vec![(LOCATION.to_string(), decoded_state.redirect_uri)].into_iter());
 
-    let removal_cookie = Cookie::build(
-        (get_rp_state_cookie_name(&resource_provider_id), String::from("")))
-        .path(RP_COOKIE_PATH);
+    let removal_cookie = Cookie::build((
+        get_rp_state_cookie_name(&resource_provider_id),
+        String::from(""),
+    ))
+    .path(RP_COOKIE_PATH);
     let updated_jar = jar.remove(removal_cookie);
 
     Ok((

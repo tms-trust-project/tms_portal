@@ -1,11 +1,11 @@
-use std::collections::HashSet;
+use crate::obj_model;
+use crate::obj_model::identity_provider::IdentityProvider;
 use anyhow::{Context, Result};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use tracing::debug;
+use std::collections::HashSet;
 use tms_lib::utils::jwt_decoder::JwtDecoderBuilder;
-use crate::obj_model;
-use crate::obj_model::identity_provider::IdentityProvider;
+use tracing::debug;
 
 pub const ROOT_COOKIE_PATH: &str = "/";
 pub const CLIENT_ID_TMS: &str = "tms";
@@ -26,14 +26,14 @@ pub struct ListResourceProviderRequestParams {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct OAuth2State {
     // TODO: can the expiration work better?
-    pub tms_identity: String,           // the tms "cloud identity"
-    pub idp_id: String,                 // id of the cloud identity provider a.k.a. login identity provider
-    pub client_id: String,              // client id of the tms client
-    pub exp: u64,                       // TODO: this is supposed to be an expiration for the state, but it should
-                                        // TODO: have a date time or something maybe?  This needs work.
-    pub redirect_uri: String,           // redirect_uri requested by the tms client
-    pub client_state: Option<String>,   // state provided to authorize endpoint by tms client
-    pub nonce: u32,                     // nonce - used to help prevent replay attacks
+    pub tms_identity: String, // the tms "cloud identity"
+    pub idp_id: String,       // id of the cloud identity provider a.k.a. login identity provider
+    pub client_id: String,    // client id of the tms client
+    pub exp: u64, // TODO: this is supposed to be an expiration for the state, but it should
+    // TODO: have a date time or something maybe?  This needs work.
+    pub redirect_uri: String, // redirect_uri requested by the tms client
+    pub client_state: Option<String>, // state provided to authorize endpoint by tms client
+    pub nonce: u32,           // nonce - used to help prevent replay attacks
 }
 /*
 Exchanges an auth code for an auth token.  The parameter <R> is the structure

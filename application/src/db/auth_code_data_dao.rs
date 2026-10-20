@@ -1,12 +1,12 @@
-use anyhow::anyhow;
-use chrono::{TimeDelta, Utc};
-use serde_json::{to_value};
-use sqlx::postgres::PgRow;
-use sqlx::{query, Error, PgTransaction, Row};
-use tms_lib::utils::service_error::ServiceError::{BadRequest};
 use crate::obj_model::auth_code_data::AuthCodeData;
 use crate::obj_model::identity_provider::IdentityProviderType;
 use crate::utils::jwt_utils::TmsTokenClaims;
+use anyhow::anyhow;
+use chrono::{TimeDelta, Utc};
+use serde_json::to_value;
+use sqlx::postgres::PgRow;
+use sqlx::{Error, PgTransaction, Row, query};
+use tms_lib::utils::service_error::ServiceError::BadRequest;
 
 impl TryFrom<&PgRow> for AuthCodeData {
     type Error = anyhow::Error;

@@ -1,9 +1,9 @@
-use chrono::{DateTime, Utc};
-use log::{info};
-use tms_lib::utils::service_error::ServiceError::NotFound;
-use sqlx::postgres::PgRow;
-use sqlx::{query, PgTransaction, Row};
 use crate::obj_model::oauth::IssuedToken;
+use chrono::{DateTime, Utc};
+use log::info;
+use sqlx::postgres::PgRow;
+use sqlx::{PgTransaction, Row, query};
+use tms_lib::utils::service_error::ServiceError::NotFound;
 
 impl From<&PgRow> for IssuedToken {
     fn from(row: &PgRow) -> Self {

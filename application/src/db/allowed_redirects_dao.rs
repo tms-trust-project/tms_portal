@@ -1,8 +1,8 @@
-use tms_lib::utils::service_error::ServiceError::BadRequest;
-use anyhow::{anyhow, Result};
-use sqlx::postgres::PgRow;
-use sqlx::{query, Error, PgTransaction, Row};
 use crate::obj_model::allowed_redirects::AllowedRedirect;
+use anyhow::{Result, anyhow};
+use sqlx::postgres::PgRow;
+use sqlx::{Error, PgTransaction, Row, query};
+use tms_lib::utils::service_error::ServiceError::BadRequest;
 
 impl From<&PgRow> for AllowedRedirect {
     fn from(row: &PgRow) -> Self {

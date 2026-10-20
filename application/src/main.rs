@@ -2,41 +2,41 @@ extern crate core;
 
 mod config;
 mod db;
+mod obj_model;
 mod routes;
 mod services;
 mod utils;
-mod obj_model;
 
-use anyhow::Context;
-use axum::body::Body;
 use crate::config::{init_db, init_logging};
 use crate::routes::{delegation, login, oauth, resource, well_known};
+use anyhow::Context;
+use axum::body::Body;
 //use axum_extra::extract::cookie::Key;
-use tms_lib::utils::service_error::ServiceError::{MethodNotAllowed, NotFound};
+use crate::db::issued_tokens_dao::db_cleanup_tokens;
+use crate::utils::app_error::AppError;
+use crate::utils::configuration::Configuration;
 use axum::handler::HandlerWithoutStateExt;
-use axum::response::IntoResponse;
-use axum::{middleware, Router};
 use axum::middleware::Next;
+use axum::response::IntoResponse;
+use axum::{Router, middleware};
 use chrono::{TimeDelta, Utc};
 use http::Request;
 use log::error;
 use sqlx::PgPool;
+use tms_lib::utils::service_error::ServiceError::{MethodNotAllowed, NotFound};
 use tokio::spawn;
 use tower_http::services::{ServeDir, ServeFile};
-use tower_http::trace::{TraceLayer};
-use tracing::{instrument};
+use tower_http::trace::TraceLayer;
+use tracing::instrument;
 use url::Url;
 use uuid::Uuid;
-use crate::db::issued_tokens_dao::db_cleanup_tokens;
-use crate::utils::app_error::AppError;
-use crate::utils::configuration::Configuration;
 
 #[derive(Debug, Clone)]
 struct AppState {
     // that holds the key used to encrypt cookies
     // key: Key,
     db_pool: PgPool,
-    config: Configuration
+    config: Configuration,
 }
 
 fn database_url() -> anyhow::Result<String> {
@@ -54,9 +54,12 @@ fn database_url() -> anyhow::Result<String> {
     );
 
     // just parsing the db url to determine if it seems valid.  We actually use database_url_string.
-    let _database_url = Url::parse(database_url_string.as_str())
-        .map_err(|e| anyhow::anyhow!(
-            format!("The database url {0} is not valid (error: {1})", &database_url_string, e)))?;
+    let _database_url = Url::parse(database_url_string.as_str()).map_err(|e| {
+        anyhow::anyhow!(format!(
+            "The database url {0} is not valid (error: {1})",
+            &database_url_string, e
+        ))
+    })?;
 
     Ok(database_url_string)
 }
@@ -72,7 +75,7 @@ async fn main() -> anyhow::Result<()> {
         // // TODO:  You probably don't wanna generate a new one each time the app starts though
         // key: Key::generate(),
         db_pool: init_db(&database_url_string).await,
-        config: Configuration::from_env()?
+        config: Configuration::from_env()?,
     };
 
     init_logging(&state.config.runtime_config).await;
@@ -85,28 +88,29 @@ async fn main() -> anyhow::Result<()> {
             interval.tick().await;
             println!("Token Cleanup");
 
-            let result:anyhow::Result<()> = async {
+            let result: anyhow::Result<()> = async {
                 match cleanup_db_pool.begin().await {
                     Ok(mut tx) => {
                         // expired an hour ago
                         let expires_before = Utc::now() - TimeDelta::hours(1);
                         match db_cleanup_tokens(&mut tx, &expires_before).await {
-                            Ok(_) => {
-                                tx.commit().await.context("Unable to commit transaction for token cleanup")
-                            }
-                            Err(error) => Err(error)
+                            Ok(_) => tx
+                                .commit()
+                                .await
+                                .context("Unable to commit transaction for token cleanup"),
+                            Err(error) => Err(error),
                         }
                     }
-                    Err(error) => Err(error.into())
+                    Err(error) => Err(error.into()),
                 }
-            }.await;
+            }
+            .await;
 
             if let Err(result) = result {
                 error!("Failed to perform database cleanup: {}", result);
             }
         }
     });
-
 
     let port = 8080;
 
@@ -122,13 +126,13 @@ async fn main() -> anyhow::Result<()> {
         .merge(resource::router().await)
         .merge(oauth::router().await)
         .merge(delegation::router().await)
-        .layer(middleware::from_fn( | request: Request<Body>, next: Next | async move
-            {
+        .layer(middleware::from_fn(
+            |request: Request<Body>, next: Next| async move {
                 let request_id = Uuid::new_v4().to_string();
                 log_mdc::insert("request_id", request_id.clone());
                 let res = next.run(request).await;
                 res
-            }
+            },
         ))
         .layer(TraceLayer::new_for_http())
         .with_state(state)

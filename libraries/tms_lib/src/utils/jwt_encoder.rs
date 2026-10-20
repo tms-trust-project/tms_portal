@@ -1,5 +1,5 @@
 use anyhow::Context;
-use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
+use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
 use serde::Serialize;
 use std::str::FromStr;
 

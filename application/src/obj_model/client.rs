@@ -16,4 +16,3 @@ pub struct Client {
     #[allow(dead_code)]
     pub updated: DateTime<Utc>,
 }
-

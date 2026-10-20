@@ -1,16 +1,16 @@
-use crate::db::client_dao::db_get_client_by_id;
 use crate::AppState;
+use crate::db::client_dao::db_get_client_by_id;
+use crate::routes::api_obj_model::tms_response::TmsResponse;
+use crate::utils::app_error::AppError;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::get;
-use axum::{debug_handler, Router};
+use axum::{Router, debug_handler};
+use jwtk::PublicKeyToJwk;
 use jwtk::jwk::JwkSet;
 use jwtk::rsa::RsaPublicKey;
-use jwtk::PublicKeyToJwk;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
-use crate::routes::api_obj_model::tms_response::TmsResponse;
-use crate::utils::app_error::AppError;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OpenidConfiguration {

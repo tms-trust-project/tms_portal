@@ -1,52 +1,54 @@
-use std::collections::HashSet;
+use crate::obj_model::resources::{
+    Resource, ResourceAccountLink, ResourceForUser, ResourceProviderLogin, Username,
+};
 use anyhow::anyhow;
 use chrono::{DateTime, Utc};
-use sqlx::{query, Error, PgTransaction, Row};
 use sqlx::postgres::PgRow;
-use tms_lib::utils::service_error::ServiceError::{BadRequest};
-use crate::obj_model::resources::{Resource, ResourceAccountLink, ResourceProviderLogin, Username, ResourceForUser};
+use sqlx::{Error, PgTransaction, Row, query};
+use std::collections::HashSet;
+use tms_lib::utils::service_error::ServiceError::BadRequest;
 
 impl From<&PgRow> for ResourceProviderLogin {
     fn from(row: &PgRow) -> Self {
         ResourceProviderLogin {
-            id:row.get("id"),
-            tms_identity:row.get("tms_identity"),
-            rp_account:row.get("rp_account"),
-            rp_id:row.get("rp_id"),
-            last_login:row.get("last_login"),
-            enabled:row.get("enabled"),
-            created:row.get("created"),
-            updated:row.get("updated"),
+            id: row.get("id"),
+            tms_identity: row.get("tms_identity"),
+            rp_account: row.get("rp_account"),
+            rp_id: row.get("rp_id"),
+            last_login: row.get("last_login"),
+            enabled: row.get("enabled"),
+            created: row.get("created"),
+            updated: row.get("updated"),
             rp_token: row.get("rp_token"),
-            rp_token_refresh: row.get("rp_token_refresh")
+            rp_token_refresh: row.get("rp_token_refresh"),
         }
     }
 }
 
 impl From<&PgRow> for Resource {
     fn from(row: &PgRow) -> Self {
-        Resource { 
-            id: row.get("id"), 
-            resource_local_id: row.get("resource_local_id"), 
-            name: row.get("name"), 
-            url: row.get("url"), 
-            description: row.get("description"), 
-            rp_id: row.get("rp_id"), 
-            created: row.get("created"), 
-            updated: row.get("updated") 
+        Resource {
+            id: row.get("id"),
+            resource_local_id: row.get("resource_local_id"),
+            name: row.get("name"),
+            url: row.get("url"),
+            description: row.get("description"),
+            rp_id: row.get("rp_id"),
+            created: row.get("created"),
+            updated: row.get("updated"),
         }
     }
 }
 
 impl From<&PgRow> for Username {
     fn from(row: &PgRow) -> Self {
-        Username { 
-            id: row.get("id"), 
-            resource_id: row.get("resource_id"), 
-            resource_provider_login_id: row.get("resource_provider_login_id"), 
-            username: row.get("username"), 
-            created: row.get("created"), 
-            updated: row.get("updated") 
+        Username {
+            id: row.get("id"),
+            resource_id: row.get("resource_id"),
+            resource_provider_login_id: row.get("resource_provider_login_id"),
+            username: row.get("username"),
+            created: row.get("created"),
+            updated: row.get("updated"),
         }
     }
 }
@@ -54,23 +56,26 @@ impl From<&PgRow> for Username {
 impl From<&PgRow> for ResourceAccountLink {
     fn from(row: &PgRow) -> Self {
         ResourceAccountLink {
-            id:row.get("id"),
-            tms_identity:row.get("tms_identity"),
-            rp_account:row.get("rp_account"),
-            rp_id:row.get("rp_id"),
-            rp_name:row.get("rp_name"),
-            last_login:row.get("last_login"),
-            enabled:row.get("enabled"),
-            created:row.get("created"),
-            updated:row.get("updated"),
+            id: row.get("id"),
+            tms_identity: row.get("tms_identity"),
+            rp_account: row.get("rp_account"),
+            rp_id: row.get("rp_id"),
+            rp_name: row.get("rp_name"),
+            last_login: row.get("last_login"),
+            enabled: row.get("enabled"),
+            created: row.get("created"),
+            updated: row.get("updated"),
         }
     }
 }
 
 pub async fn db_add_or_update_resource<'a>(
-    tx: &mut PgTransaction<'a>, resource_local_id: String,
-    name: String, url: String, description: String,
-    rp_id: String
+    tx: &mut PgTransaction<'a>,
+    resource_local_id: String,
+    name: String,
+    url: String,
+    description: String,
+    rp_id: String,
 ) -> anyhow::Result<Resource> {
     match query(
         "INSERT INTO resources
@@ -91,15 +96,18 @@ pub async fn db_add_or_update_resource<'a>(
     .bind(description)
     .bind(rp_id)
     .fetch_one(&mut **tx)
-    .await {
+    .await
+    {
         Ok(row) => Ok(Resource::from(&row)),
         Err(error) => Err(anyhow!(error)),
     }
 }
 
 pub async fn db_add_or_update_username<'a>(
-    tx: &mut PgTransaction<'a>, resource_id: i32,
-    resource_provider_login_id: i32, username: String
+    tx: &mut PgTransaction<'a>,
+    resource_id: i32,
+    resource_provider_login_id: i32,
+    username: String,
 ) -> anyhow::Result<Username> {
     match query(
         "INSERT INTO usernames
@@ -110,7 +118,8 @@ pub async fn db_add_or_update_username<'a>(
                 username = excluded.username,
                 updated = now()
             RETURNING *
-    ") 
+    ",
+    )
     .bind(resource_id)
     .bind(resource_provider_login_id)
     .bind(username)
@@ -123,30 +132,40 @@ pub async fn db_add_or_update_username<'a>(
 }
 
 pub async fn db_add_or_update_resources_with_username<'a>(
-    tx: &mut PgTransaction<'a>, resources: Vec<ResourceForUser>,
-    rp_id: String, resource_provider_login_id: i32
+    tx: &mut PgTransaction<'a>,
+    resources: Vec<ResourceForUser>,
+    rp_id: String,
+    resource_provider_login_id: i32,
 ) -> anyhow::Result<()> {
     for resource_for_user in resources {
         let resource = db_add_or_update_resource(
-            tx, 
-            resource_for_user.resource_id , 
-            resource_for_user.name, 
-            resource_for_user.url, 
-            resource_for_user.description, 
-            rp_id.clone()).await?;
+            tx,
+            resource_for_user.resource_id,
+            resource_for_user.name,
+            resource_for_user.url,
+            resource_for_user.description,
+            rp_id.clone(),
+        )
+        .await?;
         let _username = db_add_or_update_username(
-            tx, 
-            resource.id, 
-            resource_provider_login_id, 
-            resource_for_user.username).await?;
+            tx,
+            resource.id,
+            resource_provider_login_id,
+            resource_for_user.username,
+        )
+        .await?;
     }
     Ok(())
 }
 
 pub async fn db_add_or_update_resource_account_login<'a>(
-    tx: &mut PgTransaction<'a>, tms_identity: String, rp_account: String,
-    rp_id: String, last_login: DateTime<Utc>,
-    rp_token: String, rp_token_refresh: String
+    tx: &mut PgTransaction<'a>,
+    tms_identity: String,
+    rp_account: String,
+    rp_id: String,
+    last_login: DateTime<Utc>,
+    rp_token: String,
+    rp_token_refresh: String,
 ) -> anyhow::Result<ResourceProviderLogin> {
     // login - insert implies enabled, but update will not change the enabled flag
     match query(
@@ -168,14 +187,18 @@ pub async fn db_add_or_update_resource_account_login<'a>(
     .bind(rp_token)
     .bind(rp_token_refresh)
     .fetch_one(&mut **tx)
-    .await {
+    .await
+    {
         Ok(row) => Ok(ResourceProviderLogin::from(&row)),
         Err(error) => Err(anyhow!(error)),
     }
 }
 pub async fn db_get_resource_provider_login<'a>(
-    tx: &mut PgTransaction<'a>, tms_identity: &String, rp_account: &String,
-    rp_id: &String, last_login: DateTime<Utc>,
+    tx: &mut PgTransaction<'a>,
+    tms_identity: &String,
+    rp_account: &String,
+    rp_id: &String,
+    last_login: DateTime<Utc>,
 ) -> anyhow::Result<Option<ResourceProviderLogin>> {
     let row = query("SELECT * FROM resource_provider_logins WHERE tms_identity = $1 and rp_account=$2 and rp_id=$3 and last_login >= $4 and enabled is true")
         .bind(tms_identity)
@@ -192,22 +215,31 @@ pub async fn db_get_resource_provider_login<'a>(
     }
 }
 pub async fn db_delete_resource_provider_link<'a>(
-    tx: &mut PgTransaction<'a>, tms_identity: &String, resource_provider_link_id: &i64
+    tx: &mut PgTransaction<'a>,
+    tms_identity: &String,
+    resource_provider_link_id: &i64,
 ) -> anyhow::Result<ResourceProviderLogin> {
     match query(
         "delete from resource_provider_logins where
                      tms_identity = $1 and id = $2 returning *",
-    ).bind(tms_identity)
-        .bind(resource_provider_link_id)
-        .fetch_one(&mut **tx)
-        .await {
+    )
+    .bind(tms_identity)
+    .bind(resource_provider_link_id)
+    .fetch_one(&mut **tx)
+    .await
+    {
         Ok(row) => Ok(ResourceProviderLogin::from(&row)),
-        Err(Error::RowNotFound) => Err(BadRequest(format!("Resource provider link id {} not found for tms_identity {}", resource_provider_link_id, tms_identity)).into()),
-        Err(error) => Err(anyhow!(error))
+        Err(Error::RowNotFound) => Err(BadRequest(format!(
+            "Resource provider link id {} not found for tms_identity {}",
+            resource_provider_link_id, tms_identity
+        ))
+        .into()),
+        Err(error) => Err(anyhow!(error)),
     }
 }
 pub async fn db_get_resource_provider_links_for_identity<'a>(
-    tx: &mut PgTransaction<'a>, tms_identity: &String
+    tx: &mut PgTransaction<'a>,
+    tms_identity: &String,
 ) -> anyhow::Result<HashSet<ResourceAccountLink>> {
     let row_result = match query(
         // this select needs all of the fields spelled out because of the join and naming, etc
@@ -216,11 +248,13 @@ pub async fn db_get_resource_provider_links_for_identity<'a>(
         from resource_provider_logins as rpal
         INNER JOIN identity_providers AS ip ON ip.id = rpal.rp_id
         WHERE tms_identity=$1 AND ip.supports_resources = true",
-    ).bind(tms_identity)
-        .fetch_all(&mut **tx)
-        .await {
+    )
+    .bind(tms_identity)
+    .fetch_all(&mut **tx)
+    .await
+    {
         Ok(rows) => Ok(rows),
-        Err(error) => Err(anyhow!(error))
+        Err(error) => Err(anyhow!(error)),
     };
 
     let mut account_logins: Vec<ResourceAccountLink> = vec![];
@@ -233,7 +267,15 @@ pub async fn db_get_resource_provider_links_for_identity<'a>(
 
 #[cfg(test)]
 mod tests {
-    use crate::{config::init_db, database_url, db::{allowed_redirects_dao::db_get_allowed_redirect, identity_provider_dao::db_get_login_provider_by_id, resource_provider_logins_dao::db_add_or_update_resource}};
+    use crate::{
+        config::init_db,
+        database_url,
+        db::{
+            allowed_redirects_dao::db_get_allowed_redirect,
+            identity_provider_dao::db_get_login_provider_by_id,
+            resource_provider_logins_dao::db_add_or_update_resource,
+        },
+    };
 
     #[tokio::test]
     async fn test_db_resource() -> anyhow::Result<()> {
@@ -241,12 +283,14 @@ mod tests {
         let db_pool = init_db(&db_string).await;
         let mut tx = db_pool.begin().await?;
         let rsrc = db_add_or_update_resource(
-            &mut tx, 
-            "local_id".to_string(), 
-            "Name of Resource".to_string(), 
-            "http://example.org".to_string(), 
-           "Description of Resource".to_string(), 
-           "implicit_mode_tacc_rp".to_string()).await?;
+            &mut tx,
+            "local_id".to_string(),
+            "Name of Resource".to_string(),
+            "http://example.org".to_string(),
+            "Description of Resource".to_string(),
+            "implicit_mode_tacc_rp".to_string(),
+        )
+        .await?;
         dbg!(&rsrc);
         tx.commit().await?;
         Ok(())
@@ -258,8 +302,11 @@ mod tests {
         let db_pool = init_db(&db_string).await;
         let mut tx = db_pool.begin().await?;
         let x = db_get_allowed_redirect(
-            &mut tx, &"tms".to_string(), &"http://localhost:8080/".to_string()
-        ).await?;
+            &mut tx,
+            &"tms".to_string(),
+            &"http://localhost:8080/".to_string(),
+        )
+        .await?;
         dbg!(x);
         Ok(())
     }
@@ -269,9 +316,7 @@ mod tests {
         let db_string = database_url()?;
         let db_pool = init_db(&db_string).await;
         let mut tx = db_pool.begin().await?;
-        let x = db_get_login_provider_by_id(
-            &mut tx, &"globus".to_string()
-        ).await?;
+        let x = db_get_login_provider_by_id(&mut tx, &"globus".to_string()).await?;
         dbg!(x);
         Ok(())
     }

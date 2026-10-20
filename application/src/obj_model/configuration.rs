@@ -11,14 +11,14 @@ use crate::obj_model::keys::Key;
 pub struct StateKey {
     #[allow(dead_code)]
     pub kid: String,
-    pub key: Key
+    pub key: Key,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct JwtConfig {
     pub default_expiration_minutes: u64,
     pub signing_key_kid: String,
-    pub key: Key
+    pub key: Key,
 }
 
 impl Default for JwtConfig {
@@ -26,7 +26,7 @@ impl Default for JwtConfig {
         Self {
             default_expiration_minutes: 60,
             signing_key_kid: Default::default(),
-            key: Default::default()
+            key: Default::default(),
         }
     }
 }
@@ -44,9 +44,9 @@ pub struct RuntimeConfig {
 
 impl Default for RuntimeConfig {
     fn default() -> Self {
-        Self { 
-            config_directory: "application/resources/config".into(), 
-            logging_config_file_name: "log4rs.yml".into()
+        Self {
+            config_directory: "application/resources/config".into(),
+            logging_config_file_name: "log4rs.yml".into(),
         }
     }
 }

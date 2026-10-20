@@ -1,8 +1,8 @@
-use std::collections::HashSet;
-use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, TokenData, Validation};
-use jsonwebtoken::jwk::JwkSet;
-use serde::Deserialize;
 use crate::utils::service_error::ServiceError::Internal;
+use jsonwebtoken::jwk::JwkSet;
+use jsonwebtoken::{Algorithm, DecodingKey, TokenData, Validation, decode, decode_header};
+use serde::Deserialize;
+use std::collections::HashSet;
 
 pub struct JwtDecoderBuilder {
     jwks_url: Option<String>,
@@ -32,7 +32,7 @@ impl JwtDecoderBuilder {
         self
     }
 
-    pub fn validate_aud(mut self, validate_aud:bool) -> Self {
+    pub fn validate_aud(mut self, validate_aud: bool) -> Self {
         self.validate_aud = validate_aud.clone();
         self
     }
