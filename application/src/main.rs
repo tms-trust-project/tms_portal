@@ -36,6 +36,7 @@ struct AppState {
     // that holds the key used to encrypt cookies
     // key: Key,
     db_pool: PgPool,
+    config: Configuration
 }
 
 fn database_url() -> anyhow::Result<String> {
@@ -71,11 +72,10 @@ async fn main() -> anyhow::Result<()> {
         // // TODO:  You probably don't wanna generate a new one each time the app starts though
         // key: Key::generate(),
         db_pool: init_db(&database_url_string).await,
+        config: Configuration::from_env()?
     };
 
-    let config = Configuration::get(&state.db_pool).await.expect("Unable to read configuration from the database");
-
-    init_logging(&config.runtime_config).await;
+    init_logging(&state.config.runtime_config).await;
     let cleanup_db_pool = state.db_pool.clone();
     spawn(async move {
         // TODO: configuration setting

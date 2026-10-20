@@ -1,4 +1,4 @@
-use crate::db::{config_dao::db_get_http_config, identity_provider_dao::db_get_login_provider_by_id};
+use crate::db::identity_provider_dao::db_get_login_provider_by_id;
 use crate::services::login_service::{get_identity_providers, handle_callback, logout, whoami};
 use tms_lib::utils::service_error::ServiceError::{BadRequest, Internal, Unauthorized};
 use crate::utils::oauth2_authorization_code_utils::{AuthCodeQueryParams, OAuth2State, CLIENT_ID_TMS, ROOT_COOKIE_PATH, STATE_COOKIE_NAME, TOKEN_COOKIE_NAME};
@@ -23,7 +23,6 @@ use time::OffsetDateTime;
 use crate::routes::api_obj_model::login::{AuthorizeRequest, IdentityProvider, WhoAmIResponse};
 use crate::routes::api_obj_model::tms_response::TmsResponse;
 use crate::utils::app_error::AppError;
-use crate::utils::configuration::Configuration;
 use crate::utils::jwt_utils::JwtValidator;
 use crate::utils::redirect_utils::{check_allowed_redirects, check_allowed_redirects_by_client_name};
 /*
@@ -59,9 +58,9 @@ pub async fn login_handler(
     // Portal login will always be the tms client id
     let mut tx = app_state.db_pool.begin().await?;
     let client_id = String::from(CLIENT_ID_TMS);
-    let configuration = Configuration::get(&app_state.db_pool).await?;
+    let configuration = &app_state.config;
     // always use the login idp from our configuration
-    let login_idp_id = configuration.oauth_config.login_oauth_provider;
+    let login_idp_id = &configuration.oauth_config.login_oauth_provider;
     let login_idp = db_get_login_provider_by_id(&mut tx, &login_idp_id).await;
 
     // we will not use this value, but we need to make sure this redirect uri is in the database.
@@ -79,7 +78,7 @@ pub async fn login_handler(
                     let mut tx = app_state.db_pool.begin().await?;
                     check_allowed_redirects_by_client_name(&mut tx, &return_client_name, &client_return_uri).await
                         .with_context(|| "Invalid redirect url for login")?;
-                    tx.commit();
+                    tx.commit().await?;
                 } else {
                     // if the client name was not specified, it's an error
                     return Err(BadRequest("Unable to lookup client return uri.  No client name specified".to_string()).into())
@@ -106,13 +105,13 @@ pub async fn login_handler(
                 client_state: None,
             };
 
-            let encoded_state = match encode_state(&app_state.db_pool, oauth_state).await {
+            let encoded_state = match encode_state(
+                &app_state.config,
+                oauth_state).await {
                 Ok(state_string) => state_string,
                 Err(error) => return Err(Internal(error.to_string()).into()),
             };
 
-            let mut tx = app_state.db_pool.begin().await?;
-            tx.commit().await?;
             let callback_url = &configuration.http_config.get_identity_provider_callback_url();
             let encoded_nonce = BASE64_STANDARD.encode(generate_nonce().to_ne_bytes());
             let mut query_params = vec![
@@ -166,10 +165,9 @@ pub async fn logout_handler(State(app_state): State<AppState>,
         (TOKEN_COOKIE_NAME, String::from("")))
         .path(ROOT_COOKIE_PATH));
 
-    let mut tx = app_state.db_pool.begin().await?;
-    let http_config = db_get_http_config(&mut tx).await?;
+    let http_config = &app_state.config.http_config;
     let mut headers = HashMap::new();
-    headers.insert("location".to_string(), http_config.base_url);
+    headers.insert("location".to_string(), http_config.base_url.clone());
     Ok((
         updated_jar,
         TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT)
@@ -211,6 +209,7 @@ pub async fn callback_handler(
 
     // exchange code for token (state validated in handle_callback)
     let (token, expires_in) = handle_callback(
+        &app_state.config,
         &app_state.db_pool,
         &query_params.state,
         &query_params.code,
@@ -221,7 +220,8 @@ pub async fn callback_handler(
     let expiration_time = Utc::now() + TimeDelta::seconds(expires_in);
 
     // redirect browser back to the post-login page (taken from state - validated in login step).
-    let decoded_state:OAuth2State = decode_state(&app_state.db_pool, &state_cookie.value().to_owned()).await?;
+    let decoded_state:OAuth2State = decode_state(
+        &app_state.config, &state_cookie.value().to_owned()).await?;
     let headers: HashMap<String, String> =
         HashMap::from_iter(vec![(LOCATION.to_string(), decoded_state.redirect_uri)].into_iter());
 

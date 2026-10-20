@@ -5,18 +5,18 @@ use sqlx::PgTransaction;
 
 pub async fn check_allowed_redirects<'a>( tx: &mut PgTransaction<'a>, client_id:&String, url:&String) -> Result<()> {
     // Check the allowed redirect, but ignore query params
-    let mut bareUrl = Url::parse(url)?;
-    bareUrl.set_query(None);
-    let _ = db_get_allowed_redirect(tx, &client_id, &bareUrl.to_string()).await
+    let mut bare_url = Url::parse(url)?;
+    bare_url.set_query(None);
+    let _ = db_get_allowed_redirect(tx, &client_id, &bare_url.to_string()).await
         .with_context(||format!("Requested redirect url: {0} is not found for client id: {1}",  url, client_id))?;
     Ok(())
 }
 
 pub async fn check_allowed_redirects_by_client_name<'a>( tx: &mut PgTransaction<'a>, client_name:&String, url:&String) -> Result<()> {
     // Check the allowed redirect, but ignore query params
-    let mut bareUrl = Url::parse(url)?;
-    bareUrl.set_query(None);
-    let _ = db_get_allowed_redirect_by_client_name(tx, &client_name, &bareUrl.to_string()).await
+    let mut bare_url = Url::parse(url)?;
+    bare_url.set_query(None);
+    let _ = db_get_allowed_redirect_by_client_name(tx, &client_name, &bare_url.to_string()).await
         .with_context(||format!("Requested redirect url: {0} is not found for client name: {1}",  url, client_name))?;
     Ok(())
 }

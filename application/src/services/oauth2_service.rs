@@ -13,7 +13,6 @@ use tms_lib::utils::oauth_utils::generate_nonce;
 use tms_lib::utils::service_error::ServiceError::{Internal, Unauthorized};
 use crate::db::auth_code_data_dao::{db_delete_auth_code_data, db_insert_auth_code_data};
 use crate::db::client_dao::{db_get_client_by_credentials,};
-use crate::db::config_dao::{db_get_http_config};
 use crate::db::identity_provider_dao::{db_get_login_provider_by_id};
 use crate::obj_model::identity_provider::IdentityProvider;
 use crate::services::login_service::AuthorizationCodeResponse;
@@ -47,11 +46,12 @@ fn generate_code() -> String {
         .collect()
 }
 
-pub async fn authorize_code(db_pool:&PgPool, state:&Option<String>, client_id:&String, redirect_uri:&String) -> anyhow::Result<AuthorizationResult> {
+pub async fn authorize_code(
+    configuration: &Configuration,
+    db_pool:&PgPool, state:&Option<String>, client_id:&String, redirect_uri:&String) -> anyhow::Result<AuthorizationResult> {
     // get what we need from the database
     let mut tx = db_pool.begin().await?;
 
-    let configuration = Configuration::get(&db_pool).await?;
     let idp = db_get_login_provider_by_id(&mut tx, &configuration.oauth_config.login_oauth_provider).await?;
 
     // Check redirect uri - this fails if the redirect doesnt exist
@@ -59,7 +59,7 @@ pub async fn authorize_code(db_pool:&PgPool, state:&Option<String>, client_id:&S
     tx.commit().await?;
 
     // encode our state
-    let encoded_state = get_state(&db_pool, &client_id,
+    let encoded_state = get_state(configuration, &client_id,
                                   redirect_uri, &idp.id, state).await?;
 
     // compute the location url that will be used for the redirect
@@ -112,7 +112,9 @@ async fn get_login_redirect_location(configuration:&Configuration,
 
     Ok(Url::parse_with_params(&identity_provider.identity_redirect_url, query_params)?)
 }
-async fn get_state(pool:&PgPool, client_id:&String, redirect_uri:&String, idp_id:&String,
+async fn get_state(
+    configuration: &Configuration,
+    client_id:&String, redirect_uri:&String, idp_id:&String,
                        state:&Option<String>) -> anyhow::Result<String> {
 
     // populate state structure
@@ -131,18 +133,19 @@ async fn get_state(pool:&PgPool, client_id:&String, redirect_uri:&String, idp_id
     };
 
     // encode state structure
-    match encode_state(pool, oauth_state).await.context("Unable to encode state") {
+    match encode_state(configuration, oauth_state).await.context("Unable to encode state") {
         Ok(state_string) => Ok(state_string),
         Err(error) => Err(Internal(error.to_string()).into()),
     }
 }
 
-pub async fn get_access_token_from_code(db_pool:&PgPool, client_id:&String, client_secret:&String, code:&String,
+pub async fn get_access_token_from_code(
+    configuration: &Configuration,
+    db_pool:&PgPool, client_id:&String, client_secret:&String, code:&String,
                                         redirect_uri:&String) -> anyhow::Result<TokenResponse> {
     // validate client id
     let mut tx = db_pool.begin().await?;
     let client = db_get_client_by_credentials(&mut tx, &client_id, client_secret).await?;
-    let configuration = Configuration::get(db_pool).await?;
 
     // validate redirect uri
     check_allowed_redirects(&mut tx,&client.client_id, &redirect_uri).await.with_context(||"OAuth redirect is invalid")?;
@@ -153,22 +156,24 @@ pub async fn get_access_token_from_code(db_pool:&PgPool, client_id:&String, clie
     // don't want it hanging around.
     // TODO: we could invalidate the record insted if we think it might help debuging / tracking errors down.  They would still need to be removed at some point, but we could do that once a day or whatever.  I prefer just deleting them I think.
     let auth_code_data = db_delete_auth_code_data(&mut tx, code, &client_id, &redirect_uri, time_delta).await?;
-    let idp = db_get_login_provider_by_id(&mut tx, &auth_code_data.idp_id).await?;
+    // let idp = db_get_login_provider_by_id(&mut tx, &auth_code_data.idp_id).await?;
     tx.commit().await?;
 
     let tms_token_claims = from_value(auth_code_data.claims)?;
-    let tms_token_string = make_auth_token(db_pool, &tms_token_claims).await?;
+    let tms_token_string = make_auth_token(configuration, db_pool, &tms_token_claims).await?;
 
     Ok(TokenResponse{
         access_token: tms_token_string.clone(),
         expires_at: tms_token_claims.get_expires_at()?,
         expires_in: tms_token_claims.get_expires_in()?,
+        // TODO: why are we creating an empty `id_token`
         id_token: String::from(""),
         jti: tms_token_claims.get_jti()?
     })
 }
 
 pub async fn get_provider_token(
+    configuration: &Configuration,
     pool: &PgPool,
     state: &String,
     code: &String,
@@ -178,7 +183,7 @@ pub async fn get_provider_token(
         return Err(Unauthorized("State cookies do not match".to_string()).into());
     }
 
-    let decoded_state:OAuth2State = decode_state(pool, state)
+    let decoded_state:OAuth2State = decode_state(configuration, state)
         .await
         .context("Unable to decode state query param")?;
 
@@ -186,24 +191,27 @@ pub async fn get_provider_token(
     let idp = db_get_login_provider_by_id(&mut tx, &decoded_state.idp_id)
         .await
         .context("Unable to get idp for database")?;
-    let http_config = db_get_http_config(&mut tx).await?;
+    let http_config = &configuration.http_config;
     tx.commit().await?;
 
     let token:AuthorizationCodeResponse = get_token_for_provider(&idp, &http_config.get_oauth_provider_callback_url(), code).await?;
     Ok(token.id_token)
 }
 
-pub async fn process_authorization_callback(db_pool:&PgPool, internal_oauth_state:&String, client_state:&String, code:&String) -> anyhow::Result<AuthorizationCallbackResult> {
+pub async fn process_authorization_callback(
+    configuration: &Configuration,
+    db_pool:&PgPool, internal_oauth_state:&String, client_state:&String, code:&String) -> anyhow::Result<AuthorizationCallbackResult> {
     // redirect browser back to the post-login page (taken from state - validated in login step).
-    let decoded_internal_state:OAuth2State = decode_state(db_pool, internal_oauth_state).await?;
+    let decoded_internal_state:OAuth2State = decode_state(
+        configuration,  internal_oauth_state).await?;
 
     let mut tx = db_pool.begin().await?;
-    let configuration= Configuration::get(db_pool).await?;
     let identity_provider = db_get_login_provider_by_id(&mut tx, &decoded_internal_state.idp_id).await?;
     tx.commit().await?;
 
     // exchange code for token (state validated in handle_callback)
     let provider_token = get_provider_token(
+        configuration,
         db_pool,
         client_state,
         code,

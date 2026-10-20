@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use crate::{db::{config_dao::db_get_http_config, resource_provider_logins_dao::db_add_or_update_resources_with_username}, obj_model::resources::ResourceForUser};
+use crate::{db::resource_provider_logins_dao::db_add_or_update_resources_with_username, obj_model::resources::ResourceForUser, utils::configuration::Configuration};
 use crate::db::identity_provider_dao::{db_get_resource_provider_by_id, db_get_resource_providers};
 use log::warn;
 use tms_lib::utils::service_error::ServiceError::{BadRequest, Internal};
@@ -93,6 +93,7 @@ pub async fn get_linked_resource_providers(security_context:&SecurityContext, db
     Ok(resource_provider_result)
 }
 pub async fn get_authenticate_redirect_info(
+    configuration: &Configuration,
     tms_identity: &String,
     db_pool: &PgPool,
     client_id: &String,
@@ -128,14 +129,13 @@ pub async fn get_authenticate_redirect_info(
         client_state: client_state.clone(),
     };
 
-    let encoded_state = match encode_state(&db_pool, oauth_state).await {
+    let encoded_state = match encode_state(
+        configuration, oauth_state).await {
         Ok(state_string) => state_string,
         Err(error) => return Err(Internal(error.to_string()).into()),
     };
 
-    let mut tx = db_pool.begin().await?;
-    let http_config = db_get_http_config(&mut tx).await?;
-    tx.commit().await?;
+    let http_config = &configuration.http_config;
     let mut nonce = [0u8; 12];
     OsRng.fill_bytes(&mut nonce);
     let nonce_slice = BASE64_STANDARD.encode(nonce);
@@ -164,6 +164,7 @@ pub async fn get_authenticate_redirect_info(
 }
 
 pub async fn get_resource_provider_token(
+    configuration: &Configuration,
     db_pool: &PgPool,
     provider_id: &String,
     tms_identity: &String,
@@ -171,7 +172,7 @@ pub async fn get_resource_provider_token(
 ) -> Result<(), AppError> {
     let mut tx = db_pool.begin().await?;
     let rp = db_get_resource_provider_by_id(&mut tx, provider_id).await?;
-    let http_config = db_get_http_config(&mut tx).await?;
+    let http_config = &configuration.http_config;
     tx.commit().await?;
 
     let reponse: ResourceProviderAuthorizationCodeResponse =

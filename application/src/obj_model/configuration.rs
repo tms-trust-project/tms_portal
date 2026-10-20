@@ -1,19 +1,34 @@
-use std::borrow::Cow;
 use anyhow::Context;
 use chrono::{DateTime, Duration, Utc};
 use log::trace;
-use serde::{Deserialize};
+use serde::Deserialize;
+use std::borrow::Cow;
 use url::Url;
+
+use crate::obj_model::keys::Key;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct StateKey {
+    #[allow(dead_code)]
     pub kid: String,
+    pub key: Key
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct JwtConfig {
-    pub default_expiration_minutes: String,
+    pub default_expiration_minutes: u64,
     pub signing_key_kid: String,
+    pub key: Key
+}
+
+impl Default for JwtConfig {
+    fn default() -> Self {
+        Self {
+            default_expiration_minutes: 60,
+            signing_key_kid: Default::default(),
+            key: Default::default()
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -26,6 +41,16 @@ pub struct RuntimeConfig {
     pub logging_config_file_name: String,
     // TODO:  put db host and db port in here?
 }
+
+impl Default for RuntimeConfig {
+    fn default() -> Self {
+        Self { 
+            config_directory: "application/resources/config".into(), 
+            logging_config_file_name: "log4rs.yml".into()
+        }
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct DelegationPolicyConfig {
     pub delegation_expiration: String,
@@ -36,7 +61,7 @@ impl DelegationPolicyConfig {
         match DateTime::parse_from_rfc3339(&self.delegation_expiration) {
             Ok(date_time) => Ok(date_time.with_timezone(&Utc)),
             Err(error) => {
-               Err(anyhow::anyhow!(error)).context("Parsing delegation expiration time string")
+                Err(anyhow::anyhow!(error)).context("Parsing delegation expiration time string")
             }
         }
     }
@@ -61,6 +86,22 @@ pub struct HttpConfig {
     pub revocation_endpoint: String,
     pub jwks_endpoint: String,
 }
+
+impl Default for HttpConfig {
+    fn default() -> Self {
+        Self {
+            base_url: Default::default(),
+            identity_provider_callback_endpoint: "login/callback".into(),
+            resource_provider_callback_endpoint: "resources/providers/callback".into(),
+            oauth_provider_callback_endpoint: "oauth2/callback".into(),
+            token_endpoint: "oauth2/token".into(),
+            authorization_endpoint: "oauth2/authorization".into(),
+            revocation_endpoint: "oauth2/token/revoke".into(),
+            jwks_endpoint: "jwks.json".into(),
+        }
+    }
+}
+
 impl HttpConfig {
     pub fn get_identity_provider_callback_url(&self) -> String {
         self.make_tms_url(&self.base_url, &self.identity_provider_callback_endpoint)
@@ -105,4 +146,3 @@ impl HttpConfig {
         String::default()
     }
 }
-

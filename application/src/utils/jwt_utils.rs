@@ -19,7 +19,6 @@ use uuid::{Uuid};
 use tms_lib::utils::jwt_decoder::JwtDecoderBuilder;
 use tms_lib::utils::jwt_encoder::JwtEncoderBuilder;
 use crate::AppState;
-use crate::db::config_dao::{db_get_jwt_config};
 use crate::db::issued_tokens_dao::{db_get_token, db_insert_token};
 use crate::db::keys_dao::db_get_key_by_id;
 use crate::obj_model::identity_provider::IdentityProviderType;
@@ -30,7 +29,6 @@ use crate::utils::oauth2_authorization_code_utils::CLIENT_ID_TMS;
 const DEFAULT_ALGORITHM: &str = "RS256";
 
 const CLAIM_SUB: &str = "sub";
-const CLAIM_IDP: &str = "identity_provider";
 const CLAIM_NAME: &str = "name";
 const CLAIM_IDP_DISPLAY_NAME: &str = "identity_provider_display_name";
 const CLAIM_ORGANIZATION: &str = "organization";
@@ -190,18 +188,17 @@ where {
 }
 
 pub async fn make_auth_token(
+    configuration: &Configuration,
     db_pool: &PgPool,
     // client_id: &String,
     // idp_id: &String,
     // idp_type: &IdentityProviderType,
     tms_token_claims: &TmsTokenClaims,
 ) -> Result<String> {
-    let mut tx = db_pool.begin().await?;
     // let http_config = db_get_http_config(&mut tx).await?;
-    let jwt_config = db_get_jwt_config(&mut tx).await?;
+    let jwt_config = &configuration.jwt_config;
     let kid = &jwt_config.signing_key_kid;
-    let keys = db_get_key_by_id(&mut tx, &kid).await?;
-    tx.commit().await?;
+    let keys = &jwt_config.key;
     // let tms_token_claims = get_tms_token_claims(&http_config,
     //         &jwt_config, &client_id, &idp_id, &idp_type, &claims).await?;
 
@@ -230,7 +227,7 @@ pub async fn get_tms_token_claims(configuration:&Configuration,
     let tms_subject = format!("{0}@{1}", &subject, &idp_id);
     let tms_username = tms_subject.clone();
 
-    let jwt_expiration_minutes = configuration.jwt_config.default_expiration_minutes.parse()?;
+    let jwt_expiration_minutes = configuration.jwt_config.default_expiration_minutes;
     let expiration = SystemTime::now() + Duration::from_mins(jwt_expiration_minutes);
     let tms_token_claims = TmsTokenClaims {
         jti: Value::from(Uuid::new_v4().to_string()),

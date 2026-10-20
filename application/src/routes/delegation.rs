@@ -1,4 +1,4 @@
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, State};
 use axum::{Json, Router};
 use axum::routing::{delete, get, post};
 use http::StatusCode;
@@ -17,10 +17,7 @@ pub struct AddDelegationRequest {
     resource_provider_id: String,
     resource_provider_account: String,
 }
-#[derive(Debug, Deserialize)]
-pub struct GetDelegationQueryParams {
-    client_name : Option<String>,
-}
+
 pub async fn router() -> Router<AppState> {
     Router::new()
         .route("/delegations", post(add_delegation_handler))
@@ -33,7 +30,9 @@ pub async fn add_delegation_handler(State(app_state): State<AppState>,
                                     JwtValidator(security_context): JwtValidator,
                                     Json(add_delegation_request): Json<AddDelegationRequest>,
                                     ) -> anyhow::Result<TmsResponse<Delegation>, AppError> {
-    let delegation = add_delegation(&app_state.db_pool, &security_context,
+    let delegation = add_delegation(
+        &app_state.config,
+        &app_state.db_pool, &security_context,
         &add_delegation_request.client_name, &add_delegation_request.resource_provider_id,
         &add_delegation_request.resource_provider_account).await?;
     Ok(TmsResponse::builder(StatusCode::OK).entity(delegation.into()).build())

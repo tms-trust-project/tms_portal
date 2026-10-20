@@ -12,6 +12,8 @@ impl From<&PgRow> for TmsIdentity {
         }
     }
 }
+
+#[allow(dead_code)]
 pub async fn db_get_tms_identity<'a>(
     tx: &mut PgTransaction<'a>,
     tms_identity: &String,

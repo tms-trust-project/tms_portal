@@ -46,6 +46,7 @@ pub async fn get_identity_providers(pool: &PgPool) -> Result<HashSet<IdentityPro
 }
 
 pub async fn handle_callback(
+    configuration: &Configuration,
     db_pool: &PgPool,
     state: &String,
     code: &String,
@@ -55,7 +56,7 @@ pub async fn handle_callback(
         return Err(Unauthorized("State cookies do not match".to_string()).into());
     }
 
-    let decoded_state:OAuth2State = decode_state(db_pool, state)
+    let decoded_state:OAuth2State = decode_state(configuration, state)
         .await
         .context("Unable to decode state query param")?;
 
@@ -63,7 +64,6 @@ pub async fn handle_callback(
     let idp = db_get_login_provider_by_id(&mut tx, &decoded_state.idp_id)
         .await
         .context("Unable to get idp for database")?;
-    let configuration = Configuration::get(db_pool).await?;
     tx.commit().await?;
 
 
@@ -81,7 +81,7 @@ pub async fn handle_callback(
     let tms_identity = tms_token_claims.get_sub()?;
     db_insert_tms_identity_if_absent(&mut tx, &tms_identity).await?;
     tx.commit().await?;
-    let tms_token = make_auth_token(db_pool, &tms_token_claims).await?;
+    let tms_token = make_auth_token(configuration, db_pool, &tms_token_claims).await?;
     Ok((tms_token, tms_token_claims.get_expires_in()?))
 }
 

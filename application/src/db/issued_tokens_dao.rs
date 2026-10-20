@@ -30,6 +30,8 @@ pub async fn db_get_token<'a>(
         })?;
     Ok(IssuedToken::from(&row))
 }
+
+#[allow(dead_code)]
 pub async fn db_delete_token<'a>(
     tx: &mut PgTransaction<'a>,
     token: &String,

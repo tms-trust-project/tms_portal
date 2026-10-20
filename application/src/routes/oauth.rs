@@ -85,6 +85,7 @@ struct OAuthAuthorizeRequest {
     response_type: ResponseType,
     client_id: String,
     redirect_uri: String,
+    #[allow(dead_code)]
     scope: Option<String>,
     state: Option<String>,
 }
@@ -97,6 +98,7 @@ struct OAuthTokenRequest {
     pub grant_type: GrantType,
     pub redirect_uri: String,
     pub code: Option<String>,
+    #[allow(dead_code)]
     pub refresh_token: Option<String>,
 }
 
@@ -129,7 +131,9 @@ async fn authorize_handler(State(app_state): State<AppState>, jar:CookieJar,
     match query_params.response_type {
         // code - oauth authorization code flow
         ResponseType::Code => {
-            let authorization_result = authorize_code(&app_state.db_pool, &query_params.state, &query_params.client_id, &query_params.redirect_uri).await?;
+            let authorization_result = authorize_code(
+                &app_state.config,
+                &app_state.db_pool, &query_params.state, &query_params.client_id, &query_params.redirect_uri).await?;
 
             let updated_jar = jar.add(
                 Cookie::build((STATE_COOKIE_NAME, authorization_result.encoded_state))
@@ -161,7 +165,9 @@ async fn tokens_handler(State(app_state): State<AppState>,
         // handle authorization code flow
         GrantType::AuthorizationCode => {
             if let Some(code) = &oauth_token_request.code {
-                let token_response = get_access_token_from_code(&app_state.db_pool, &oauth_token_request.client_id,
+                let token_response = get_access_token_from_code(
+                    &app_state.config,
+                    &app_state.db_pool, &oauth_token_request.client_id,
                                                        &oauth_token_request.client_secret, &code,
                                                        &oauth_token_request.redirect_uri).await?;
                 Ok(TmsResponse::builder(StatusCode::OK)
@@ -191,6 +197,7 @@ async fn callback_handler(
 
     // handle the callback logic
     let authorization_callback_result = process_authorization_callback(
+        &app_state.config,
         &app_state.db_pool, &state_cookie.value().to_owned(), &query_params.state, &query_params.code).await?;
 
     let removal_cookie = Cookie::build(
