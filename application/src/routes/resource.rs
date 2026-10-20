@@ -118,10 +118,7 @@ pub async fn list_resource_provider_handler(
     let linked_only = query_params.linked_only.unwrap_or(false);
     let result =
         get_resource_providers(&security_context, &app_state.db_pool, &linked_only).await?;
-    let response = result
-        .iter()
-        .map(ResourceProvider::from)
-        .collect();
+    let response = result.iter().map(ResourceProvider::from).collect();
     Ok(TmsResponse::builder(StatusCode::OK)
         .entity(response)
         .build())
@@ -148,10 +145,7 @@ pub async fn get_linked_resource_provider_handler(
     JwtValidator(security_context): JwtValidator,
 ) -> Result<TmsResponse<HashSet<ResourceAccountLink>>, AppError> {
     let result = get_linked_resource_providers(&security_context, &app_state.db_pool).await?;
-    let response = result
-        .iter()
-        .map(ResourceAccountLink::from)
-        .collect();
+    let response = result.iter().map(ResourceAccountLink::from).collect();
     Ok(TmsResponse::builder(StatusCode::OK)
         .entity(response)
         .build())

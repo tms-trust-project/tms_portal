@@ -274,11 +274,6 @@ pub async fn get_idp_handler(
 ) -> anyhow::Result<TmsResponse<HashSet<IdentityProvider>>, AppError> {
     let idp_result = get_identity_providers(&app_state.db_pool).await?;
     Ok(TmsResponse::builder(StatusCode::OK)
-        .entity(
-            idp_result
-                .iter()
-                .map(IdentityProvider::from)
-                .collect(),
-        )
+        .entity(idp_result.iter().map(IdentityProvider::from).collect())
         .build())
 }
