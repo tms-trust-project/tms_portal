@@ -31,5 +31,7 @@ jobs:
         run: pnpm run lint
       - name: Check formatting
         run: pnpm exec prettier --check '**/*.{ts,tsx}'
+      - name: build
+        run: pnpm run build
       - name: Test
         run: pnpm exec vitest run --coverage
