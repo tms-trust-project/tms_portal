@@ -7,6 +7,11 @@ import { defineConfig } from "vite"
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  define: {
+    __REDIRECT_URI__: JSON.stringify(
+      process.env.REDIRECT_URI || "https://tms-portal.savanna.tacc.cloud/"
+    ),
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "./src"),
