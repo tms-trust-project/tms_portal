@@ -8,9 +8,7 @@ import { defineConfig } from "vite"
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   define: {
-    __REDIRECT_URI__: JSON.stringify(
-      process.env.REDIRECT_URI || "https://tms-portal.savanna.tacc.cloud/"
-    ),
+    __REDIRECT_URI__: JSON.stringify(process.env.REDIRECT_URI),
   },
   resolve: {
     alias: {

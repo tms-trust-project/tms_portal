@@ -34,4 +34,4 @@ jobs:
       - name: build
         run: pnpm run build
       - name: Test
-        run: pnpm exec vitest run --coverage
+        run: pnpm test run --coverage
