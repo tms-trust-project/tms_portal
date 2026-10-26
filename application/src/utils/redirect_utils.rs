@@ -1,3 +1,4 @@
+use log::info;
 use url::Url;
 use crate::db::allowed_redirects_dao::{db_get_allowed_redirect, db_get_allowed_redirect_by_client_name};
 use anyhow::{Context, Result};
@@ -7,6 +8,7 @@ pub async fn check_allowed_redirects<'a>( tx: &mut PgTransaction<'a>, client_id:
     // Check the allowed redirect, but ignore query params
     let mut bareUrl = Url::parse(url)?;
     bareUrl.set_query(None);
+    info!("before db_get_allowed: {0}, {1}", &client_id, &bareUrl.to_string());
     let _ = db_get_allowed_redirect(tx, &client_id, &bareUrl.to_string()).await
         .with_context(||format!("Requested redirect url: {0} is not found for client id: {1}",  url, client_id))?;
     Ok(())

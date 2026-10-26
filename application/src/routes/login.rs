@@ -1,5 +1,6 @@
 use crate::db::{config_dao::db_get_http_config, identity_provider_dao::db_get_login_provider_by_id};
 use crate::services::login_service::{get_identity_providers, handle_callback, logout, whoami};
+use log::info;
 use tms_lib::utils::service_error::ServiceError::{BadRequest, Internal, Unauthorized};
 use crate::utils::oauth2_authorization_code_utils::{AuthCodeQueryParams, OAuth2State, CLIENT_ID_TMS, ROOT_COOKIE_PATH, STATE_COOKIE_NAME, TOKEN_COOKIE_NAME};
 use crate::{AppState};
@@ -64,6 +65,7 @@ pub async fn login_handler(
     let login_idp_id = configuration.oauth_config.login_oauth_provider;
     let login_idp = db_get_login_provider_by_id(&mut tx, &login_idp_id).await;
 
+    info!("client_id: {0}, redirect: {1}", &client_id, &form_data.redirect_uri);
     // we will not use this value, but we need to make sure this redirect uri is in the database.
     check_allowed_redirects(&mut tx, &client_id, &form_data.redirect_uri).await
         .with_context(||"Invalid login redirect")?;

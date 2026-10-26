@@ -27,7 +27,7 @@ RUN apt update
 RUN apt-get install -y less 
 
 # Install vi.
-RUN apt-get install -y vim-tiny
+RUN apt-get install -y vim-tiny postgresql-client iputils-ping
 
 # Install ca certs
 RUN apt-get install -y ca-certificates
