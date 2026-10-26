@@ -79,6 +79,7 @@ pub async fn login_handler(
                 if let Some(return_client_name) = &form_data.client_name {
                     // check to make sure the client name / return uri are in the allowed list
                     let mut tx = app_state.db_pool.begin().await?;
+                    info!("before allowed redirect by name: client: {0}, redirect: {1}", &return_client_name, &client_return_uri);
                     check_allowed_redirects_by_client_name(&mut tx, &return_client_name, &client_return_uri).await
                         .with_context(|| "Invalid redirect url for login")?;
                     tx.commit();

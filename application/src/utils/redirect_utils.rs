@@ -11,6 +11,7 @@ pub async fn check_allowed_redirects<'a>( tx: &mut PgTransaction<'a>, client_id:
     info!("before db_get_allowed: {0}, {1}", &client_id, &bareUrl.to_string());
     let _ = db_get_allowed_redirect(tx, &client_id, &bareUrl.to_string()).await
         .with_context(||format!("Requested redirect url: {0} is not found for client id: {1}",  url, client_id))?;
+    info!("after db_get_allowrd");
     Ok(())
 }
 
