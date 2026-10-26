@@ -21,7 +21,7 @@ export function UserMenu() {
         role="link"
         nativeButton={false}
         render={
-          <a href="/login?idp_id=globus_idp&redirect_uri=https://tms-portal.savanna.tacc.cloud/">
+          <a href="/login?idp_id=globus_idp&redirect_uri=https://tms-portal.savanna-staging.tacc.cloud/">
             <LogIn /> Log In
           </a>
         }
