@@ -54,7 +54,7 @@ function App() {
           <div>
             Please{" "}
             <a
-              href="/login?idp_id=globus_idp&redirect_uri=https://tms-portal-staging.savanna.tacc.cloud/"
+              href={`/login?idp_id=globus_idp&redirect_uri=${__REDIRECT_URI__}`}
               className="text-primary underline-offset-4 hover:underline"
             >
               log in

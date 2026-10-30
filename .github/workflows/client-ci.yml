@@ -2,7 +2,9 @@ name: Client CI
 
 on:
   push:
+    branches: [master]
   pull_request:
+    branches: ["**"]
 
 permissions:
   contents: read
@@ -29,5 +31,7 @@ jobs:
         run: pnpm run lint
       - name: Check formatting
         run: pnpm exec prettier --check '**/*.{ts,tsx}'
+      - name: build
+        run: pnpm run build
       - name: Test
-        run: pnpm exec vitest run --coverage
+        run: pnpm test run --coverage
