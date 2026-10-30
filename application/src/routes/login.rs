@@ -66,6 +66,7 @@ pub async fn login_handler(
     let login_idp = db_get_login_provider_by_id(&mut tx, &login_idp_id).await;
 
     info!("client_id: {0}, redirect: {1}", &client_id, &form_data.redirect_uri);
+    info!("login_idp_id: {0}, login_idp: {1:?}", &login_idp_id, &login_idp);
     // we will not use this value, but we need to make sure this redirect uri is in the database.
     check_allowed_redirects(&mut tx, &client_id, &form_data.redirect_uri).await
         .with_context(||"Invalid login redirect")?;
