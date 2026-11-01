@@ -146,6 +146,7 @@ pub async fn login_handler(
             let authorization = format!("Basic {}", BASE64_STANDARD.encode(&creds));
             headers.insert("Authorization".to_string(), authorization);
 
+            info!("Redirecting to location: {location}");
             Ok((
                 updated_jar,
                 TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT)
