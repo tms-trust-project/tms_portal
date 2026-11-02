@@ -8,14 +8,17 @@ import {
   CardDescription,
 } from "@/components/ui/card"
 
-import { Building2, UserRound } from "lucide-react"
+import { Building2, Settings, UserRound } from "lucide-react"
 import { type ProviderLink } from "@/tms-hooks"
 import { UnlinkButton } from "./UnlinkButton"
+import { LinkSuccessAlert } from "./LinkSuccessAlert"
+import { Button } from "../ui/button"
 
 export function ProviderCard({
   provider,
   children,
 }: React.PropsWithChildren<{ provider: ProviderLink; identity?: string }>) {
+  const stateParam = new URLSearchParams(window.location.search).get("state")
   return (
     <Card className="border-border/60 shadow-sm">
       <CardHeader>
@@ -38,7 +41,20 @@ export function ProviderCard({
 
       <CardContent className="space-y-4">
         <div>
-          <h2 className="text-base font-semibold">Current Delegations</h2>
+          <h2 className="text-base font-semibold">
+            Current Delegations{" "}
+            {stateParam && (
+              <LinkSuccessAlert
+                trigger={
+                  <Button variant="outline" size="sm" className="ml-1">
+                    <Settings />
+                    Manage
+                  </Button>
+                }
+              />
+            )}{" "}
+          </h2>
+
           <p className="text-sm text-muted-foreground">
             View and manage delegations associated with this resource provider.
           </p>

@@ -26,8 +26,14 @@ export function LinkIdentityModal() {
   const { data: providerList } = useListProviders()
   const { data: providerLinkList } = useListProviderLinks()
   const searchParams = new URLSearchParams(window.location.search)
-  const returnUri = searchParams.get("client_return_uri")
-  const clientName = searchParams.get("client_name")
+
+  const stateParam = new URLSearchParams(window.location.search).get("state")
+  const linkState = stateParam ? JSON.parse(stateParam) : null
+
+  const returnUri =
+    searchParams.get("client_return_uri") ?? linkState?.returnUri
+  const clientName = searchParams.get("client_name") ?? linkState?.clientName
+
   const linkStateRawParam = searchParams.get("state")
   const linkStateParams = linkStateRawParam
     ? JSON.parse(linkStateRawParam)
