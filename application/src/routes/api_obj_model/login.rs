@@ -1,6 +1,6 @@
+use crate::obj_model;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use crate::obj_model;
 
 #[derive(Debug, Serialize)]
 pub struct WhoAmIResponse {

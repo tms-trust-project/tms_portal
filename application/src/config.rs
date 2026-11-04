@@ -1,10 +1,10 @@
-use std::path::Path;
-use sqlx::postgres::PgPoolOptions;
-use sqlx::PgPool;
-use log::info;
 use crate::obj_model::configuration::RuntimeConfig;
+use log::info;
+use sqlx::PgPool;
+use sqlx::postgres::PgPoolOptions;
+use std::path::Path;
 
-pub async fn init_db(connection_url: &String) -> PgPool {
+pub async fn init_db(connection_url: &str) -> PgPool {
     // unwrap - panic and exist if we can't conenct to db
     PgPoolOptions::new()
         .max_connections(5)

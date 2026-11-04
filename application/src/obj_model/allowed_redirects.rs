@@ -7,4 +7,3 @@ pub struct AllowedRedirect {
     pub created: DateTime<Utc>,
     pub updated: DateTime<Utc>,
 }
-

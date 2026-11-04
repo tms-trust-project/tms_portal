@@ -1,8 +1,8 @@
+use crate::routes::api_obj_model::tms_response::TmsResponse;
 use axum::body::Body;
 use axum::response::{IntoResponse, Response};
 use http::StatusCode;
 use serde::Serialize;
-use crate::routes::api_obj_model::tms_response::TmsResponse;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ApiResponseBody<T>
@@ -39,10 +39,10 @@ where
             builder = builder.header(http::header::CONTENT_TYPE, "application/json");
         };
 
-        if let Ok(json_string) = serde_json::ser::to_string(&result) {
-            if let Ok(response) = builder.body(Body::from(json_string)) {
-                return response;
-            };
+        if let Ok(json_string) = serde_json::ser::to_string(&result)
+            && let Ok(response) = builder.body(Body::from(json_string))
+        {
+            return response;
         };
 
         internal_error_response("Unable to build response")

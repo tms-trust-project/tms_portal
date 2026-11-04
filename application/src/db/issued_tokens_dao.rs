@@ -1,9 +1,9 @@
-use chrono::{DateTime, Utc};
-use log::{info};
-use tms_lib::utils::service_error::ServiceError::NotFound;
-use sqlx::postgres::PgRow;
-use sqlx::{query, PgTransaction, Row};
 use crate::obj_model::oauth::IssuedToken;
+use chrono::{DateTime, Utc};
+use log::info;
+use sqlx::postgres::PgRow;
+use sqlx::{PgTransaction, Row, query};
+use tms_lib::utils::service_error::ServiceError::NotFound;
 
 impl From<&PgRow> for IssuedToken {
     fn from(row: &PgRow) -> Self {
@@ -25,11 +25,13 @@ pub async fn db_get_token<'a>(
         .fetch_one(&mut **tx)
         .await
         .map_err(|error| match error {
-            sqlx::Error::RowNotFound => NotFound(format!("Token not found")).into(),
+            sqlx::Error::RowNotFound => NotFound("Token not found".to_string()).into(),
             _ => anyhow::anyhow!(error),
         })?;
     Ok(IssuedToken::from(&row))
 }
+
+#[allow(dead_code)]
 pub async fn db_delete_token<'a>(
     tx: &mut PgTransaction<'a>,
     token: &String,

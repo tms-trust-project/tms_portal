@@ -1,8 +1,8 @@
+use crate::obj_model::delegation::Delegation;
 use chrono::{DateTime, Utc};
 use sqlx::postgres::PgRow;
-use sqlx::{query, PgTransaction, Row};
+use sqlx::{PgTransaction, Row, query};
 use tms_lib::utils::service_error::ServiceError::NotFound;
-use crate::obj_model::delegation::Delegation;
 
 impl From<&PgRow> for Delegation {
     fn from(row: &PgRow) -> Self {
@@ -21,18 +21,25 @@ impl From<&PgRow> for Delegation {
 }
 pub async fn db_insert_delegation<'a>(
     tx: &mut PgTransaction<'a>,
-    client_id: & String, rp_account: & String, expires_at: &DateTime<Utc>,
-    tms_identity: &String, rp_id: &String) -> anyhow::Result<Delegation> {
+    client_id: &String,
+    rp_account: &String,
+    expires_at: &DateTime<Utc>,
+    tms_identity: &String,
+    rp_id: &String,
+) -> anyhow::Result<Delegation> {
     // on conflict do update ... really does nothing, but it ensures that a record is returned
-    let delegation_id:i32 = query("INSERT INTO delegations (client_id, rp_account, expires_at,
-                         tms_identity, rp_id) VALUES ($1, $2, $3, $4, $5) RETURNING id")
-        .bind(client_id)
-        .bind(rp_account)
-        .bind(expires_at)
-        .bind(tms_identity)
-        .bind(rp_id)
-        .fetch_one(&mut **tx)
-        .await?.get("id");
+    let delegation_id: i32 = query(
+        "INSERT INTO delegations (client_id, rp_account, expires_at,
+                         tms_identity, rp_id) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+    )
+    .bind(client_id)
+    .bind(rp_account)
+    .bind(expires_at)
+    .bind(tms_identity)
+    .bind(rp_id)
+    .fetch_one(&mut **tx)
+    .await?
+    .get("id");
 
     let row = query("SELECT dlgs.*, cl.name FROM delegations dlgs LEFT JOIN clients cl ON dlgs.client_id = cl.client_id WHERE dlgs.id = $1")
         .bind(delegation_id)
@@ -43,8 +50,9 @@ pub async fn db_insert_delegation<'a>(
 }
 pub async fn db_get_delegations<'a>(
     tx: &mut PgTransaction<'a>,
-    client_id: & Option<String>, tms_identity: &String) -> anyhow::Result<Vec<Delegation>> {
-
+    client_id: &Option<String>,
+    tms_identity: &String,
+) -> anyhow::Result<Vec<Delegation>> {
     let rows= match client_id {
         Some(client_id) => {
             query("SELECT dlgs.*, cl.name FROM delegations dlgs LEFT JOIN clients cl ON dlgs.client_id = cl.client_id WHERE client_id = $1 AND tms_identity = $2")
@@ -69,7 +77,10 @@ pub async fn db_get_delegations<'a>(
 }
 pub async fn db_delete_delegation<'a>(
     tx: &mut PgTransaction<'a>,
-    tms_identity:&String, client_id: & String, delegation_id: i32) -> anyhow::Result<Delegation> {
+    tms_identity: &String,
+    client_id: &String,
+    delegation_id: i32,
+) -> anyhow::Result<Delegation> {
     // on conflict do update ... really does nothing, but it ensures that a record is returned
     let row = query("DELETE FROM delegations dlgs USING clients cl WHERE dlgs.client_id = cl.client_id AND dlgs.tms_identity=$1 AND dlgs.client_id=$2 AND dlgs.id=$3 RETURNING *")
         .bind(tms_identity)

@@ -1,7 +1,7 @@
-use tms_lib::utils::service_error::ServiceError::NotFound;
-use sqlx::postgres::PgRow;
-use sqlx::{query, PgTransaction, Row};
 use crate::obj_model::client::Client;
+use sqlx::postgres::PgRow;
+use sqlx::{PgTransaction, Row, query};
+use tms_lib::utils::service_error::ServiceError::NotFound;
 
 impl From<&PgRow> for Client {
     fn from(row: &PgRow) -> Self {
@@ -25,7 +25,9 @@ pub async fn db_get_client_by_id<'a>(
         .fetch_one(&mut **tx)
         .await
         .map_err(|error| match error {
-            sqlx::Error::RowNotFound => NotFound(format!("Client id {} not found", client_id)).into(),
+            sqlx::Error::RowNotFound => {
+                NotFound(format!("Client id {} not found", client_id)).into()
+            }
             _ => anyhow::anyhow!(error),
         })?;
     Ok(Client::from(&row))
@@ -39,7 +41,9 @@ pub async fn db_get_client_by_name<'a>(
         .fetch_one(&mut **tx)
         .await
         .map_err(|error| match error {
-            sqlx::Error::RowNotFound => NotFound(format!("Client with name '{}' not found", client_name)).into(),
+            sqlx::Error::RowNotFound => {
+                NotFound(format!("Client with name '{}' not found", client_name)).into()
+            }
             _ => anyhow::anyhow!(error),
         })?;
     Ok(Client::from(&row))
@@ -49,16 +53,16 @@ pub async fn db_get_client_by_credentials<'a>(
     client_id: &String,
     secret: &String,
 ) -> anyhow::Result<Client> {
-    let row = query(
-        "select * from clients where client_id = $1 and secret = $2",
-    )
-    .bind(client_id)
-    .bind(secret)
-    .fetch_one(&mut **tx)
-    .await
-    .map_err(|error| match error {
-        sqlx::Error::RowNotFound => NotFound(format!("Client id {} not found", client_id)).into(),
-        _ => anyhow::anyhow!(error),
-    })?;
+    let row = query("select * from clients where client_id = $1 and secret = $2")
+        .bind(client_id)
+        .bind(secret)
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(|error| match error {
+            sqlx::Error::RowNotFound => {
+                NotFound(format!("Client id {} not found", client_id)).into()
+            }
+            _ => anyhow::anyhow!(error),
+        })?;
     Ok(Client::from(&row))
 }
