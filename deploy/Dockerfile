@@ -13,6 +13,8 @@ COPY ./client/package.json ./client/pnpm-lock.yaml ./client/pnpm-workspace.yaml 
 WORKDIR /client
 RUN pnpm install
 COPY ./client/ /client/
+
+ARG REDIRECT_URI
 RUN pnpm run build
 
 
