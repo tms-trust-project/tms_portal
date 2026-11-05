@@ -6,6 +6,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,7 +16,7 @@ import {
   AlertTitle,
 } from "@/components/ui/alert"
 import { CheckCircle2Icon, InfoIcon } from "lucide-react"
-import { useState } from "react"
+import React, { useState } from "react"
 import { useDelegateProvider } from "@/tms-hooks/useDelegate"
 import { useListDelegations, useListProviderLinks } from "@/tms-hooks"
 import { Spinner } from "@/components/ui/spinner"
@@ -29,11 +30,17 @@ type LinkState = {
   providerId?: string
 }
 
-export function LinkSuccessAlert() {
+export function LinkSuccessAlert({
+  trigger,
+}: {
+  trigger?: React.ReactElement
+}) {
   const stateParam = new URLSearchParams(window.location.search).get("state")
   const linkState = stateParam ? (JSON.parse(stateParam) as LinkState) : null
   const { clientName, providerId, providerName, returnUri } = linkState ?? {}
-  const [isOpen, setIsOpen] = useState(linkState?.result === "success")
+  const [isOpen, setIsOpen] = useState(
+    !trigger && linkState?.result === "success"
+  )
 
   const { data: delegations } = useListDelegations()
   const { data: linkedProviders } = useListProviderLinks()
@@ -60,6 +67,7 @@ export function LinkSuccessAlert() {
 
   return (
     <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
+      {trigger && <AlertDialogTrigger render={trigger} />}
       <AlertDialogContent className="data-[size=default]:sm:max-w-xl">
         <AlertDialogHeader>
           <AlertDialogTitle>Authentication Successful</AlertDialogTitle>

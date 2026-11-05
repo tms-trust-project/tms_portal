@@ -82,6 +82,18 @@ const delegationsStub = {
   ],
 }
 
+const clientsStub = {
+  status: "200 OK",
+  result: [
+    {
+      id: 100,
+      name: "Link Test",
+      description: "The science gateway for the XYZ project.",
+      uri: "http://localhost:8000",
+    },
+  ],
+}
+
 export const handlers = [
   // Add global delay of 5ms to prevent skipping render of loading states
   http.all("*", async () => {
@@ -131,4 +143,7 @@ export const handlers = [
       })
     }
   ),
+  http.get("/clients", () => {
+    return HttpResponse.json(clientsStub)
+  }),
 ]
