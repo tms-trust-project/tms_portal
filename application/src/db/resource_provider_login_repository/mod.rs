@@ -1,4 +1,4 @@
-pub mod text_fixtures;
+pub mod test_fixtures;
 
 use crate::obj_model::resources::ResourceProviderLogin;
 use crate::ports::resource_provider_login::ResourceProviderLoginRepository;

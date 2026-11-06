@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use crate::{
     db::{
-        client_repository::text_fixtures::{MockClientRepo, MockClientReturnType},
-        delegation_repository::text_fixtures::{MockDelegationRepo, MockDelegationReturnType},
-        resource_provider_login_repository::text_fixtures::{
+        client_repository::test_fixtures::{MockClientRepo, MockClientReturnType},
+        delegation_repository::test_fixtures::{MockDelegationRepo, MockDelegationReturnType},
+        resource_provider_login_repository::test_fixtures::{
             MockResourceProviderLoginRepo, MockResourceProviderLoginReturnType,
         },
     },

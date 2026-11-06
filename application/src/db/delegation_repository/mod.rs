@@ -1,4 +1,4 @@
-pub mod text_fixtures;
+pub mod test_fixtures;
 
 use crate::obj_model::delegation::Delegation;
 use crate::ports::delegation::DelegationRepository;
