@@ -1,5 +1,5 @@
 use crate::AppState;
-use crate::db::client_dao::db_get_client_by_id;
+use crate::db::client_repository::get_client_by_id;
 use crate::routes::api_obj_model::tms_response::TmsResponse;
 use crate::utils::app_error::AppError;
 use axum::extract::{Path, State};
@@ -87,7 +87,7 @@ pub async fn jwks_json_handler(
 ) -> Result<TmsResponse<JwkSet>, AppError> {
     let mut tx = app_state.db_pool.begin().await?;
     // lookup client ot make sure it's a real client id
-    let _client = db_get_client_by_id(&mut tx, &client_id).await?;
+    let _client = get_client_by_id(&mut tx, &client_id).await?;
     let jwt_config = &app_state.config.jwt_config;
     let key = &jwt_config.key;
     tx.commit().await?;

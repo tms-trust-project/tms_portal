@@ -1,6 +1,6 @@
 use crate::AppState;
 use crate::db::issued_tokens_dao::{db_get_token, db_insert_token};
-use crate::db::keys_dao::db_get_key_by_id;
+use crate::db::keys_dao::get_key_by_id;
 use crate::obj_model::identity_provider::IdentityProviderType;
 use crate::utils::app_error::AppError;
 use crate::utils::configuration::Configuration;
@@ -44,6 +44,17 @@ pub struct SecurityContext {
     pub client_id: String,
     pub is_tms_client: bool,
 }
+
+impl SecurityContext {
+    pub fn token_matches_client(&self, client_id: &String) -> bool {
+        if self.is_tms_client {
+            true
+        } else {
+            self.client_id == *client_id
+        }
+    }
+}
+
 pub struct JwtValidator(pub SecurityContext);
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TmsTokenClaims {
@@ -121,7 +132,7 @@ async fn get_token_claims(db_pool: &PgPool, token: &String) -> Result<TmsTokenCl
         return Err(Unauthorized("Token is expired or revoked".to_string()).into());
     }
     let key = match token_header.kid {
-        Some(kid) => db_get_key_by_id(&mut tx, &kid).await,
+        Some(kid) => get_key_by_id(&mut tx, &kid).await,
         None => return Err(BadRequest(String::from("Unable to find key for jwt")).into()),
     }?;
     tx.commit().await?;
@@ -298,11 +309,4 @@ fn get_datetime_from_value(value: &Value) -> Result<DateTime<Utc>> {
         return Err(Internal("Unable to determine expiration for token".to_string()).into());
     };
     Ok(datetime)
-}
-pub fn token_matches_client(security_context: &SecurityContext, client_id: &String) -> bool {
-    if security_context.is_tms_client {
-        true
-    } else {
-        security_context.client_id == *client_id
-    }
 }

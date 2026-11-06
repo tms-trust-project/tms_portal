@@ -4,7 +4,7 @@ use crate::obj_model::resources::{
 use anyhow::anyhow;
 use chrono::{DateTime, Utc};
 use sqlx::postgres::PgRow;
-use sqlx::{Error, PgTransaction, Row, query};
+use sqlx::{query, Error, PgPool, PgTransaction, Row};
 use std::collections::HashSet;
 use tms_lib::utils::service_error::ServiceError::BadRequest;
 
@@ -193,28 +193,34 @@ pub async fn db_add_or_update_resource_account_login<'a>(
         Err(error) => Err(anyhow!(error)),
     }
 }
+
 pub async fn db_get_resource_provider_login<'a>(
-    tx: &mut PgTransaction<'a>,
-    tms_identity: &String,
-    rp_account: &String,
-    rp_id: &String,
+    db_pool: &PgPool,
+    tms_identity: &str,
+    rp_account: &str,
+    rp_id: &str,
     last_login: DateTime<Utc>,
+    enabled: bool
 ) -> anyhow::Result<Option<ResourceProviderLogin>> {
-    let row = query("SELECT * FROM resource_provider_logins WHERE tms_identity = $1 and rp_account=$2 and rp_id=$3 and last_login >= $4 and enabled is true")
+    let row = query("SELECT * FROM resource_provider_logins WHERE tms_identity = $1 and rp_account=$2 and rp_id=$3 and last_login >= $4 and enabled is $5")
         .bind(tms_identity)
         .bind(rp_account)
         .bind(rp_id)
         .bind(last_login)
-        .fetch_optional(&mut **tx)
-        .await.map_err( |error| anyhow::anyhow!(error))?;
+        .bind(enabled)
+        .fetch_optional(db_pool)
+        .await
+        .map_err( |error| anyhow::anyhow!(error))?;
+
     match row {
         Some(row) => Ok(Some(ResourceProviderLogin::from(&row))),
         None => Ok(None),
     }
 }
+
 pub async fn db_delete_resource_provider_link<'a>(
     tx: &mut PgTransaction<'a>,
-    tms_identity: &String,
+    tms_identity: &str,
     resource_provider_link_id: &i64,
 ) -> anyhow::Result<ResourceProviderLogin> {
     match query(
@@ -237,7 +243,7 @@ pub async fn db_delete_resource_provider_link<'a>(
 }
 pub async fn db_get_resource_provider_links_for_identity<'a>(
     tx: &mut PgTransaction<'a>,
-    tms_identity: &String,
+    tms_identity: &str,
 ) -> anyhow::Result<HashSet<ResourceAccountLink>> {
     let row_result = match query(
         // this select needs all of the fields spelled out because of the join and naming, etc
@@ -269,8 +275,8 @@ mod tests {
         config::init_db,
         database_url,
         db::{
-            allowed_redirects_dao::db_get_allowed_redirect,
-            identity_provider_dao::db_get_login_provider_by_id,
+            allowed_redirects_dao::get_allowed_redirect,
+            identity_provider_dao::get_login_provider_by_id,
             resource_provider_logins_dao::db_add_or_update_resource,
         },
     };
@@ -299,7 +305,7 @@ mod tests {
         let db_string = database_url()?;
         let db_pool = init_db(&db_string).await;
         let mut tx = db_pool.begin().await?;
-        let x = db_get_allowed_redirect(
+        let x = get_allowed_redirect(
             &mut tx,
             &"tms".to_string(),
             &"http://localhost:8080/".to_string(),
@@ -314,7 +320,7 @@ mod tests {
         let db_string = database_url()?;
         let db_pool = init_db(&db_string).await;
         let mut tx = db_pool.begin().await?;
-        let x = db_get_login_provider_by_id(&mut tx, &"globus".to_string()).await?;
+        let x = get_login_provider_by_id(&mut tx, &"globus".to_string()).await?;
         dbg!(x);
         Ok(())
     }

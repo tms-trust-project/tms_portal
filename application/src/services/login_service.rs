@@ -1,6 +1,6 @@
-use crate::db::identity_provider_dao::{db_get_login_provider_by_id, db_get_login_providers};
+use crate::db::identity_provider_dao::{get_login_provider_by_id, get_login_providers};
 use crate::db::issued_tokens_dao::db_revoke_token;
-use crate::db::keys_dao::db_get_key_by_id;
+use crate::db::keys_dao::get_key_by_id;
 use crate::db::tms_identities_dao::db_insert_tms_identity_if_absent;
 use crate::obj_model::identity_provider::{IdentityProvider, IdentityProviderType};
 use crate::obj_model::login::WhoAmIResponse;
@@ -36,7 +36,7 @@ pub struct AuthorizationCodeResponse {
 }
 pub async fn get_identity_providers(pool: &PgPool) -> Result<HashSet<IdentityProvider>> {
     let mut tx = pool.begin().await?;
-    let idps = db_get_login_providers(&mut tx).await?;
+    let idps = get_login_providers(&mut tx).await?;
     tx.commit().await?;
 
     let mut idp_result = HashSet::new();
@@ -62,7 +62,7 @@ pub async fn handle_callback(
         .context("Unable to decode state query param")?;
 
     let mut tx = db_pool.begin().await?;
-    let idp = db_get_login_provider_by_id(&mut tx, &decoded_state.idp_id)
+    let idp = get_login_provider_by_id(&mut tx, &decoded_state.idp_id)
         .await
         .context("Unable to get idp for database")?;
     tx.commit().await?;
@@ -109,7 +109,7 @@ pub async fn whoami(db_pool: &PgPool, token: &String) -> anyhow::Result<WhoAmIRe
     let token_header = decode_header(token)?;
     let mut tx = db_pool.begin().await?;
     let key = match token_header.kid {
-        Some(kid) => db_get_key_by_id(&mut tx, &kid).await,
+        Some(kid) => get_key_by_id(&mut tx, &kid).await,
         None => return Err(BadRequest(String::from("Unable to find key for jwt")).into()),
     }?;
     tx.commit().await?;

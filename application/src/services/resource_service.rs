@@ -1,4 +1,4 @@
-use crate::db::identity_provider_dao::{db_get_resource_provider_by_id, db_get_resource_providers};
+use crate::db::identity_provider_dao::{get_resource_provider_by_id, list_resource_providers};
 use crate::db::resource_provider_logins_dao::{
     db_add_or_update_resource_account_login, db_delete_resource_provider_link,
     db_get_resource_provider_links_for_identity,
@@ -72,7 +72,7 @@ pub async fn get_resource_providers(
 ) -> Result<HashSet<ResourceProvider>> {
     let mut tx = db_pool.begin().await?;
     let rps =
-        db_get_resource_providers(&mut tx, &security_context.tms_identity, linked_only).await?;
+        list_resource_providers(&mut tx, &security_context.tms_identity, linked_only).await?;
     tx.commit().await?;
 
     let mut resource_provider_result = HashSet::new();
@@ -123,7 +123,7 @@ pub async fn get_authenticate_redirect_info(
     client_state: &Option<String>,
 ) -> Result<ResourceProviderAuthorizeInfo, AppError> {
     let mut tx = db_pool.begin().await?;
-    let rp = db_get_resource_provider_by_id(&mut tx, provider_id)
+    let rp = get_resource_provider_by_id(&mut tx, provider_id)
         .await
         .with_context(|| {
             format!(
@@ -198,7 +198,7 @@ pub async fn get_resource_provider_token(
     code: &String,
 ) -> Result<(), AppError> {
     let mut tx = db_pool.begin().await?;
-    let rp = db_get_resource_provider_by_id(&mut tx, provider_id).await?;
+    let rp = get_resource_provider_by_id(&mut tx, provider_id).await?;
     let http_config = &configuration.http_config;
     tx.commit().await?;
 

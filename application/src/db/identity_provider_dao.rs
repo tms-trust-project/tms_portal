@@ -39,7 +39,7 @@ impl TryFrom<&PgRow> for IdentityProvider {
 /*
 Returns the list of identity providers that support login
  */
-pub async fn db_get_login_providers<'a>(
+pub async fn get_login_providers<'a>(
     tx: &mut PgTransaction<'a>,
 ) -> Result<HashSet<IdentityProvider>> {
     let idp_query_result = query(
@@ -62,7 +62,7 @@ pub async fn db_get_login_providers<'a>(
 /*
 Returns an identity provider by id if it supports login
  */
-pub async fn db_get_login_provider_by_id<'a>(
+pub async fn get_login_provider_by_id<'a>(
     tx: &mut PgTransaction<'a>,
     id: &String,
 ) -> Result<IdentityProvider> {
@@ -85,7 +85,7 @@ pub async fn db_get_login_provider_by_id<'a>(
 /*
 Returns the list of identity providers that support resources
  */
-pub async fn db_get_resource_providers<'a>(
+pub async fn list_resource_providers<'a>(
     tx: &mut PgTransaction<'a>,
     tms_identity: &String,
     linked_only: &bool,
@@ -121,7 +121,7 @@ pub async fn db_get_resource_providers<'a>(
 /*
 Returns an identity provider by id if it supports resources
  */
-pub async fn db_get_resource_provider_by_id<'a>(
+pub async fn get_resource_provider_by_id<'a>(
     tx: &mut PgTransaction<'a>,
     provider_id: &str,
 ) -> Result<IdentityProvider> {

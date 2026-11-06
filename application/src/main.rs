@@ -6,11 +6,18 @@ mod obj_model;
 mod routes;
 mod services;
 mod utils;
+mod ports;
+
+use std::sync::Arc;
 
 use crate::config::{init_db, init_logging};
 use crate::routes::{delegation, login, oauth, resource, well_known};
+use crate::services::delegation_service::DelegationService;
 use anyhow::Context;
 use axum::body::Body;
+use db::client_repository::PostgresClientRepository;
+use db::delegation_repository::PostgresDelegationRepository;
+use db::resource_provider_login_repository::PostgresResourceProviderLoginRepository;
 //use axum_extra::extract::cookie::Key;
 use crate::db::issued_tokens_dao::db_cleanup_tokens;
 use crate::utils::app_error::AppError;
@@ -31,12 +38,13 @@ use tracing::instrument;
 use url::Url;
 use uuid::Uuid;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 struct AppState {
     // that holds the key used to encrypt cookies
     // key: Key,
     db_pool: PgPool,
     config: Configuration,
+    delegation_service: DelegationService,
 }
 
 fn database_url() -> anyhow::Result<String> {
@@ -69,13 +77,26 @@ fn database_url() -> anyhow::Result<String> {
 async fn main() -> anyhow::Result<()> {
     let database_url_string = database_url()?;
     dbg!(&database_url_string);
+    let db_pool = init_db(&database_url_string).await;
+    let config = Configuration::from_env()?;
+    let client_repo = PostgresClientRepository::new(db_pool.clone());
+    let delegation_repo = PostgresDelegationRepository::new(db_pool.clone());
+    let resource_provider_login_repo =
+        PostgresResourceProviderLoginRepository::new(db_pool.clone());
+    let delegation_service = DelegationService::new(
+        Arc::new(client_repo),
+        Arc::new(delegation_repo),
+        Arc::new(resource_provider_login_repo),
+        config.delegation_policy_config.clone(),
+    );
     let state = AppState {
         // // Generate a secure key
         // //
         // // TODO:  You probably don't wanna generate a new one each time the app starts though
         // key: Key::generate(),
-        db_pool: init_db(&database_url_string).await,
-        config: Configuration::from_env()?,
+        db_pool: db_pool.clone(),
+        delegation_service,
+        config,
     };
 
     init_logging(&state.config.runtime_config).await;
@@ -143,6 +164,7 @@ async fn main() -> anyhow::Result<()> {
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", &port))
         .await
         .unwrap();
+    
     Ok(axum::serve(listener, app).await?)
 }
 

@@ -1,3 +1,5 @@
+pub mod test_fixtures;
+
 use chrono::{DateTime, Utc};
 
 #[derive(Debug)]

@@ -24,7 +24,7 @@ impl TryFrom<&PgRow> for AuthCodeData {
         })
     }
 }
-pub async fn db_delete_auth_code_data<'a>(
+pub async fn delete_auth_code_data<'a>(
     tx: &mut PgTransaction<'a>,
     auth_code: &String,
     client_id: &String,
@@ -47,7 +47,7 @@ pub async fn db_delete_auth_code_data<'a>(
         Err(error) => Err(anyhow!(error)),
     }
 }
-pub async fn db_insert_auth_code_data<'a>(
+pub async fn insert_auth_code_data<'a>(
     tx: &mut PgTransaction<'a>,
     auth_code: &String,
     client_id: &String,

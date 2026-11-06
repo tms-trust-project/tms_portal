@@ -15,7 +15,7 @@ impl From<&PgRow> for Key {
     }
 }
 
-pub async fn db_get_key_by_id<'a>(tx: &mut PgTransaction<'a>, kid: &String) -> anyhow::Result<Key> {
+pub async fn get_key_by_id<'a>(tx: &mut PgTransaction<'a>, kid: &String) -> anyhow::Result<Key> {
     let row = query("select * from keys where kid = $1")
         .bind(kid)
         .fetch_one(&mut **tx)

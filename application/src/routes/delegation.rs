@@ -1,7 +1,6 @@
 use crate::AppState;
 use crate::routes::api_obj_model::delegations::Delegation;
 use crate::routes::api_obj_model::tms_response::TmsResponse;
-use crate::services::delegation_service::{add_delegation, delete_delegation, get_delegations};
 use crate::utils::app_error::AppError;
 use crate::utils::jwt_utils::JwtValidator;
 use axum::extract::{Path, State};
@@ -37,15 +36,16 @@ pub async fn add_delegation_handler(
     JwtValidator(security_context): JwtValidator,
     Json(add_delegation_request): Json<AddDelegationRequest>,
 ) -> anyhow::Result<TmsResponse<Delegation>, AppError> {
-    let delegation = add_delegation(
-        &app_state.config,
-        &app_state.db_pool,
-        &security_context,
-        &add_delegation_request.client_name,
-        &add_delegation_request.resource_provider_id,
-        &add_delegation_request.resource_provider_account,
-    )
-    .await?;
+    let delegation = app_state
+        .delegation_service
+        .add_delegation(
+            &security_context,
+            &add_delegation_request.client_name,
+            &add_delegation_request.resource_provider_id,
+            &add_delegation_request.resource_provider_account,
+        )
+        .await?;
+    
     Ok(TmsResponse::builder(StatusCode::OK)
         .entity(delegation.into())
         .build())
@@ -56,8 +56,10 @@ pub async fn get_delegations_handler_with_client(
     Path(client_name): Path<String>,
     JwtValidator(security_context): JwtValidator,
 ) -> anyhow::Result<TmsResponse<Vec<Delegation>>, AppError> {
-    let delegations =
-        get_delegations(&app_state.db_pool, &security_context, &Some(client_name)).await?;
+    let delegations = app_state
+        .delegation_service
+        .get_delegations(&security_context, &Some(client_name))
+        .await?;
     let mut result_delegations = Vec::with_capacity(delegations.len());
     for delegation in delegations {
         result_delegations.push(delegation.into());
@@ -71,7 +73,10 @@ pub async fn get_delegations_handler(
     State(app_state): State<AppState>,
     JwtValidator(security_context): JwtValidator,
 ) -> anyhow::Result<TmsResponse<Vec<Delegation>>, AppError> {
-    let delegations = get_delegations(&app_state.db_pool, &security_context, &None).await?;
+    let delegations = app_state
+        .delegation_service
+        .get_delegations(&security_context, &None)
+        .await?;
     let mut result_delegations = Vec::with_capacity(delegations.len());
     for delegation in delegations {
         result_delegations.push(delegation.into());
@@ -86,13 +91,10 @@ pub async fn delete_delegations_handler(
     Path((client_name, delegation_id)): Path<(String, i32)>,
     JwtValidator(security_context): JwtValidator,
 ) -> anyhow::Result<TmsResponse<Delegation>, AppError> {
-    let delegation = delete_delegation(
-        &app_state.db_pool,
-        &security_context,
-        &client_name,
-        delegation_id,
-    )
-    .await?;
+    let delegation = app_state
+        .delegation_service
+        .delete_delegation(&security_context, &client_name, delegation_id)
+        .await?;
     Ok(TmsResponse::builder(StatusCode::OK)
         .entity(delegation.into())
         .build())

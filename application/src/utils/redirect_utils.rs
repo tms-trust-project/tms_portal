@@ -1,5 +1,5 @@
 use crate::db::allowed_redirects_dao::{
-    db_get_allowed_redirect, db_get_allowed_redirect_by_client_name,
+    get_allowed_redirect, get_allowed_redirect_by_client_name,
 };
 use anyhow::{Context, Result};
 use sqlx::PgTransaction;
@@ -13,7 +13,7 @@ pub async fn check_allowed_redirects<'a>(
     // Check the allowed redirect, but ignore query params
     let mut bare_url = Url::parse(url)?;
     bare_url.set_query(None);
-    let _ = db_get_allowed_redirect(tx, client_id, bare_url.as_ref())
+    let _ = get_allowed_redirect(tx, client_id, bare_url.as_ref())
         .await
         .with_context(|| {
             format!(
@@ -32,7 +32,7 @@ pub async fn check_allowed_redirects_by_client_name<'a>(
     // Check the allowed redirect, but ignore query params
     let mut bare_url = Url::parse(url)?;
     bare_url.set_query(None);
-    let _ = db_get_allowed_redirect_by_client_name(tx, client_name, bare_url.as_ref())
+    let _ = get_allowed_redirect_by_client_name(tx, client_name, bare_url.as_ref())
         .await
         .with_context(|| {
             format!(

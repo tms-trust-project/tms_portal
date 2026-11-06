@@ -15,7 +15,7 @@ impl From<&PgRow> for AllowedRedirect {
     }
 }
 
-pub async fn db_get_allowed_redirect<'a>(
+pub async fn get_allowed_redirect<'a>(
     tx: &mut PgTransaction<'a>,
     client_id: &str,
     redirect_uri: &str,
@@ -32,7 +32,7 @@ pub async fn db_get_allowed_redirect<'a>(
         Err(error) => Err(anyhow!(error)),
     }
 }
-pub async fn db_get_allowed_redirect_by_client_name<'a>(
+pub async fn get_allowed_redirect_by_client_name<'a>(
     tx: &mut PgTransaction<'a>,
     client_name: &str,
     redirect_uri: &str,

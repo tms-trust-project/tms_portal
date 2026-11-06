@@ -1,6 +1,6 @@
-use crate::db::auth_code_data_dao::{db_delete_auth_code_data, db_insert_auth_code_data};
-use crate::db::client_dao::db_get_client_by_credentials;
-use crate::db::identity_provider_dao::db_get_login_provider_by_id;
+use crate::db::auth_code_data_dao::{delete_auth_code_data, insert_auth_code_data};
+use crate::db::client_repository::get_client_by_credentials;
+use crate::db::identity_provider_dao::get_login_provider_by_id;
 use crate::obj_model::identity_provider::IdentityProvider;
 use crate::services::login_service::AuthorizationCodeResponse;
 use crate::utils::configuration::Configuration;
@@ -60,7 +60,7 @@ pub async fn authorize_code(
     let mut tx = db_pool.begin().await?;
 
     let idp =
-        db_get_login_provider_by_id(&mut tx, &configuration.oauth_config.login_oauth_provider)
+        get_login_provider_by_id(&mut tx, &configuration.oauth_config.login_oauth_provider)
             .await?;
 
     // Check redirect uri - this fails if the redirect doesnt exist
@@ -103,7 +103,7 @@ pub async fn generate_code_and_redirect(
     .await?;
 
     let mut tx = pool.begin().await?;
-    db_insert_auth_code_data(
+    insert_auth_code_data(
         &mut tx,
         &auth_code,
         &state.client_id,
@@ -190,7 +190,7 @@ pub async fn get_access_token_from_code(
 ) -> anyhow::Result<TokenResponse> {
     // validate client id
     let mut tx = db_pool.begin().await?;
-    let client = db_get_client_by_credentials(&mut tx, client_id, client_secret).await?;
+    let client = get_client_by_credentials(&mut tx, client_id, client_secret).await?;
 
     // validate redirect uri
     check_allowed_redirects(&mut tx, &client.client_id, redirect_uri)
@@ -203,7 +203,7 @@ pub async fn get_access_token_from_code(
     // don't want it hanging around.
     // TODO: we could invalidate the record insted if we think it might help debuging / tracking errors down.  They would still need to be removed at some point, but we could do that once a day or whatever.  I prefer just deleting them I think.
     let auth_code_data =
-        db_delete_auth_code_data(&mut tx, code, client_id, redirect_uri, time_delta).await?;
+        delete_auth_code_data(&mut tx, code, client_id, redirect_uri, time_delta).await?;
     // let idp = db_get_login_provider_by_id(&mut tx, &auth_code_data.idp_id).await?;
     tx.commit().await?;
 
@@ -236,7 +236,7 @@ pub async fn get_provider_token(
         .context("Unable to decode state query param")?;
 
     let mut tx = pool.begin().await?;
-    let idp = db_get_login_provider_by_id(&mut tx, &decoded_state.idp_id)
+    let idp = get_login_provider_by_id(&mut tx, &decoded_state.idp_id)
         .await
         .context("Unable to get idp for database")?;
     let http_config = &configuration.http_config;
@@ -260,7 +260,7 @@ pub async fn process_authorization_callback(
 
     let mut tx = db_pool.begin().await?;
     let identity_provider =
-        db_get_login_provider_by_id(&mut tx, &decoded_internal_state.idp_id).await?;
+        get_login_provider_by_id(&mut tx, &decoded_internal_state.idp_id).await?;
     tx.commit().await?;
 
     // exchange code for token (state validated in handle_callback)

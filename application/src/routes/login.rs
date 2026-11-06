@@ -1,5 +1,5 @@
 use crate::AppState;
-use crate::db::identity_provider_dao::db_get_login_provider_by_id;
+use crate::db::identity_provider_dao::get_login_provider_by_id;
 use crate::routes::api_obj_model::login::{AuthorizeRequest, IdentityProvider, WhoAmIResponse};
 use crate::routes::api_obj_model::tms_response::TmsResponse;
 use crate::services::login_service::{get_identity_providers, handle_callback, logout, whoami};
@@ -66,7 +66,7 @@ pub async fn login_handler(
     let configuration = &app_state.config;
     // always use the login idp from our configuration
     let login_idp_id = &configuration.oauth_config.login_oauth_provider;
-    let login_idp = db_get_login_provider_by_id(&mut tx, login_idp_id).await;
+    let login_idp = get_login_provider_by_id(&mut tx, login_idp_id).await;
 
     // we will not use this value, but we need to make sure this redirect uri is in the database.
     check_allowed_redirects(&mut tx, &client_id, &form_data.redirect_uri)
