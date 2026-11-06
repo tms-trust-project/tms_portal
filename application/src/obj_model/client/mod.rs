@@ -2,7 +2,7 @@ pub mod test_fixtures;
 
 use chrono::{DateTime, Utc};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Client {
     #[allow(dead_code)]
     pub id: i32,

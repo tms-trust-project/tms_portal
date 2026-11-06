@@ -1,3 +1,5 @@
+use std::sync::Mutex;
+
 use chrono::{DateTime, Utc};
 
 use crate::{
@@ -6,60 +8,33 @@ use crate::{
 };
 
 pub struct MockDelegationRepo {
-    return_type: MockDelegationReturnType,
+    delegations: Mutex<Vec<Delegation>>,
+    error: Option<String>,
 }
 
 impl MockDelegationRepo {
-    pub fn new(return_type: MockDelegationReturnType) -> Self {
-        Self { return_type }
-    }
-}
-
-pub enum MockDelegationReturnType {
-    Error,
-    Delegation,
-}
-
-impl MockDelegationReturnType {
-    pub fn delegation(
-        client_id: Option<&str>,
-        rp_account: Option<&str>,
-        expires_at: Option<DateTime<Utc>>,
-        tms_identity: Option<&str>,
-        rp_id: Option<&str>,
-        delegation_id: Option<i32>,
-    ) -> Delegation {
-        let mut builder = DelegationBuilder::new();
-
-        if let Some(client_id) = client_id {
-            builder = builder.with_client_id(client_id.into());
+    pub fn new(initial_state: Vec<Delegation>) -> Self {
+        Self {
+            delegations: Mutex::new(initial_state),
+            error: None,
         }
-
-        if let Some(rp_account) = rp_account {
-            builder = builder.with_rp_account(rp_account.into());
-        }
-
-        if let Some(expires_at) = expires_at {
-            builder = builder.with_expires_at(expires_at);
-        }
-
-        if let Some(tms_identity) = tms_identity {
-            builder = builder.with_tms_identity(tms_identity.into());
-        }
-
-        if let Some(rp_id) = rp_id {
-            builder = builder.with_rp_id(rp_id.into());
-        }
-
-        if let Some(delegation_id) = delegation_id {
-            builder = builder.with_id(delegation_id);
-        }
-
-        builder.build()
     }
 
-    pub fn error(msg: Option<&str>) -> anyhow::Error {
-        anyhow::Error::msg(msg.unwrap_or("Error").to_string())
+    pub fn with_error(mut self, error: impl Into<String>) -> Self {
+        self.error = Some(error.into());
+        self
+    }
+
+    fn configured_error(&self) -> Option<anyhow::Error> {
+        self.error
+            .as_ref()
+            .map(|error| anyhow::Error::msg(error.clone()))
+    }
+
+    fn lock_delegations(&self) -> anyhow::Result<std::sync::MutexGuard<'_, Vec<Delegation>>> {
+        self.delegations
+            .lock()
+            .map_err(|_| anyhow::Error::msg("Mock delegation repository lock poisoned"))
     }
 }
 
@@ -73,35 +48,43 @@ impl DelegationRepository for MockDelegationRepo {
         tms_identity: &str,
         rp_id: &str,
     ) -> anyhow::Result<Delegation> {
-        match self.return_type {
-            MockDelegationReturnType::Delegation => Ok(MockDelegationReturnType::delegation(
-                Some(client_id),
-                Some(rp_account),
-                Some(*expires_at),
-                Some(tms_identity),
-                Some(rp_id),
-                None,
-            )),
-            MockDelegationReturnType::Error => Err(MockDelegationReturnType::error(Some(
-                "Failed to save delegation",
-            ))),
+        if let Some(error) = self.configured_error() {
+            return Err(error);
         }
+
+        let mut delegations = self.lock_delegations()?;
+        let next_id = delegations
+            .iter()
+            .map(|delegation| delegation.id)
+            .max()
+            .unwrap_or(0)
+            + 1;
+        let delegation = DelegationBuilder::new()
+            .with_id(next_id)
+            .with_client_id(client_id.into())
+            .with_rp_account(rp_account.into())
+            .with_expires_at(*expires_at)
+            .with_tms_identity(tms_identity.into())
+            .with_rp_id(rp_id.into())
+            .build();
+
+        delegations.push(delegation.clone());
+
+        Ok(delegation)
     }
 
     async fn list_all(&self, tms_identity: &str) -> anyhow::Result<Vec<Delegation>> {
-        match self.return_type {
-            MockDelegationReturnType::Delegation => Ok(vec![MockDelegationReturnType::delegation(
-                None,
-                None,
-                None,
-                Some(tms_identity),
-                None,
-                None,
-            )]),
-            MockDelegationReturnType::Error => Err(MockDelegationReturnType::error(Some(
-                "Failed to list delegations",
-            ))),
+        if let Some(error) = self.configured_error() {
+            return Err(error);
         }
+
+        let delegations = self.lock_delegations()?;
+
+        Ok(delegations
+            .iter()
+            .filter(|delegation| delegation.tms_identity == tms_identity)
+            .cloned()
+            .collect())
     }
 
     async fn list_by_client_id(
@@ -109,19 +92,19 @@ impl DelegationRepository for MockDelegationRepo {
         client_id: &str,
         tms_identity: &str,
     ) -> anyhow::Result<Vec<Delegation>> {
-        match self.return_type {
-            MockDelegationReturnType::Delegation => Ok(vec![MockDelegationReturnType::delegation(
-                Some(client_id),
-                None,
-                None,
-                Some(tms_identity),
-                None,
-                None,
-            )]),
-            MockDelegationReturnType::Error => Err(MockDelegationReturnType::error(Some(
-                "Failed to list delegations by client id",
-            ))),
+        if let Some(error) = self.configured_error() {
+            return Err(error);
         }
+
+        let delegations = self.lock_delegations()?;
+
+        Ok(delegations
+            .iter()
+            .filter(|delegation| {
+                delegation.client_id == client_id && delegation.tms_identity == tms_identity
+            })
+            .cloned()
+            .collect())
     }
 
     async fn delete(
@@ -130,18 +113,20 @@ impl DelegationRepository for MockDelegationRepo {
         client_id: &str,
         delegation_id: i32,
     ) -> anyhow::Result<Delegation> {
-        match self.return_type {
-            MockDelegationReturnType::Delegation => Ok(MockDelegationReturnType::delegation(
-                Some(client_id),
-                None,
-                None,
-                Some(tms_identity),
-                None,
-                Some(delegation_id),
-            )),
-            MockDelegationReturnType::Error => Err(MockDelegationReturnType::error(Some(
-                "Failed to delete delegation",
-            ))),
+        if let Some(error) = self.configured_error() {
+            return Err(error);
         }
+
+        let mut delegations = self.lock_delegations()?;
+        let index = delegations
+            .iter()
+            .position(|delegation| {
+                delegation.id == delegation_id
+                    && delegation.client_id == client_id
+                    && delegation.tms_identity == tms_identity
+            })
+            .ok_or_else(|| anyhow::Error::msg("Delegation not found"))?;
+
+        Ok(delegations.remove(index))
     }
 }

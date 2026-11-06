@@ -1,70 +1,68 @@
 use crate::{
-    obj_model::client::{
-        Client,
-        test_fixtures::ClientBuilder,
-    },
-    ports::client::ClientRepository
+    obj_model::client::Client,
+    ports::client::ClientRepository,
 };
 
 pub struct MockClientRepo {
-    return_type: MockClientReturnType
+    clients: Vec<Client>,
+    error: Option<String>,
 }
 
 impl MockClientRepo {
-    pub fn new(return_type: MockClientReturnType) -> Self {
-        Self { return_type }
-    }
-}
-
-pub enum MockClientReturnType {
-    Error,
-    Client
-}
-
-impl MockClientReturnType {
-    pub fn client(client_id: Option<&str>, client_name: Option<&str>, secret: Option<&str>) -> Client {
-        let mut builder = ClientBuilder::new();
-
-        if let Some(cid) = client_id {
-            builder = builder.with_client_id(cid.into());
+    pub fn new(initial_state: Vec<Client>) -> Self {
+        Self {
+            clients: initial_state,
+            error: None,
         }
-
-        if let Some(name) = client_name {
-            builder = builder.with_name(name.into());
-        }
-
-        if let Some(sec) = secret {
-            builder = builder.with_secret(sec.into());
-        }
-
-        builder.build()
     }
 
-    pub fn error(msg: Option<&str>) -> anyhow::Error {
-        anyhow::Error::msg(msg.unwrap_or("Error").to_string())
+    pub fn with_error(mut self, error: impl Into<String>) -> Self {
+        self.error = Some(error.into());
+        self
+    }
+
+    fn configured_error(&self) -> Option<anyhow::Error> {
+        self.error
+            .as_ref()
+            .map(|error| anyhow::Error::msg(error.clone()))
     }
 }
 
 #[async_trait::async_trait]
 impl ClientRepository for MockClientRepo {
     async fn get_by_id(&self, client_id: &str) -> anyhow::Result<Client> {
-        match self.return_type {
-            MockClientReturnType::Client => Ok(MockClientReturnType::client(Some(client_id), None, None)),
-            MockClientReturnType::Error => Err(MockClientReturnType::error(Some("Failed to get client by client_id")))
+        if let Some(error) = self.configured_error() {
+            return Err(error);
         }
+
+        self.clients
+            .iter()
+            .find(|c| c.client_id == client_id)
+            .cloned()
+            .ok_or_else(|| anyhow::Error::msg("Client not found"))
     }
 
     async fn get_by_name(&self, client_name: &str) -> anyhow::Result<Client> {
-        match self.return_type {
-            MockClientReturnType::Client => Ok(MockClientReturnType::client(None, Some(client_name), None)),
-            MockClientReturnType::Error => Err(MockClientReturnType::error(Some("Failed to get client by name")))
+        if let Some(error) = self.configured_error() {
+            return Err(error);
         }
+
+        self.clients
+            .iter()
+            .find(|c| c.name == client_name)
+            .cloned()
+            .ok_or_else(|| anyhow::Error::msg("Client not found"))
     }
 
     async fn get_by_credentials(&self, client_id: &str, secret: &str) -> anyhow::Result<Client> {
-        match self.return_type {
-            MockClientReturnType::Client => Ok(MockClientReturnType::client(Some(client_id), None, Some(secret))),
-            MockClientReturnType::Error => Err(MockClientReturnType::error(Some("Failed to get client by client_id and secret")))
+        if let Some(error) = self.configured_error() {
+            return Err(error);
         }
+
+        self.clients
+            .iter()
+            .find(|c| c.client_id == client_id && c.secret == secret)
+            .cloned()
+            .ok_or_else(|| anyhow::Error::msg("Client not found"))
     }
 }
