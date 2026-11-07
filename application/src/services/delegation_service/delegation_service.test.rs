@@ -35,12 +35,12 @@ async fn delegation_fails_when_client_ids_dont_match_and_not_tms_client() {
 
     // Add the delegation
     let result = service.add_delegation(
-            &ctx,
-            &values.client_name,
-            &values.rp_id,
-            &values.rp_account
-        )
-        .await;
+        &ctx,
+        &values.client_name,
+        &values.rp_id,
+        &values.rp_account
+    )
+    .await;
 
     // Fails as expected
     assert!(result.is_err())
