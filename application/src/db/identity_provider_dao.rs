@@ -1,10 +1,10 @@
-use tms_lib::utils::service_error::{ ServiceError::BadRequest, ServiceError::NotFound };
-use anyhow::{anyhow, Result};
+use crate::obj_model::identity_provider::{IdentityProvider, IdentityProviderType};
+use anyhow::{Result, anyhow};
 use sqlx::postgres::PgRow;
-use sqlx::{query, Error, PgTransaction, Row};
+use sqlx::{Error, PgTransaction, Row, query};
 use std::collections::HashSet;
 use std::str::FromStr;
-use crate::obj_model::identity_provider::{IdentityProvider, IdentityProviderType};
+use tms_lib::utils::service_error::{ServiceError::BadRequest, ServiceError::NotFound};
 /*
 Identity providers can be for either resources or for logins.  There's a boolean for
 the support of each - supports_login, supports_resources.  I guess in retrospect it should
@@ -39,7 +39,7 @@ impl TryFrom<&PgRow> for IdentityProvider {
 /*
 Returns the list of identity providers that support login
  */
-pub async fn db_get_login_providers<'a>(
+pub async fn get_login_providers<'a>(
     tx: &mut PgTransaction<'a>,
 ) -> Result<HashSet<IdentityProvider>> {
     let idp_query_result = query(
@@ -62,7 +62,7 @@ pub async fn db_get_login_providers<'a>(
 /*
 Returns an identity provider by id if it supports login
  */
-pub async fn db_get_login_provider_by_id<'a>(
+pub async fn get_login_provider_by_id<'a>(
     tx: &mut PgTransaction<'a>,
     id: &String,
 ) -> Result<IdentityProvider> {
@@ -85,8 +85,10 @@ pub async fn db_get_login_provider_by_id<'a>(
 /*
 Returns the list of identity providers that support resources
  */
-pub async fn db_get_resource_providers<'a>(
-    tx: &mut PgTransaction<'a>, tms_identity: &String, linked_only: &bool
+pub async fn list_resource_providers<'a>(
+    tx: &mut PgTransaction<'a>,
+    tms_identity: &String,
+    linked_only: &bool,
 ) -> Result<HashSet<IdentityProvider>> {
     let rp_query_result = match linked_only {
         true => {
@@ -95,17 +97,18 @@ pub async fn db_get_resource_providers<'a>(
                       INNER JOIN resource_provider_account_logins
                       AS rpal ON ip.id = rpal.rp_id where supports_resources = true
                       and tms_identity = $1",
-            ).bind(tms_identity)
-                .fetch_all(&mut **tx)
-                .await?
+            )
+            .bind(tms_identity)
+            .fetch_all(&mut **tx)
+            .await?
         }
         false => {
             query(
                 "select * from identity_providers
                      where supports_resources = true",
             )
-                .fetch_all(&mut **tx)
-                .await?
+            .fetch_all(&mut **tx)
+            .await?
         }
     };
 
@@ -118,9 +121,9 @@ pub async fn db_get_resource_providers<'a>(
 /*
 Returns an identity provider by id if it supports resources
  */
-pub async fn db_get_resource_provider_by_id<'a>(
+pub async fn get_resource_provider_by_id<'a>(
     tx: &mut PgTransaction<'a>,
-    provider_id: &String,
+    provider_id: &str,
 ) -> Result<IdentityProvider> {
     match query(
         "select * from identity_providers
@@ -128,21 +131,30 @@ pub async fn db_get_resource_provider_by_id<'a>(
     )
     .bind(provider_id)
     .fetch_one(&mut **tx)
-    .await {
+    .await
+    {
         Ok(row) => Ok(IdentityProvider::try_from(&row)?),
-        Err(Error::RowNotFound) => Err(BadRequest("Resource provider not found".to_string()).into()),
+        Err(Error::RowNotFound) => {
+            Err(BadRequest("Resource provider not found".to_string()).into())
+        }
         Err(error) => Err(anyhow!(error)),
     }
 }
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
     use crate::db::identity_provider_dao::IdentityProviderType;
+    use std::str::FromStr;
 
     #[test]
     fn test_idp_type_from_str() {
         assert!(IdentityProviderType::from_str("test").is_err());
-        assert_eq!(IdentityProviderType::from_str("Globus").unwrap(), IdentityProviderType::Globus);
-        assert_eq!(IdentityProviderType::from_str("tacc_tapis").unwrap(), IdentityProviderType::TaccTapis);
+        assert_eq!(
+            IdentityProviderType::from_str("Globus").unwrap(),
+            IdentityProviderType::Globus
+        );
+        assert_eq!(
+            IdentityProviderType::from_str("tacc_tapis").unwrap(),
+            IdentityProviderType::TaccTapis
+        );
     }
 }

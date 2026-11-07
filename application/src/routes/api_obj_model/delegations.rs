@@ -1,5 +1,5 @@
-use serde::Serialize;
 use crate::obj_model;
+use serde::Serialize;
 
 #[derive(Debug, Hash, Serialize, Clone, PartialEq, Eq)]
 pub struct Delegation {

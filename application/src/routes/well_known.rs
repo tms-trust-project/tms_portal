@@ -1,18 +1,16 @@
-use crate::db::client_dao::db_get_client_by_id;
-use crate::db::config_dao::{db_get_http_config, db_get_jwt_config};
-use crate::db::keys_dao::db_get_key_by_id;
 use crate::AppState;
+use crate::db::client_repository::get_client_by_id;
+use crate::routes::api_obj_model::tms_response::TmsResponse;
+use crate::utils::app_error::AppError;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::get;
-use axum::{debug_handler, Router};
+use axum::{Router, debug_handler};
+use jwtk::PublicKeyToJwk;
 use jwtk::jwk::JwkSet;
 use jwtk::rsa::RsaPublicKey;
-use jwtk::PublicKeyToJwk;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
-use crate::routes::api_obj_model::tms_response::TmsResponse;
-use crate::utils::app_error::AppError;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OpenidConfiguration {
@@ -69,8 +67,7 @@ pub async fn openid_configuration_handler(
     Path(client_id): Path<String>,
     State(app_state): State<AppState>,
 ) -> Result<TmsResponse<OpenidConfiguration>, AppError> {
-    let mut tx = app_state.db_pool.begin().await?;
-    let http_config = db_get_http_config(&mut tx).await?;
+    let http_config = &app_state.config.http_config;
     let openid_configuration = OpenidConfiguration {
         issuer: http_config.base_url.clone(),
         authorization_endpoint: http_config.get_authorization_url().clone(),
@@ -90,12 +87,12 @@ pub async fn jwks_json_handler(
 ) -> Result<TmsResponse<JwkSet>, AppError> {
     let mut tx = app_state.db_pool.begin().await?;
     // lookup client ot make sure it's a real client id
-    let _client = db_get_client_by_id(&mut tx, &client_id).await?;
-    let jwt_config = db_get_jwt_config(&mut tx).await?;
-    let key = db_get_key_by_id(&mut tx, &jwt_config.signing_key_kid).await?;
+    let _client = get_client_by_id(&mut tx, &client_id).await?;
+    let jwt_config = &app_state.config.jwt_config;
+    let key = &jwt_config.key;
     tx.commit().await?;
 
-    let public_key_string = key.jwt_public_key;
+    let public_key_string = &key.jwt_public_key;
     let rpk = RsaPublicKey::from_pem(public_key_string.as_bytes(), None)?;
     // let encoding_key = EncodingKey::from_rsa_pem(&public_key_string.as_bytes())?;
     // let jwk = Jwk::from_encoding_key(&encoding_key, RS256)?;

@@ -1,10 +1,13 @@
 use chrono::{DateTime, Utc};
 
 pub struct IssuedToken {
+    #[allow(dead_code)]
     pub access_token: String,
     pub expiration: DateTime<Utc>,
     pub revoked: bool,
+    #[allow(dead_code)]
     pub created: DateTime<Utc>,
+    #[allow(dead_code)]
     pub updated: DateTime<Utc>,
 }
 

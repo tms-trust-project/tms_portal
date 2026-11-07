@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::obj_model;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Hash, Eq, PartialEq, Clone)]
 pub struct ResourceAccountLogin {
@@ -10,7 +10,6 @@ pub struct ResourceAccountLogin {
     pub last_login: String,
     pub enabled: bool,
 }
-
 
 impl From<obj_model::resources::ResourceProviderLogin> for ResourceAccountLogin {
     fn from(value: obj_model::resources::ResourceProviderLogin) -> Self {
@@ -26,13 +25,13 @@ impl From<obj_model::resources::ResourceProviderLogin> for ResourceAccountLogin 
 }
 #[derive(Debug, Serialize, Deserialize, Hash, Eq, PartialEq, Clone)]
 pub struct ResourceAccountLink {
-    pub id:i32,
-    pub tms_identity:String,
-    pub rp_account:String,
-    pub rp_id:String,
-    pub resource_provider_name:String,
-    pub last_login:String,
-    pub enabled:bool,
+    pub id: i32,
+    pub tms_identity: String,
+    pub rp_account: String,
+    pub rp_id: String,
+    pub resource_provider_name: String,
+    pub last_login: String,
+    pub enabled: bool,
 }
 impl From<&obj_model::resources::ResourceAccountLink> for ResourceAccountLink {
     fn from(value: &obj_model::resources::ResourceAccountLink) -> Self {
@@ -85,4 +84,3 @@ pub struct Resource {
     pub provider_account_id: String,
     pub provider_name: String,
 }
-

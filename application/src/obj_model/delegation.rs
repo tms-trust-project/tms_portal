@@ -1,5 +1,8 @@
+pub mod test_fixtures;
+
 use chrono::{DateTime, Utc};
 
+#[derive(Debug, Clone)]
 pub struct Delegation {
     pub id: i32,
     pub client_id: String,
