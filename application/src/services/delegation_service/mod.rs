@@ -164,3 +164,6 @@ impl DelegationService {
 #[cfg(test)]
 #[path = "delegation_service.test.rs"]
 mod delegation_service_test;
+
+#[cfg(test)]
+mod test_fixtures;

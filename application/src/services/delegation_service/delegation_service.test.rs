@@ -1,41 +1,31 @@
-use std::sync::Arc;
-
 use chrono::{Duration, Utc};
 
 use crate::{
-    db::{
-        client_repository::test_fixtures::MockClientRepo,
-        delegation_repository::test_fixtures::MockDelegationRepo,
-        resource_provider_login_repository::test_fixtures::MockResourceProviderLoginRepo,
-    },
-    obj_model::{client::test_fixtures::ClientBuilder, configuration::DelegationPolicyConfig, resources::{test_fixtures::ResourceProviderLoginBuilder, ResourceProviderLogin}},
-    utils::jwt_utils::SecurityContext,
+    obj_model::{client::test_fixtures::ClientBuilder, configuration::DelegationPolicyConfig, resources::{test_fixtures::ResourceProviderLoginBuilder, ResourceProviderLogin}}, services::delegation_service::test_fixtures::TestDelegationServiceBuilder, utils::jwt_utils::SecurityContext
 };
-
-use super::DelegationService;
 
 #[tokio::test]
 async fn delegation_fails_when_client_ids_dont_match_and_not_tms_client() {
     // Initialize the values that will be used in this test
     let values = utils::DefaultTestValues::new();
 
-    let initial_clients = vec![
-        ClientBuilder::new()
-            .with_client_id(values.client_id.clone())
-            .with_name(values.client_name.clone())
-            .build(),
-    ];
-    let mock_client_repo = Arc::new(MockClientRepo::new(initial_clients));
-    let mock_delegation_repo = Arc::new(MockDelegationRepo::new(vec![]));
-    let mock_rp_login_repo = Arc::new(MockResourceProviderLoginRepo::new(vec![]));
-
-    let service = DelegationService::new(
-        mock_client_repo,
-        mock_delegation_repo,
-        mock_rp_login_repo,
-        DelegationPolicyConfig::default(),
-    );
-
+    // Build a DelegationService with mocked dependencies
+    let service = TestDelegationServiceBuilder::new()
+        .with_init_mock_client_repo(
+            vec![
+                ClientBuilder::new()
+                    .with_client_id(values.client_id.clone())
+                    .with_name(values.client_name.clone())
+                    .build(),
+            ]
+        )
+        .with_init_mock_delegation_repo(vec![])
+        .with_init_mock_rp_login_repo(vec![])
+        .with_delegation_policy(values.delegation_policy.clone())
+        .build();
+    
+    // Initialize a security context that uses a different client id than the mocked client
+    // and where the security context is NOT a tms client
     let ctx = SecurityContext {
         client_id: "different-client-id".into(),
         is_tms_client: false,
@@ -43,6 +33,7 @@ async fn delegation_fails_when_client_ids_dont_match_and_not_tms_client() {
         token: values.ctx_token.clone(),
     };
 
+    // Add the delegation
     let result = service.add_delegation(
             &ctx,
             &values.client_name,
@@ -51,6 +42,7 @@ async fn delegation_fails_when_client_ids_dont_match_and_not_tms_client() {
         )
         .await;
 
+    // Fails as expected
     assert!(result.is_err())
 }
 
@@ -59,38 +51,32 @@ async fn delegation_succeeds_when_client_ids_dont_match_and_is_tms_client() {
     // Initialize the values that will be used in this test
     let values = utils::DefaultTestValues::new();
 
-    // Initialize mock Client repo
-    let mock_client_repo = Arc::new(MockClientRepo::new(
-        vec![
-            ClientBuilder::new()
-                .with_client_id(values.client_id.clone())
-                .with_name(values.client_name.clone())
-                .build(),
-        ]
-    ));
-
-    // Initialize mock Delegation repo
-    let mock_delegation_repo = Arc::new(MockDelegationRepo::new(vec![]));
-
-    // Initialize mock ResourceProviderLogin repo
-    let initial_rp_logins = vec![
-        utils::build_valid_login_from_delegation_policy(
-            values.delegation_policy.clone(),
-            &values.tms_identity,
-            &values.rp_id,
-            &values.rp_account,
+    // Build a DelegationService with mocked dependencies
+    let service = TestDelegationServiceBuilder::new()
+        .with_init_mock_client_repo(
+            vec![
+                ClientBuilder::new()
+                    .with_client_id(values.client_id.clone())
+                    .with_name(values.client_name.clone())
+                    .build(),
+            ]
         )
-    ];
-    let mock_rp_login_repo = Arc::new(MockResourceProviderLoginRepo::new(initial_rp_logins));
+        .with_init_mock_delegation_repo(vec![])
+        .with_init_mock_rp_login_repo(
+            vec![
+                utils::build_valid_login_from_delegation_policy(
+                    values.delegation_policy.clone(),
+                    &values.tms_identity,
+                    &values.rp_id,
+                    &values.rp_account,
+                )
+            ]
+        )
+        .with_delegation_policy(values.delegation_policy.clone())
+        .build();
 
-    // Initialize Delegation service
-    let service = DelegationService::new(
-        mock_client_repo,
-        mock_delegation_repo,
-        mock_rp_login_repo,
-        values.delegation_policy.clone(),
-    );
-
+    // Initialize a security context that uses a different client id than the mocked client
+    // and where the security context is a tms client
     let ctx = SecurityContext {
         client_id: "different-client-id".into(),
         is_tms_client: true,
@@ -115,32 +101,29 @@ async fn delegation_succeeds_when_requested_client_id_matches_security_context()
     // Initialize the values that will be used in this test
     let values = utils::DefaultTestValues::new();
 
-    let initial_clients = vec![
-        ClientBuilder::new()
-            .with_client_id(values.client_id.clone())
-            .with_name(values.client_name.clone())
-            .build(),
-    ];
-    let mock_client_repo = Arc::new(MockClientRepo::new(initial_clients));
-    let mock_delegation_repo = Arc::new(MockDelegationRepo::new(vec![]));
-    
-    // Initialize mock ResourceProviderLogin repo
-    let initial_rp_logins = vec![
-        utils::build_valid_login_from_delegation_policy(
-            values.delegation_policy.clone(),
-            &values.tms_identity,
-            &values.rp_id,
-            &values.rp_account,
+    // Build a DelegationService with mocked dependencies
+    let service = TestDelegationServiceBuilder::new()
+        .with_init_mock_client_repo(
+            vec![
+                ClientBuilder::new()
+                    .with_client_id(values.client_id.clone())
+                    .with_name(values.client_name.clone())
+                    .build(),
+            ]
         )
-    ];
-    let mock_rp_login_repo = Arc::new(MockResourceProviderLoginRepo::new(initial_rp_logins));
-
-    let service = DelegationService::new(
-        mock_client_repo,
-        mock_delegation_repo,
-        mock_rp_login_repo,
-        values.delegation_policy.clone(),
-    );
+        .with_init_mock_delegation_repo(vec![])
+        .with_init_mock_rp_login_repo(
+            vec![
+                utils::build_valid_login_from_delegation_policy(
+                    values.delegation_policy.clone(),
+                    &values.tms_identity,
+                    &values.rp_id,
+                    &values.rp_account,
+                )
+            ]
+        )
+        .with_delegation_policy(values.delegation_policy.clone())
+        .build();
 
     let ctx = SecurityContext {
         client_id: values.client_id.clone(),
@@ -166,22 +149,20 @@ async fn delegation_fails_when_no_recent_login_found() {
     // Initialize the values that will be used in this test
     let values = utils::DefaultTestValues::new();
 
-    let initial_clients = vec![
-        ClientBuilder::new()
-            .with_client_id(values.client_id.clone())
-            .with_name(values.client_name.clone())
-            .build(),
-    ];
-    let mock_client_repo = Arc::new(MockClientRepo::new(initial_clients));
-    let mock_delegation_repo = Arc::new(MockDelegationRepo::new(vec![]));
-    let mock_rp_login_repo = Arc::new(MockResourceProviderLoginRepo::new(vec![]));
-
-    let service = DelegationService::new(
-        mock_client_repo,
-        mock_delegation_repo,
-        mock_rp_login_repo,
-        DelegationPolicyConfig::default(),
-    );
+    // Build a DelegationService with mocked dependencies
+    let service = TestDelegationServiceBuilder::new()
+        .with_init_mock_client_repo(
+            vec![
+                ClientBuilder::new()
+                    .with_client_id(values.client_id.clone())
+                    .with_name(values.client_name.clone())
+                    .build(),
+            ]
+        )
+        .with_init_mock_delegation_repo(vec![])
+        .with_init_mock_rp_login_repo(vec![])
+        .with_delegation_policy(values.delegation_policy.clone())
+        .build();
 
     let ctx = SecurityContext {
         client_id: values.client_id.clone(),
@@ -203,28 +184,24 @@ async fn delegation_fails_when_no_recent_login_found() {
 }
 
 #[tokio::test]
-async fn fails_due_to_internal_client_repo_error() {
+async fn delegation_fails_due_to_internal_client_repo_error() {
     // Initialize the values that will be used in this test
     let values = utils::DefaultTestValues::new();
 
-    let initial_clients = vec![
-        ClientBuilder::new()
-            .with_client_id(values.client_id.clone())
-            .with_name(values.client_name.clone())
-            .build(),
-    ];
-    let mock_client_repo = Arc::new(
-        MockClientRepo::new(initial_clients).with_error(values.client_repo_error_message.clone())
-    );
-    let mock_delegation_repo = Arc::new(MockDelegationRepo::new(vec![]));
-    let mock_rp_login_repo = Arc::new(MockResourceProviderLoginRepo::new(vec![]));
-
-    let service = DelegationService::new(
-        mock_client_repo,
-        mock_delegation_repo,
-        mock_rp_login_repo,
-        DelegationPolicyConfig::default(),
-    );
+    // Build a DelegationService with mocked dependencies
+    let service = TestDelegationServiceBuilder::new()
+        .with_init_mock_client_repo(
+            vec![
+                ClientBuilder::new()
+                    .with_client_id(values.client_id.clone())
+                    .with_name(values.client_name.clone())
+                    .build(),
+            ]
+        )
+        .with_mock_client_repo_error(&values.client_repo_error_message)
+        .with_init_mock_rp_login_repo(vec![])
+        .with_delegation_policy(values.delegation_policy.clone())
+        .build();
 
     let ctx = SecurityContext {
         client_id: values.client_id.clone(),
@@ -253,25 +230,20 @@ async fn fails_due_to_internal_rp_login_repo_error() {
     // Initialize the values that will be used in this test
     let values = utils::DefaultTestValues::new();
 
-    let initial_clients = vec![
-        ClientBuilder::new()
-            .with_client_id(values.client_id.clone())
-            .with_name(values.client_name.clone())
-            .build(),
-    ];
-    let mock_client_repo = Arc::new(MockClientRepo::new(initial_clients));
-    let mock_delegation_repo = Arc::new(MockDelegationRepo::new(vec![]));
-    let mock_rp_login_repo = Arc::new(
-        MockResourceProviderLoginRepo::new(vec![])
-            .with_error(values.rp_login_repo_error_message.clone())
-        );
-
-    let service = DelegationService::new(
-        mock_client_repo,
-        mock_delegation_repo,
-        mock_rp_login_repo,
-        DelegationPolicyConfig::default(),
-    );
+    // Build a DelegationService with mocked dependencies
+    let service = TestDelegationServiceBuilder::new()
+        .with_init_mock_client_repo(
+            vec![
+                ClientBuilder::new()
+                    .with_client_id(values.client_id.clone())
+                    .with_name(values.client_name.clone())
+                    .build(),
+            ]
+        )
+        .with_init_mock_delegation_repo(vec![])
+        .with_mock_rp_login_repo_error(&values.rp_login_repo_error_message)
+        .with_delegation_policy(values.delegation_policy.clone())
+        .build();
 
     let ctx = SecurityContext {
         client_id: values.client_id.clone(),
@@ -300,25 +272,29 @@ async fn fails_due_to_internal_delegation_repo_error() {
     // Initialize the values that will be used in this test
     let values = utils::DefaultTestValues::new();
 
-    let initial_clients = vec![
-        ClientBuilder::new()
-            .with_client_id(values.client_id.clone())
-            .with_name(values.client_name.clone())
-            .build(),
-    ];
-    let mock_client_repo = Arc::new(MockClientRepo::new(initial_clients));
-    let mock_delegation_repo = Arc::new(
-        MockDelegationRepo::new(vec![])
-            .with_error(values.delegation_repo_error_message.clone())
-    );
-    let mock_rp_login_repo = Arc::new(MockResourceProviderLoginRepo::new(vec![]));
-
-    let service = DelegationService::new(
-        mock_client_repo,
-        mock_delegation_repo,
-        mock_rp_login_repo,
-        DelegationPolicyConfig::default(),
-    );
+    // Build a DelegationService with mocked dependencies
+    let service = TestDelegationServiceBuilder::new()
+        .with_init_mock_client_repo(
+            vec![
+                ClientBuilder::new()
+                    .with_client_id(values.client_id.clone())
+                    .with_name(values.client_name.clone())
+                    .build(),
+            ]
+        )
+        .with_mock_delegation_repo_error(&values.delegation_repo_error_message)
+        .with_init_mock_rp_login_repo(
+            vec![
+                utils::build_valid_login_from_delegation_policy(
+                    values.delegation_policy.clone(),
+                    &values.tms_identity,
+                    &values.rp_id,
+                    &values.rp_account,
+                )
+            ]
+        )
+        .with_delegation_policy(values.delegation_policy.clone())
+        .build();
 
     let ctx = SecurityContext {
         client_id: values.client_id.clone(),
