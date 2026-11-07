@@ -1,3 +1,4 @@
+#[cfg(test)]
 pub mod test_fixtures;
 
 use crate::obj_model::delegation::Delegation;

@@ -30,6 +30,7 @@ pub async fn router() -> Router<AppState> {
             delete(delete_delegations_handler),
         )
 }
+
 #[axum::debug_handler]
 pub async fn add_delegation_handler(
     State(app_state): State<AppState>,
@@ -45,7 +46,7 @@ pub async fn add_delegation_handler(
             &add_delegation_request.resource_provider_account,
         )
         .await?;
-    
+
     Ok(TmsResponse::builder(StatusCode::OK)
         .entity(delegation.into())
         .build())
