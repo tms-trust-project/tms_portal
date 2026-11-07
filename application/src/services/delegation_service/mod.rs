@@ -8,7 +8,7 @@ use crate::ports::resource_provider_login::ResourceProviderLoginRepository;
 use crate::utils::jwt_utils::SecurityContext;
 use chrono::Duration;
 use chrono::Utc;
-use tms_lib::utils::service_error::ServiceError::{BadRequest, NotFound};
+use tms_lib::utils::service_error::ServiceError::{BadRequest, Unauthorized};
 
 #[derive(Clone)]
 pub struct DelegationService {
@@ -69,7 +69,7 @@ impl DelegationService {
 
         let _recent_login = match maybe_recent_login {
             Some(recent_login) => recent_login,
-            None => return Err(NotFound("User must authenticate to delegate".to_string()).into())
+            None => return Err(Unauthorized("User must reauthenticate to delegate".to_string()).into())
         };
 
         let delegation = self.delegation_repo

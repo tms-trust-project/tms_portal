@@ -43,8 +43,7 @@ async fn delegation_fails_when_client_ids_dont_match_and_not_tms_client() {
         token: values.ctx_token.clone(),
     };
 
-    let result = service
-        .add_delegation(
+    let result = service.add_delegation(
             &ctx,
             &values.client_name,
             &values.rp_id,
@@ -136,7 +135,6 @@ async fn delegation_succeeds_when_requested_client_id_matches_security_context()
     ];
     let mock_rp_login_repo = Arc::new(MockResourceProviderLoginRepo::new(initial_rp_logins));
 
-
     let service = DelegationService::new(
         mock_client_repo,
         mock_delegation_repo,
@@ -204,6 +202,146 @@ async fn delegation_fails_when_no_recent_login_found() {
     assert!(result.is_err())
 }
 
+#[tokio::test]
+async fn fails_due_to_internal_client_repo_error() {
+    // Initialize the values that will be used in this test
+    let values = utils::DefaultTestValues::new();
+
+    let initial_clients = vec![
+        ClientBuilder::new()
+            .with_client_id(values.client_id.clone())
+            .with_name(values.client_name.clone())
+            .build(),
+    ];
+    let mock_client_repo = Arc::new(
+        MockClientRepo::new(initial_clients).with_error(values.client_repo_error_message.clone())
+    );
+    let mock_delegation_repo = Arc::new(MockDelegationRepo::new(vec![]));
+    let mock_rp_login_repo = Arc::new(MockResourceProviderLoginRepo::new(vec![]));
+
+    let service = DelegationService::new(
+        mock_client_repo,
+        mock_delegation_repo,
+        mock_rp_login_repo,
+        DelegationPolicyConfig::default(),
+    );
+
+    let ctx = SecurityContext {
+        client_id: values.client_id.clone(),
+        is_tms_client: false,
+        tms_identity: values.tms_identity.clone(),
+        token: values.ctx_token.clone(),
+    };
+
+    let result = service
+        .add_delegation(
+            &ctx,
+            &values.client_name,
+            &values.rp_id,
+            &values.rp_account,
+        )
+        .await;
+    
+    assert!(result.is_err());
+    
+    let err = result.unwrap_err();
+    assert!(err.to_string() == values.client_repo_error_message);
+}
+
+#[tokio::test]
+async fn fails_due_to_internal_rp_login_repo_error() {
+    // Initialize the values that will be used in this test
+    let values = utils::DefaultTestValues::new();
+
+    let initial_clients = vec![
+        ClientBuilder::new()
+            .with_client_id(values.client_id.clone())
+            .with_name(values.client_name.clone())
+            .build(),
+    ];
+    let mock_client_repo = Arc::new(MockClientRepo::new(initial_clients));
+    let mock_delegation_repo = Arc::new(MockDelegationRepo::new(vec![]));
+    let mock_rp_login_repo = Arc::new(
+        MockResourceProviderLoginRepo::new(vec![])
+            .with_error(values.rp_login_repo_error_message.clone())
+        );
+
+    let service = DelegationService::new(
+        mock_client_repo,
+        mock_delegation_repo,
+        mock_rp_login_repo,
+        DelegationPolicyConfig::default(),
+    );
+
+    let ctx = SecurityContext {
+        client_id: values.client_id.clone(),
+        is_tms_client: false,
+        tms_identity: values.tms_identity.clone(),
+        token: values.ctx_token.clone(),
+    };
+
+    let result = service
+        .add_delegation(
+            &ctx,
+            &values.client_name,
+            &values.rp_id,
+            &values.rp_account,
+        )
+        .await;
+    
+    assert!(result.is_err());
+
+    let err = result.unwrap_err();
+    assert!(err.to_string() == values.rp_login_repo_error_message);
+}
+
+#[tokio::test]
+async fn fails_due_to_internal_delegation_repo_error() {
+    // Initialize the values that will be used in this test
+    let values = utils::DefaultTestValues::new();
+
+    let initial_clients = vec![
+        ClientBuilder::new()
+            .with_client_id(values.client_id.clone())
+            .with_name(values.client_name.clone())
+            .build(),
+    ];
+    let mock_client_repo = Arc::new(MockClientRepo::new(initial_clients));
+    let mock_delegation_repo = Arc::new(
+        MockDelegationRepo::new(vec![])
+            .with_error(values.delegation_repo_error_message.clone())
+    );
+    let mock_rp_login_repo = Arc::new(MockResourceProviderLoginRepo::new(vec![]));
+
+    let service = DelegationService::new(
+        mock_client_repo,
+        mock_delegation_repo,
+        mock_rp_login_repo,
+        DelegationPolicyConfig::default(),
+    );
+
+    let ctx = SecurityContext {
+        client_id: values.client_id.clone(),
+        is_tms_client: false,
+        tms_identity: values.tms_identity.clone(),
+        token: values.ctx_token.clone(),
+    };
+
+    let result = service
+        .add_delegation(
+            &ctx,
+            &values.client_name,
+            &values.rp_id,
+            &values.rp_account,
+        )
+        .await;
+    
+    assert!(result.is_err());
+
+    let err = result.unwrap_err();
+    assert!(err.to_string() == values.delegation_repo_error_message)
+}
+
 mod utils {
     use super::*;
 
@@ -235,6 +373,9 @@ mod utils {
         pub client_id: String,
         pub client_name: String,
         pub ctx_token: String,
+        pub delegation_repo_error_message: String,
+        pub rp_login_repo_error_message: String,
+        pub client_repo_error_message: String,
     }
 
     impl DefaultTestValues {
@@ -247,6 +388,9 @@ mod utils {
                 client_id: "test-client-id".into(),
                 client_name: "test-client-name".into(),
                 ctx_token: "test-token".into(),
+                client_repo_error_message: "Client Repo Network Error".into(),
+                delegation_repo_error_message: "Delegation Repo Network Error".into(),
+                rp_login_repo_error_message: "Resource Provider Login Repo Network Error".into(),
             }
         }
     }
