@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 
 use crate::obj_model::resources::ResourceProviderLogin;
 
@@ -79,6 +79,12 @@ impl ResourceProviderLoginBuilder {
     pub fn with_rp_token_refresh(mut self, rp_token_refresh: String) -> Self {
         self.rp_token_refresh = Some(rp_token_refresh);
         self
+    }
+
+    pub fn with_unexpired_last_login(mut self, earliest_login: DateTime<Utc>) -> Self {
+        let last_login = earliest_login + Duration::minutes(5);
+
+        self.with_last_login(last_login)
     }
 
     pub fn build(&self) -> ResourceProviderLogin {
