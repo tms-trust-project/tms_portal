@@ -1,6 +1,23 @@
 use std::sync::Arc;
 
-use crate::{db::{client_repository::test_fixtures::MockClientRepo, delegation_repository::test_fixtures::MockDelegationRepo, resource_provider_login_repository::test_fixtures::MockResourceProviderLoginRepo}, obj_model::{client::Client, configuration::DelegationPolicyConfig, delegation::{self, Delegation}, resources::ResourceProviderLogin}, ports::{client::ClientRepository, delegation::DelegationRepository, resource_provider_login::ResourceProviderLoginRepository}};
+use crate::{
+    db::{
+        client_repository::test_fixtures::MockClientRepo,
+        delegation_repository::test_fixtures::MockDelegationRepo,
+        resource_provider_login_repository::test_fixtures::MockResourceProviderLoginRepo,
+    },
+    obj_model::{
+        client::Client,
+        configuration::DelegationPolicyConfig,
+        delegation::Delegation,
+        resources::ResourceProviderLogin,
+    },
+    ports::{
+        client::ClientRepository,
+        delegation::DelegationRepository,
+        resource_provider_login::ResourceProviderLoginRepository,
+    },
+};
 
 use super::DelegationService;
 
@@ -68,6 +85,37 @@ impl TestDelegationServiceBuilder {
             resource_provider_login_repo,
             delegation_policy,
         )
+    }
+}
+
+#[derive(Clone, Debug)]
+pub(super) struct TestValues {
+    pub delegation_policy: DelegationPolicyConfig,
+    pub tms_identity: String,
+    pub rp_id: String,
+    pub rp_account: String,
+    pub client_id: String,
+    pub client_name: String,
+    pub ctx_token: String,
+    pub delegation_repo_error_message: String,
+    pub rp_login_repo_error_message: String,
+    pub client_repo_error_message: String,
+}
+
+impl TestValues {
+    pub fn new() -> Self {
+        Self {
+            delegation_policy: DelegationPolicyConfig::default(),
+            tms_identity: "test-tms-identity".into(),
+            rp_id: "test-rp-id".into(),
+            rp_account: "test-rp-account".into(),
+            client_id: "test-client-id".into(),
+            client_name: "test-client-name".into(),
+            ctx_token: "test-token".into(),
+            client_repo_error_message: "Client Repo Network Error".into(),
+            delegation_repo_error_message: "Delegation Repo Network Error".into(),
+            rp_login_repo_error_message: "Resource Provider Login Repo Network Error".into(),
+        }
     }
 }
 
