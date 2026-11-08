@@ -1,13 +1,19 @@
 use chrono::{Duration, Utc};
 
 use crate::{
-    obj_model::{client::test_fixtures::ClientBuilder, configuration::DelegationPolicyConfig, resources::{test_fixtures::ResourceProviderLoginBuilder, ResourceProviderLogin}}, services::delegation_service::test_fixtures::TestDelegationServiceBuilder, utils::jwt_utils::SecurityContext
+    obj_model::{
+        client::test_fixtures::ClientBuilder,
+        configuration::DelegationPolicyConfig,
+        resources::{ResourceProviderLogin, test_fixtures::ResourceProviderLoginBuilder},
+    },
+    services::delegation_service::test_fixtures::TestDelegationServiceBuilder,
+    utils::jwt_utils::SecurityContext,
 };
 
 #[tokio::test]
 async fn delegation_fails_when_client_ids_dont_match_and_not_tms_client() {
     // Initialize the values that will be used in this test
-    let values = utils::DefaultTestValues::new();
+    let values = utils::TestValues::new();
 
     // Build a DelegationService with mocked dependencies
     let service = TestDelegationServiceBuilder::new()
@@ -49,7 +55,7 @@ async fn delegation_fails_when_client_ids_dont_match_and_not_tms_client() {
 #[tokio::test]
 async fn delegation_succeeds_when_client_ids_dont_match_and_is_tms_client() {
     // Initialize the values that will be used in this test
-    let values = utils::DefaultTestValues::new();
+    let values = utils::TestValues::new();
 
     // Build a DelegationService with mocked dependencies
     let service = TestDelegationServiceBuilder::new()
@@ -99,7 +105,7 @@ async fn delegation_succeeds_when_client_ids_dont_match_and_is_tms_client() {
 #[tokio::test]
 async fn delegation_succeeds_when_requested_client_id_matches_security_context() {
     // Initialize the values that will be used in this test
-    let values = utils::DefaultTestValues::new();
+    let values = utils::TestValues::new();
 
     // Build a DelegationService with mocked dependencies
     let service = TestDelegationServiceBuilder::new()
@@ -147,7 +153,7 @@ async fn delegation_succeeds_when_requested_client_id_matches_security_context()
 #[tokio::test]
 async fn delegation_fails_when_no_recent_login_found() {
     // Initialize the values that will be used in this test
-    let values = utils::DefaultTestValues::new();
+    let values = utils::TestValues::new();
 
     // Build a DelegationService with mocked dependencies
     let service = TestDelegationServiceBuilder::new()
@@ -186,7 +192,7 @@ async fn delegation_fails_when_no_recent_login_found() {
 #[tokio::test]
 async fn delegation_fails_due_to_internal_client_repo_error() {
     // Initialize the values that will be used in this test
-    let values = utils::DefaultTestValues::new();
+    let values = utils::TestValues::new();
 
     // Build a DelegationService with mocked dependencies
     let service = TestDelegationServiceBuilder::new()
@@ -228,7 +234,7 @@ async fn delegation_fails_due_to_internal_client_repo_error() {
 #[tokio::test]
 async fn fails_due_to_internal_rp_login_repo_error() {
     // Initialize the values that will be used in this test
-    let values = utils::DefaultTestValues::new();
+    let values = utils::TestValues::new();
 
     // Build a DelegationService with mocked dependencies
     let service = TestDelegationServiceBuilder::new()
@@ -270,7 +276,7 @@ async fn fails_due_to_internal_rp_login_repo_error() {
 #[tokio::test]
 async fn fails_due_to_internal_delegation_repo_error() {
     // Initialize the values that will be used in this test
-    let values = utils::DefaultTestValues::new();
+    let values = utils::TestValues::new();
 
     // Build a DelegationService with mocked dependencies
     let service = TestDelegationServiceBuilder::new()
@@ -341,7 +347,7 @@ mod utils {
     }
 
     #[derive(Clone, Debug)]
-    pub(super) struct DefaultTestValues {
+    pub(super) struct TestValues {
         pub delegation_policy: DelegationPolicyConfig,
         pub tms_identity: String,
         pub rp_id: String,
@@ -354,7 +360,7 @@ mod utils {
         pub client_repo_error_message: String,
     }
 
-    impl DefaultTestValues {
+    impl TestValues {
         pub fn new() -> Self {
             Self {
                 delegation_policy: DelegationPolicyConfig::default(),
