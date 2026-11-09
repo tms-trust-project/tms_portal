@@ -1,6 +1,5 @@
 use crate::db::identity_provider_dao::{db_get_login_provider_by_id, db_get_login_providers};
 use crate::db::issued_tokens_dao::db_revoke_token;
-use crate::db::keys_dao::db_get_key_by_id;
 use crate::db::tms_identities_dao::db_insert_tms_identity_if_absent;
 use crate::obj_model::identity_provider::{IdentityProvider, IdentityProviderType};
 use crate::obj_model::login::WhoAmIResponse;
@@ -8,7 +7,9 @@ use crate::services::globus_token_provider::GlobusTokenProvider;
 use crate::services::token_provider::TokenProvider;
 use crate::utils::app_error::AppError;
 use crate::utils::configuration::Configuration;
-use crate::utils::jwt_utils::{TmsTokenClaims, get_tms_token_claims, make_auth_token};
+use crate::utils::jwt_utils::{
+    TmsTokenClaims, get_signing_key, get_tms_token_claims, make_auth_token,
+};
 use crate::utils::oauth2_authorization_code_utils::{
     OAuth2State, decode_access_token, get_token_for_provider,
 };
@@ -20,10 +21,7 @@ use serde_json::Value;
 use sqlx::PgPool;
 use std::collections::{HashMap, HashSet};
 use tms_lib::utils::jwt_decoder::JwtDecoderBuilder;
-use tms_lib::utils::service_error::{
-    ServiceError,
-    ServiceError::{BadRequest, Unauthorized},
-};
+use tms_lib::utils::service_error::{ServiceError, ServiceError::Unauthorized};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AuthorizationCodeResponse {
@@ -105,14 +103,12 @@ pub async fn logout(db_pool: &PgPool, token: &String) -> Result<()> {
     Ok(())
 }
 
-pub async fn whoami(db_pool: &PgPool, token: &String) -> anyhow::Result<WhoAmIResponse, AppError> {
+pub async fn whoami(
+    configuration: &Configuration,
+    token: &String,
+) -> anyhow::Result<WhoAmIResponse, AppError> {
     let token_header = decode_header(token)?;
-    let mut tx = db_pool.begin().await?;
-    let key = match token_header.kid {
-        Some(kid) => db_get_key_by_id(&mut tx, &kid).await,
-        None => return Err(BadRequest(String::from("Unable to find key for jwt")).into()),
-    }?;
-    tx.commit().await?;
+    let key = get_signing_key(configuration, &token_header.kid)?;
 
     let tms_token_claims: TmsTokenClaims = JwtDecoderBuilder::builder()
         .public_key(key.jwt_public_key.as_bytes())
