@@ -150,11 +150,10 @@ pub async fn login_handler(
                     .http_only(true),
             );
 
+            // This response goes to the browser, so it must not carry the idp client secret.
+            // The secret is only sent server to server, when the code is exchanged for a token.
             let mut headers = HashMap::new();
             headers.insert("location".to_string(), location.to_string());
-            let creds = format!("{}:{}", idp.client_id, idp.client_secret);
-            let authorization = format!("Basic {}", BASE64_STANDARD.encode(&creds));
-            headers.insert("Authorization".to_string(), authorization);
 
             Ok((
                 updated_jar,
@@ -200,7 +199,7 @@ pub async fn whoami_handler(
     State(app_state): State<AppState>,
     JwtValidator(security_context): JwtValidator,
 ) -> anyhow::Result<TmsResponse<WhoAmIResponse>, AppError> {
-    let whoami_response = whoami(&app_state.db_pool, &security_context.token).await?;
+    let whoami_response = whoami(&app_state.config, &security_context.token).await?;
     Ok(TmsResponse::builder(StatusCode::OK)
         .entity(whoami_response.into())
         .build())
