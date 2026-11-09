@@ -1,8 +1,7 @@
 use chrono::{DateTime, Utc};
 
 use crate::{
-    obj_model::resources::ResourceProviderLogin,
-    ports::resource_provider_login::ResourceProviderLoginRepository,
+    obj_model::resources::ResourceProviderLogin, ports::resource_provider_login::ResourceProviderLoginRepository,
 };
 
 pub struct MockResourceProviderLoginRepo {
@@ -12,10 +11,7 @@ pub struct MockResourceProviderLoginRepo {
 
 impl MockResourceProviderLoginRepo {
     pub fn new(initial_state: Vec<ResourceProviderLogin>) -> Self {
-        Self {
-            resource_provider_logins: initial_state,
-            error: None,
-        }
+        Self { resource_provider_logins: initial_state, error: None }
     }
 
     pub fn with_error(mut self, error: impl Into<String>) -> Self {
@@ -24,9 +20,7 @@ impl MockResourceProviderLoginRepo {
     }
 
     fn configured_error(&self) -> Option<anyhow::Error> {
-        self.error
-            .as_ref()
-            .map(|error| anyhow::Error::msg(error.clone()))
+        self.error.as_ref().map(|error| anyhow::Error::msg(error.clone()))
     }
 }
 

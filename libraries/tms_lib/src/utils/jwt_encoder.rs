@@ -14,12 +14,7 @@ impl<T> JwtEncoderBuilder<T>
 where
     T: Serialize,
 {
-    pub fn builder(
-        claims: T,
-        encoding_key_bytes: &[u8],
-        algorithm_name: &str,
-        kid: &str,
-    ) -> JwtEncoderBuilder<T> {
+    pub fn builder(claims: T, encoding_key_bytes: &[u8], algorithm_name: &str, kid: &str) -> JwtEncoderBuilder<T> {
         JwtEncoderBuilder {
             algorithm_name: String::from(algorithm_name),
             kid: String::from(kid),

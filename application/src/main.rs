@@ -3,10 +3,10 @@ extern crate core;
 mod config;
 mod db;
 mod obj_model;
+mod ports;
 mod routes;
 mod services;
 mod utils;
-mod ports;
 
 use std::sync::Arc;
 
@@ -48,13 +48,12 @@ struct AppState {
 }
 
 fn database_url() -> anyhow::Result<String> {
-    let database_host = std::env::var("TMS_PORTAL_DB_HOST")
-        .map_err(|_| anyhow::anyhow!("TMS_PORTAL_DB_HOST must be set"))?;
+    let database_host =
+        std::env::var("TMS_PORTAL_DB_HOST").map_err(|_| anyhow::anyhow!("TMS_PORTAL_DB_HOST must be set"))?;
     let database_port = std::env::var("TMS_PORTAL_DB_PORT").unwrap_or(String::from("5432"));
     let database_name = std::env::var("TMS_PORTAL_DB_NAME").unwrap_or(String::from("tms_db"));
     let database_user = std::env::var("TMS_PORTAL_DB_USER").unwrap_or(String::from("tms"));
-    let database_password =
-        std::env::var("TMS_PORTAL_DB_PASSWORD").expect("TMS_PORTAL_DB_PASSWORD must be set");
+    let database_password = std::env::var("TMS_PORTAL_DB_PASSWORD").expect("TMS_PORTAL_DB_PASSWORD must be set");
 
     let database_url_string = format!(
         "postgres://{0}:{1}@{2}:{3}/{4}",
@@ -63,10 +62,7 @@ fn database_url() -> anyhow::Result<String> {
 
     // just parsing the db url to determine if it seems valid.  We actually use database_url_string.
     let _database_url = Url::parse(database_url_string.as_str()).map_err(|e| {
-        anyhow::anyhow!(format!(
-            "The database url {0} is not valid (error: {1})",
-            &database_url_string, e
-        ))
+        anyhow::anyhow!(format!("The database url {0} is not valid (error: {1})", &database_url_string, e))
     })?;
 
     Ok(database_url_string)
@@ -81,8 +77,7 @@ async fn main() -> anyhow::Result<()> {
     let config = Configuration::from_env()?;
     let client_repo = PostgresClientRepository::new(db_pool.clone());
     let delegation_repo = PostgresDelegationRepository::new(db_pool.clone());
-    let resource_provider_login_repo =
-        PostgresResourceProviderLoginRepository::new(db_pool.clone());
+    let resource_provider_login_repo = PostgresResourceProviderLoginRepository::new(db_pool.clone());
     let delegation_service = DelegationService::new(
         Arc::new(client_repo),
         Arc::new(delegation_repo),
@@ -115,10 +110,7 @@ async fn main() -> anyhow::Result<()> {
                         // expired an hour ago
                         let expires_before = Utc::now() - TimeDelta::hours(1);
                         match db_cleanup_tokens(&mut tx, &expires_before).await {
-                            Ok(_) => tx
-                                .commit()
-                                .await
-                                .context("Unable to commit transaction for token cleanup"),
+                            Ok(_) => tx.commit().await.context("Unable to commit transaction for token cleanup"),
                             Err(error) => Err(error),
                         }
                     }
@@ -147,13 +139,11 @@ async fn main() -> anyhow::Result<()> {
         .merge(resource::router().await)
         .merge(oauth::router().await)
         .merge(delegation::router().await)
-        .layer(middleware::from_fn(
-            |request: Request<Body>, next: Next| async move {
-                let request_id = Uuid::new_v4().to_string();
-                log_mdc::insert("request_id", request_id.clone());
-                next.run(request).await
-            },
-        ))
+        .layer(middleware::from_fn(|request: Request<Body>, next: Next| async move {
+            let request_id = Uuid::new_v4().to_string();
+            log_mdc::insert("request_id", request_id.clone());
+            next.run(request).await
+        }))
         .layer(TraceLayer::new_for_http())
         .with_state(state)
         .nest_service("/debug", ServeFile::new("dist/debug.html"))
@@ -161,10 +151,8 @@ async fn main() -> anyhow::Result<()> {
         .fallback_service(ServeDir::new("dist/").not_found_service(not_found.into_service()))
         .method_not_allowed_fallback(method_not_allowed);
 
-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", &port))
-        .await
-        .unwrap();
-    
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", &port)).await.unwrap();
+
     Ok(axum::serve(listener, app).await?)
 }
 

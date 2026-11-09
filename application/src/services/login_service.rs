@@ -9,9 +9,7 @@ use crate::services::token_provider::TokenProvider;
 use crate::utils::app_error::AppError;
 use crate::utils::configuration::Configuration;
 use crate::utils::jwt_utils::{TmsTokenClaims, get_tms_token_claims, make_auth_token};
-use crate::utils::oauth2_authorization_code_utils::{
-    OAuth2State, decode_access_token, get_token_for_provider,
-};
+use crate::utils::oauth2_authorization_code_utils::{OAuth2State, decode_access_token, get_token_for_provider};
 use crate::utils::state_utils::decode_state;
 use anyhow::{Context, Result};
 use jsonwebtoken::decode_header;
@@ -57,37 +55,24 @@ pub async fn handle_callback(
         return Err(Unauthorized("State cookies do not match".to_string()).into());
     }
 
-    let decoded_state: OAuth2State = decode_state(configuration, state)
-        .await
-        .context("Unable to decode state query param")?;
+    let decoded_state: OAuth2State =
+        decode_state(configuration, state).await.context("Unable to decode state query param")?;
 
     let mut tx = db_pool.begin().await?;
-    let idp = get_login_provider_by_id(&mut tx, &decoded_state.idp_id)
-        .await
-        .context("Unable to get idp for database")?;
+    let idp =
+        get_login_provider_by_id(&mut tx, &decoded_state.idp_id).await.context("Unable to get idp for database")?;
     tx.commit().await?;
 
-    let token: AuthorizationCodeResponse = get_token_for_provider(
-        &idp,
-        &configuration
-            .http_config
-            .get_identity_provider_callback_url(),
-        code,
-    )
-    .await?;
+    let token: AuthorizationCodeResponse =
+        get_token_for_provider(&idp, &configuration.http_config.get_identity_provider_callback_url(), code).await?;
 
     let mut claims: HashMap<String, Value> = decode_access_token(&idp, &token.id_token).await?;
     // TODO: get iss from config
     claims.insert("iss".to_string(), Value::from("https://tms.tacc.edu/"));
 
-    let tms_token_claims = get_tms_token_claims(
-        configuration,
-        &decoded_state.client_id,
-        &idp.id,
-        &idp.identity_provider_type,
-        &claims,
-    )
-    .await?;
+    let tms_token_claims =
+        get_tms_token_claims(configuration, &decoded_state.client_id, &idp.id, &idp.identity_provider_type, &claims)
+            .await?;
 
     // make sure the tms_identity is stored in the db
     let mut tx = db_pool.begin().await?;
@@ -124,11 +109,7 @@ pub async fn whoami(db_pool: &PgPool, token: &String) -> anyhow::Result<WhoAmIRe
     let token_provider = match idp_provider {
         IdentityProviderType::Globus => GlobusTokenProvider {},
         _ => {
-            return Err(ServiceError::Internal(format!(
-                "Unsupported provider type {0}",
-                idp_provider
-            ))
-            .into());
+            return Err(ServiceError::Internal(format!("Unsupported provider type {0}", idp_provider)).into());
         }
     };
 

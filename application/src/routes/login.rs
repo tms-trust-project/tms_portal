@@ -6,12 +6,9 @@ use crate::services::login_service::{get_identity_providers, handle_callback, lo
 use crate::utils::app_error::AppError;
 use crate::utils::jwt_utils::JwtValidator;
 use crate::utils::oauth2_authorization_code_utils::{
-    AuthCodeQueryParams, CLIENT_ID_TMS, OAuth2State, ROOT_COOKIE_PATH, STATE_COOKIE_NAME,
-    TOKEN_COOKIE_NAME,
+    AuthCodeQueryParams, CLIENT_ID_TMS, OAuth2State, ROOT_COOKIE_PATH, STATE_COOKIE_NAME, TOKEN_COOKIE_NAME,
 };
-use crate::utils::redirect_utils::{
-    check_allowed_redirects, check_allowed_redirects_by_client_name,
-};
+use crate::utils::redirect_utils::{check_allowed_redirects, check_allowed_redirects_by_client_name};
 use crate::utils::state_utils::{decode_state, encode_state};
 use anyhow::Context;
 use axum::extract::{Query, State};
@@ -81,13 +78,9 @@ pub async fn login_handler(
                 if let Some(return_client_name) = &form_data.client_name {
                     // check to make sure the client name / return uri are in the allowed list
                     let mut tx = app_state.db_pool.begin().await?;
-                    check_allowed_redirects_by_client_name(
-                        &mut tx,
-                        return_client_name,
-                        client_return_uri,
-                    )
-                    .await
-                    .with_context(|| "Invalid redirect url for login")?;
+                    check_allowed_redirects_by_client_name(&mut tx, return_client_name, client_return_uri)
+                        .await
+                        .with_context(|| "Invalid redirect url for login")?;
                     tx.commit().await?;
                 } else {
                     // if the client name was not specified, it's an error
@@ -96,15 +89,11 @@ pub async fn login_handler(
                     )
                     .into());
                 }
-                redirect_uri
-                    .query_pairs_mut()
-                    .append_pair("client_return_uri", client_return_uri.as_str());
+                redirect_uri.query_pairs_mut().append_pair("client_return_uri", client_return_uri.as_str());
             }
             // It's ok if they give the client_name but no return uri
             if let Some(client_name) = &form_data.client_name {
-                redirect_uri
-                    .query_pairs_mut()
-                    .append_pair("client_name", client_name.as_str());
+                redirect_uri.query_pairs_mut().append_pair("client_name", client_name.as_str());
             }
 
             let oauth_state = OAuth2State {
@@ -112,10 +101,7 @@ pub async fn login_handler(
                 client_id,
                 idp_id: idp.id,
                 redirect_uri: redirect_uri.to_string(),
-                exp: SystemTime::now()
-                    .duration_since(SystemTime::UNIX_EPOCH)?
-                    .as_secs()
-                    + 300,
+                exp: SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?.as_secs() + 300,
                 nonce: generate_nonce(),
                 client_state: None,
             };
@@ -125,9 +111,7 @@ pub async fn login_handler(
                 Err(error) => return Err(Internal(error.to_string()).into()),
             };
 
-            let callback_url = &configuration
-                .http_config
-                .get_identity_provider_callback_url();
+            let callback_url = &configuration.http_config.get_identity_provider_callback_url();
             let encoded_nonce = BASE64_STANDARD.encode(generate_nonce().to_ne_bytes());
             let mut query_params = vec![
                 ("response_type", "code"),
@@ -144,11 +128,8 @@ pub async fn login_handler(
 
             let location = Url::parse_with_params(&idp.identity_redirect_url, query_params)?;
 
-            let updated_jar = jar.add(
-                Cookie::build((STATE_COOKIE_NAME, encoded_state))
-                    .path(ROOT_COOKIE_PATH)
-                    .http_only(true),
-            );
+            let updated_jar =
+                jar.add(Cookie::build((STATE_COOKIE_NAME, encoded_state)).path(ROOT_COOKIE_PATH).http_only(true));
 
             let mut headers = HashMap::new();
             headers.insert("location".to_string(), location.to_string());
@@ -156,12 +137,7 @@ pub async fn login_handler(
             let authorization = format!("Basic {}", BASE64_STANDARD.encode(&creds));
             headers.insert("Authorization".to_string(), authorization);
 
-            Ok((
-                updated_jar,
-                TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT)
-                    .headers(headers)
-                    .build(),
-            ))
+            Ok((updated_jar, TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT).headers(headers).build()))
         }
 
         Err(error) => Err(BadRequest(error.to_string()).into()),
@@ -177,18 +153,12 @@ pub async fn logout_handler(
     logout(&app_state.db_pool, &security_context.token).await?;
 
     // remove the token cookie
-    let updated_jar =
-        jar.remove(Cookie::build((TOKEN_COOKIE_NAME, String::from(""))).path(ROOT_COOKIE_PATH));
+    let updated_jar = jar.remove(Cookie::build((TOKEN_COOKIE_NAME, String::from(""))).path(ROOT_COOKIE_PATH));
 
     let http_config = &app_state.config.http_config;
     let mut headers = HashMap::new();
     headers.insert("location".to_string(), http_config.base_url.clone());
-    Ok((
-        updated_jar,
-        TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT)
-            .headers(headers)
-            .build(),
-    ))
+    Ok((updated_jar, TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT).headers(headers).build()))
 }
 
 /*
@@ -201,9 +171,7 @@ pub async fn whoami_handler(
     JwtValidator(security_context): JwtValidator,
 ) -> anyhow::Result<TmsResponse<WhoAmIResponse>, AppError> {
     let whoami_response = whoami(&app_state.db_pool, &security_context.token).await?;
-    Ok(TmsResponse::builder(StatusCode::OK)
-        .entity(whoami_response.into())
-        .build())
+    Ok(TmsResponse::builder(StatusCode::OK).entity(whoami_response.into()).build())
 }
 
 /*
@@ -235,34 +203,23 @@ pub async fn callback_handler(
     let expiration_time = Utc::now() + TimeDelta::seconds(expires_in);
 
     // redirect browser back to the post-login page (taken from state - validated in login step).
-    let decoded_state: OAuth2State =
-        decode_state(&app_state.config, &state_cookie.value().to_owned()).await?;
-    let headers: HashMap<String, String> =
-        HashMap::from_iter(vec![(LOCATION.to_string(), decoded_state.redirect_uri)]);
+    let decoded_state: OAuth2State = decode_state(&app_state.config, &state_cookie.value().to_owned()).await?;
+    let headers: HashMap<String, String> = HashMap::from_iter(vec![(LOCATION.to_string(), decoded_state.redirect_uri)]);
 
     // Build a new cookie and save it with the TMS token.
     let token_cookie = Cookie::build((TOKEN_COOKIE_NAME, token))
         .path(ROOT_COOKIE_PATH)
         .http_only(false)
         .secure(true)
-        .expires(OffsetDateTime::from_unix_timestamp(
-            expiration_time.timestamp(),
-        )?)
+        .expires(OffsetDateTime::from_unix_timestamp(expiration_time.timestamp())?)
         .build();
 
     // Build a 'removal cookie' to remove the state
-    let removal_cookie = Cookie::build((STATE_COOKIE_NAME, String::from("")))
-        .path(ROOT_COOKIE_PATH)
-        .http_only(true);
+    let removal_cookie = Cookie::build((STATE_COOKIE_NAME, String::from(""))).path(ROOT_COOKIE_PATH).http_only(true);
 
     let updated_jar = jar.add(token_cookie).remove(removal_cookie);
 
-    Ok((
-        updated_jar,
-        TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT)
-            .headers(headers)
-            .build(),
-    ))
+    Ok((updated_jar, TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT).headers(headers).build()))
 }
 
 /*
@@ -273,7 +230,5 @@ pub async fn get_idp_handler(
     State(app_state): State<AppState>,
 ) -> anyhow::Result<TmsResponse<HashSet<IdentityProvider>>, AppError> {
     let idp_result = get_identity_providers(&app_state.db_pool).await?;
-    Ok(TmsResponse::builder(StatusCode::OK)
-        .entity(idp_result.iter().map(IdentityProvider::from).collect())
-        .build())
+    Ok(TmsResponse::builder(StatusCode::OK).entity(idp_result.iter().map(IdentityProvider::from).collect()).build())
 }

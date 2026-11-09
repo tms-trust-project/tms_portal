@@ -6,30 +6,19 @@ use tms_lib::utils::jwt_encoder::JwtEncoderBuilder;
 
 const DEFAULT_STATE_ALGORITHM: &str = "RS256";
 
-pub async fn encode_state<T>(
-    configuration: &Configuration,
-    oauth_state: T,
-) -> anyhow::Result<String>
+pub async fn encode_state<T>(configuration: &Configuration, oauth_state: T) -> anyhow::Result<String>
 where
     T: Serialize,
 {
     let state_key = &configuration.state_key;
     let keys = &state_key.key;
 
-    JwtEncoderBuilder::builder(
-        oauth_state,
-        keys.jwt_private_key.as_bytes(),
-        DEFAULT_STATE_ALGORITHM,
-        keys.kid.as_str(),
-    )
-    .encode()
-    .await
+    JwtEncoderBuilder::builder(oauth_state, keys.jwt_private_key.as_bytes(), DEFAULT_STATE_ALGORITHM, keys.kid.as_str())
+        .encode()
+        .await
 }
 
-pub async fn decode_state<T>(
-    configuration: &Configuration,
-    state_string: &String,
-) -> anyhow::Result<T>
+pub async fn decode_state<T>(configuration: &Configuration, state_string: &String) -> anyhow::Result<T>
 where
     T: DeserializeOwned,
 {

@@ -1,10 +1,8 @@
-use crate::obj_model::resources::{
-    Resource, ResourceAccountLink, ResourceForUser, ResourceProviderLogin, Username,
-};
+use crate::obj_model::resources::{Resource, ResourceAccountLink, ResourceForUser, ResourceProviderLogin, Username};
 use anyhow::anyhow;
 use chrono::{DateTime, Utc};
 use sqlx::postgres::PgRow;
-use sqlx::{query, Error, PgPool, PgTransaction, Row};
+use sqlx::{Error, PgPool, PgTransaction, Row, query};
 use std::collections::HashSet;
 use tms_lib::utils::service_error::ServiceError::BadRequest;
 
@@ -147,13 +145,8 @@ pub async fn db_add_or_update_resources_with_username<'a>(
             rp_id.clone(),
         )
         .await?;
-        let _username = db_add_or_update_username(
-            tx,
-            resource.id,
-            resource_provider_login_id,
-            resource_for_user.username,
-        )
-        .await?;
+        let _username =
+            db_add_or_update_username(tx, resource.id, resource_provider_login_id, resource_for_user.username).await?;
     }
     Ok(())
 }
@@ -200,7 +193,7 @@ pub async fn db_get_resource_provider_login<'a>(
     rp_account: &str,
     rp_id: &str,
     last_login: DateTime<Utc>,
-    enabled: bool
+    enabled: bool,
 ) -> anyhow::Result<Option<ResourceProviderLogin>> {
     let row = query("SELECT * FROM resource_provider_logins WHERE tms_identity = $1 and rp_account=$2 and rp_id=$3 and last_login >= $4 and enabled is $5")
         .bind(tms_identity)
@@ -275,8 +268,7 @@ mod tests {
         config::init_db,
         database_url,
         db::{
-            allowed_redirects_dao::get_allowed_redirect,
-            identity_provider_dao::get_login_provider_by_id,
+            allowed_redirects_dao::get_allowed_redirect, identity_provider_dao::get_login_provider_by_id,
             resource_provider_logins_dao::db_add_or_update_resource,
         },
     };
@@ -305,12 +297,7 @@ mod tests {
         let db_string = database_url()?;
         let db_pool = init_db(&db_string).await;
         let mut tx = db_pool.begin().await?;
-        let x = get_allowed_redirect(
-            &mut tx,
-            &"tms".to_string(),
-            &"http://localhost:8080/".to_string(),
-        )
-        .await?;
+        let x = get_allowed_redirect(&mut tx, &"tms".to_string(), &"http://localhost:8080/".to_string()).await?;
         dbg!(x);
         Ok(())
     }

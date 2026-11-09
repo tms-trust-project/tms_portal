@@ -28,11 +28,7 @@ where
     }
 
     pub fn build(self) -> TmsResponse<T> {
-        TmsResponse {
-            status_code: self.status_code,
-            headers: self.headers,
-            entity: self.entity,
-        }
+        TmsResponse { status_code: self.status_code, headers: self.headers, entity: self.entity }
     }
 }
 pub struct TmsResponse<T>
@@ -49,11 +45,7 @@ where
     T: Serialize,
 {
     pub fn builder(status_code: StatusCode) -> TmsResponseBuilder<T> {
-        TmsResponseBuilder {
-            status_code,
-            entity: None,
-            headers: None,
-        }
+        TmsResponseBuilder { status_code, entity: None, headers: None }
     }
 }
 
@@ -61,9 +53,6 @@ impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let error_tuple = self.as_tuple();
         // build a TmsResponse object, and convert that into a Response
-        TmsResponse::builder(error_tuple.0)
-            .entity(error_tuple.1)
-            .build()
-            .into_response()
+        TmsResponse::builder(error_tuple.0).entity(error_tuple.1).build().into_response()
     }
 }

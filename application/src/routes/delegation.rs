@@ -21,14 +21,8 @@ pub async fn router() -> Router<AppState> {
     Router::new()
         .route("/delegations", post(add_delegation_handler))
         .route("/delegations", get(get_delegations_handler))
-        .route(
-            "/delegations/{client_name}",
-            get(get_delegations_handler_with_client),
-        )
-        .route(
-            "/delegations/{client_name}/{delegation_id}",
-            delete(delete_delegations_handler),
-        )
+        .route("/delegations/{client_name}", get(get_delegations_handler_with_client))
+        .route("/delegations/{client_name}/{delegation_id}", delete(delete_delegations_handler))
 }
 
 #[axum::debug_handler]
@@ -47,9 +41,7 @@ pub async fn add_delegation_handler(
         )
         .await?;
 
-    Ok(TmsResponse::builder(StatusCode::OK)
-        .entity(delegation.into())
-        .build())
+    Ok(TmsResponse::builder(StatusCode::OK).entity(delegation.into()).build())
 }
 #[axum::debug_handler]
 pub async fn get_delegations_handler_with_client(
@@ -57,34 +49,24 @@ pub async fn get_delegations_handler_with_client(
     Path(client_name): Path<String>,
     JwtValidator(security_context): JwtValidator,
 ) -> anyhow::Result<TmsResponse<Vec<Delegation>>, AppError> {
-    let delegations = app_state
-        .delegation_service
-        .get_delegations(&security_context, &Some(client_name))
-        .await?;
+    let delegations = app_state.delegation_service.get_delegations(&security_context, &Some(client_name)).await?;
     let mut result_delegations = Vec::with_capacity(delegations.len());
     for delegation in delegations {
         result_delegations.push(delegation.into());
     }
-    Ok(TmsResponse::builder(StatusCode::OK)
-        .entity(result_delegations)
-        .build())
+    Ok(TmsResponse::builder(StatusCode::OK).entity(result_delegations).build())
 }
 #[axum::debug_handler]
 pub async fn get_delegations_handler(
     State(app_state): State<AppState>,
     JwtValidator(security_context): JwtValidator,
 ) -> anyhow::Result<TmsResponse<Vec<Delegation>>, AppError> {
-    let delegations = app_state
-        .delegation_service
-        .get_delegations(&security_context, &None)
-        .await?;
+    let delegations = app_state.delegation_service.get_delegations(&security_context, &None).await?;
     let mut result_delegations = Vec::with_capacity(delegations.len());
     for delegation in delegations {
         result_delegations.push(delegation.into());
     }
-    Ok(TmsResponse::builder(StatusCode::OK)
-        .entity(result_delegations)
-        .build())
+    Ok(TmsResponse::builder(StatusCode::OK).entity(result_delegations).build())
 }
 #[axum::debug_handler]
 pub async fn delete_delegations_handler(
@@ -92,11 +74,7 @@ pub async fn delete_delegations_handler(
     Path((client_name, delegation_id)): Path<(String, i32)>,
     JwtValidator(security_context): JwtValidator,
 ) -> anyhow::Result<TmsResponse<Delegation>, AppError> {
-    let delegation = app_state
-        .delegation_service
-        .delete_delegation(&security_context, &client_name, delegation_id)
-        .await?;
-    Ok(TmsResponse::builder(StatusCode::OK)
-        .entity(delegation.into())
-        .build())
+    let delegation =
+        app_state.delegation_service.delete_delegation(&security_context, &client_name, delegation_id).await?;
+    Ok(TmsResponse::builder(StatusCode::OK).entity(delegation.into()).build())
 }

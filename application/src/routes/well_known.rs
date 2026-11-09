@@ -17,8 +17,8 @@ pub struct OpenidConfiguration {
     issuer: String,                 // "issuer": "https://auth.globus.org",
     authorization_endpoint: String, // "authorization_endpoint": "https://auth.globus.org/v2/oauth2/authorize",
     token_endpoint: String,         //"token_endpoint": "https://auth.globus.org/v2/oauth2/token",
-    revocation_endpoint: String, // "revocation_endpoint": "https://auth.globus.org/v2/oauth2/token/revoke",
-    jwks_uri: String,            // "jwks_uri": "https://auth.globus.org/jwk.json",
+    revocation_endpoint: String,    // "revocation_endpoint": "https://auth.globus.org/v2/oauth2/token/revoke",
+    jwks_uri: String,               // "jwks_uri": "https://auth.globus.org/jwk.json",
 }
 // more stuff we might add one day
 // "response_types_supported": [
@@ -55,10 +55,7 @@ pub struct OpenidConfiguration {
 
 pub async fn router() -> Router<AppState> {
     Router::new()
-        .route(
-            "/{client_id}/.well-known/openid-configuration",
-            get(openid_configuration_handler),
-        )
+        .route("/{client_id}/.well-known/openid-configuration", get(openid_configuration_handler))
         .route("/{client_id}/jwks.json", get(jwks_json_handler))
 }
 
@@ -77,9 +74,7 @@ pub async fn openid_configuration_handler(
     };
 
     debug!("Client Id:{:?}", client_id);
-    Ok(TmsResponse::builder(StatusCode::OK)
-        .entity(openid_configuration)
-        .build())
+    Ok(TmsResponse::builder(StatusCode::OK).entity(openid_configuration).build())
 }
 pub async fn jwks_json_handler(
     Path(client_id): Path<String>,

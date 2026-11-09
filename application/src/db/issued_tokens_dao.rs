@@ -16,41 +16,30 @@ impl From<&PgRow> for IssuedToken {
         }
     }
 }
-pub async fn db_get_token<'a>(
-    tx: &mut PgTransaction<'a>,
-    token: &String,
-) -> anyhow::Result<IssuedToken> {
-    let row = query("select * from issued_tokens where access_token = $1")
-        .bind(token)
-        .fetch_one(&mut **tx)
-        .await
-        .map_err(|error| match error {
-            sqlx::Error::RowNotFound => NotFound("Token not found".to_string()).into(),
-            _ => anyhow::anyhow!(error),
-        })?;
+pub async fn db_get_token<'a>(tx: &mut PgTransaction<'a>, token: &String) -> anyhow::Result<IssuedToken> {
+    let row =
+        query("select * from issued_tokens where access_token = $1").bind(token).fetch_one(&mut **tx).await.map_err(
+            |error| match error {
+                sqlx::Error::RowNotFound => NotFound("Token not found".to_string()).into(),
+                _ => anyhow::anyhow!(error),
+            },
+        )?;
     Ok(IssuedToken::from(&row))
 }
 
 #[allow(dead_code)]
-pub async fn db_delete_token<'a>(
-    tx: &mut PgTransaction<'a>,
-    token: &String,
-) -> anyhow::Result<IssuedToken> {
-    let row = query("delete from issued_tokens where access_token = $1")
-        .bind(token)
-        .fetch_one(&mut **tx)
-        .await
-        .map_err(|error| match error {
-            sqlx::Error::RowNotFound => NotFound("Token not found".to_string()).into(),
-            _ => anyhow::anyhow!(error),
-        })?;
+pub async fn db_delete_token<'a>(tx: &mut PgTransaction<'a>, token: &String) -> anyhow::Result<IssuedToken> {
+    let row =
+        query("delete from issued_tokens where access_token = $1").bind(token).fetch_one(&mut **tx).await.map_err(
+            |error| match error {
+                sqlx::Error::RowNotFound => NotFound("Token not found".to_string()).into(),
+                _ => anyhow::anyhow!(error),
+            },
+        )?;
     Ok(IssuedToken::from(&row))
 }
 
-pub async fn db_revoke_token<'a>(
-    tx: &mut PgTransaction<'a>,
-    token: &String,
-) -> anyhow::Result<IssuedToken> {
+pub async fn db_revoke_token<'a>(tx: &mut PgTransaction<'a>, token: &String) -> anyhow::Result<IssuedToken> {
     let row = query("update issued_tokens set revoked = true where access_token = $1 returning *")
         .bind(token)
         .fetch_one(&mut **tx)
@@ -78,10 +67,7 @@ pub async fn db_insert_token<'a>(
         })?;
     Ok(IssuedToken::from(&row))
 }
-pub async fn db_cleanup_tokens<'a>(
-    tx: &mut PgTransaction<'a>,
-    expired_before: &DateTime<Utc>,
-) -> anyhow::Result<u64> {
+pub async fn db_cleanup_tokens<'a>(tx: &mut PgTransaction<'a>, expired_before: &DateTime<Utc>) -> anyhow::Result<u64> {
     let row_result = query("delete from issued_tokens where expiration < $1")
         .bind(expired_before)
         .execute(&mut **tx)

@@ -1,12 +1,11 @@
 use crate::AppState;
 use crate::routes::api_obj_model::resources::{
-    Resource, ResourceAccountLink, ResourceAccountLogin, ResourceProvider,
-    ResourceProviderAuthorizeRequest,
+    Resource, ResourceAccountLink, ResourceAccountLogin, ResourceProvider, ResourceProviderAuthorizeRequest,
 };
 use crate::routes::api_obj_model::tms_response::TmsResponse;
 use crate::services::resource_service::{
-    get_authenticate_redirect_info, get_linked_resource_providers, get_resource_provider_token,
-    get_resource_providers, unlink_resource_provider,
+    get_authenticate_redirect_info, get_linked_resource_providers, get_resource_provider_token, get_resource_providers,
+    unlink_resource_provider,
 };
 use crate::utils::app_error::AppError;
 use crate::utils::jwt_utils::JwtValidator;
@@ -35,23 +34,11 @@ const RP_COOKIE_PATH: &str = "/resources/providers";
 pub async fn router() -> Router<AppState> {
     Router::new()
         .route("/resources/providers", get(list_resource_provider_handler))
-        .route(
-            "/resources/{provider_id}/{provider_account_id}",
-            get(get_resource_handler),
-        )
-        .route(
-            "/resources/providers/links/{resource_provider_link_id}",
-            delete(unlink_resource_provider_handler),
-        )
-        .route(
-            "/resources/providers/links",
-            get(get_linked_resource_provider_handler),
-        )
+        .route("/resources/{provider_id}/{provider_account_id}", get(get_resource_handler))
+        .route("/resources/providers/links/{resource_provider_link_id}", delete(unlink_resource_provider_handler))
+        .route("/resources/providers/links", get(get_linked_resource_provider_handler))
         .route("/resources/providers/authorize", get(authorize_handler))
-        .route(
-            "/resources/providers/callback",
-            get(get_resource_provider_callback_handler),
-        )
+        .route("/resources/providers/callback", get(get_resource_provider_callback_handler))
 }
 
 //#[require_token(security_context)]
@@ -77,32 +64,18 @@ pub async fn authorize_handler(
     .await?;
 
     let updated_jar = jar.add(
-        Cookie::build((
-            get_rp_state_cookie_name(&query_params.provider_id),
-            authorize_info.encoded_state.clone(),
-        ))
-        .path(RP_COOKIE_PATH)
-        .http_only(true),
+        Cookie::build((get_rp_state_cookie_name(&query_params.provider_id), authorize_info.encoded_state.clone()))
+            .path(RP_COOKIE_PATH)
+            .http_only(true),
     );
 
-    let creds = format!(
-        "{}:{}",
-        authorize_info.client_id, authorize_info.client_secret
-    );
+    let creds = format!("{}:{}", authorize_info.client_id, authorize_info.client_secret);
     let authorization = format!("Basic {}", BASE64_STANDARD.encode(&creds));
     let mut headers = HashMap::new();
-    headers.insert(
-        "location".to_string(),
-        authorize_info.identity_redirect_url.to_string(),
-    );
+    headers.insert("location".to_string(), authorize_info.identity_redirect_url.to_string());
     headers.insert("Authorization".to_string(), authorization);
 
-    Ok((
-        updated_jar,
-        TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT)
-            .headers(headers)
-            .build(),
-    ))
+    Ok((updated_jar, TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT).headers(headers).build()))
 }
 
 fn get_rp_state_cookie_name(rp_name: &String) -> String {
@@ -116,12 +89,9 @@ pub async fn list_resource_provider_handler(
     JwtValidator(security_context): JwtValidator,
 ) -> Result<TmsResponse<HashSet<ResourceProvider>>, AppError> {
     let linked_only = query_params.linked_only.unwrap_or(false);
-    let result =
-        get_resource_providers(&security_context, &app_state.db_pool, &linked_only).await?;
+    let result = get_resource_providers(&security_context, &app_state.db_pool, &linked_only).await?;
     let response = result.iter().map(ResourceProvider::from).collect();
-    Ok(TmsResponse::builder(StatusCode::OK)
-        .entity(response)
-        .build())
+    Ok(TmsResponse::builder(StatusCode::OK).entity(response).build())
 }
 #[debug_handler]
 pub async fn unlink_resource_provider_handler(
@@ -129,15 +99,8 @@ pub async fn unlink_resource_provider_handler(
     Path(resource_provider_link_id): Path<i64>,
     JwtValidator(security_context): JwtValidator,
 ) -> Result<TmsResponse<ResourceAccountLogin>, AppError> {
-    let result = unlink_resource_provider(
-        &security_context,
-        &app_state.db_pool,
-        &resource_provider_link_id,
-    )
-    .await?;
-    Ok(TmsResponse::builder(StatusCode::OK)
-        .entity(result.into())
-        .build())
+    let result = unlink_resource_provider(&security_context, &app_state.db_pool, &resource_provider_link_id).await?;
+    Ok(TmsResponse::builder(StatusCode::OK).entity(result.into()).build())
 }
 #[debug_handler]
 pub async fn get_linked_resource_provider_handler(
@@ -146,9 +109,7 @@ pub async fn get_linked_resource_provider_handler(
 ) -> Result<TmsResponse<HashSet<ResourceAccountLink>>, AppError> {
     let result = get_linked_resource_providers(&security_context, &app_state.db_pool).await?;
     let response = result.iter().map(ResourceAccountLink::from).collect();
-    Ok(TmsResponse::builder(StatusCode::OK)
-        .entity(response)
-        .build())
+    Ok(TmsResponse::builder(StatusCode::OK).entity(response).build())
 }
 #[debug_handler]
 pub async fn get_resource_handler(
@@ -198,8 +159,7 @@ pub async fn get_resource_provider_callback_handler(
     let resource_provider_id = decoded_state.idp_id;
 
     // Get the state cookie set during the login process.
-    let Some(state_cookie) = jar.get(get_rp_state_cookie_name(&resource_provider_id).as_str())
-    else {
+    let Some(state_cookie) = jar.get(get_rp_state_cookie_name(&resource_provider_id).as_str()) else {
         return Err(Unauthorized("No state cookies were found".to_string()).into());
     };
 
@@ -207,8 +167,7 @@ pub async fn get_resource_provider_callback_handler(
         return Err(Unauthorized("State cookies do not match".to_string()).into());
     }
 
-    let decoded_state: OAuth2State =
-        decode_state(&app_state.config, &state_cookie.value().to_string()).await?;
+    let decoded_state: OAuth2State = decode_state(&app_state.config, &state_cookie.value().to_string()).await?;
 
     get_resource_provider_token(
         &app_state.config,
@@ -220,20 +179,11 @@ pub async fn get_resource_provider_callback_handler(
     .await?;
 
     // redirect browser back to the post-login page (taken from state - validated in login step).
-    let headers: HashMap<String, String> =
-        HashMap::from_iter(vec![(LOCATION.to_string(), decoded_state.redirect_uri)]);
+    let headers: HashMap<String, String> = HashMap::from_iter(vec![(LOCATION.to_string(), decoded_state.redirect_uri)]);
 
-    let removal_cookie = Cookie::build((
-        get_rp_state_cookie_name(&resource_provider_id),
-        String::from(""),
-    ))
-    .path(RP_COOKIE_PATH);
+    let removal_cookie =
+        Cookie::build((get_rp_state_cookie_name(&resource_provider_id), String::from(""))).path(RP_COOKIE_PATH);
     let updated_jar = jar.remove(removal_cookie);
 
-    Ok((
-        updated_jar,
-        TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT)
-            .headers(headers)
-            .build(),
-    ))
+    Ok((updated_jar, TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT).headers(headers).build()))
 }

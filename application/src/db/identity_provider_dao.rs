@@ -39,9 +39,7 @@ impl TryFrom<&PgRow> for IdentityProvider {
 /*
 Returns the list of identity providers that support login
  */
-pub async fn get_login_providers<'a>(
-    tx: &mut PgTransaction<'a>,
-) -> Result<HashSet<IdentityProvider>> {
+pub async fn get_login_providers<'a>(tx: &mut PgTransaction<'a>) -> Result<HashSet<IdentityProvider>> {
     let idp_query_result = query(
         "select id, name, client_id, client_secret, identity_redirect_url,
                      oauth2_token_url, oauth2_jwks_url, oidc_user_info_url,
@@ -62,10 +60,7 @@ pub async fn get_login_providers<'a>(
 /*
 Returns an identity provider by id if it supports login
  */
-pub async fn get_login_provider_by_id<'a>(
-    tx: &mut PgTransaction<'a>,
-    id: &String,
-) -> Result<IdentityProvider> {
+pub async fn get_login_provider_by_id<'a>(tx: &mut PgTransaction<'a>, id: &String) -> Result<IdentityProvider> {
     let row = query(
         "select id, name, client_id, client_secret, identity_redirect_url,
                      oauth2_token_url, oauth2_jwks_url, oidc_user_info_url,
@@ -134,9 +129,7 @@ pub async fn get_resource_provider_by_id<'a>(
     .await
     {
         Ok(row) => Ok(IdentityProvider::try_from(&row)?),
-        Err(Error::RowNotFound) => {
-            Err(BadRequest("Resource provider not found".to_string()).into())
-        }
+        Err(Error::RowNotFound) => Err(BadRequest("Resource provider not found".to_string()).into()),
         Err(error) => Err(anyhow!(error)),
     }
 }
@@ -148,13 +141,7 @@ mod tests {
     #[test]
     fn test_idp_type_from_str() {
         assert!(IdentityProviderType::from_str("test").is_err());
-        assert_eq!(
-            IdentityProviderType::from_str("Globus").unwrap(),
-            IdentityProviderType::Globus
-        );
-        assert_eq!(
-            IdentityProviderType::from_str("tacc_tapis").unwrap(),
-            IdentityProviderType::TaccTapis
-        );
+        assert_eq!(IdentityProviderType::from_str("Globus").unwrap(), IdentityProviderType::Globus);
+        assert_eq!(IdentityProviderType::from_str("tacc_tapis").unwrap(), IdentityProviderType::TaccTapis);
     }
 }

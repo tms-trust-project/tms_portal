@@ -79,25 +79,13 @@ impl DelegationBuilder {
 
         Delegation {
             id: self.id.unwrap_or(1),
-            client_id: self
-                .client_id
-                .clone()
-                .unwrap_or_else(|| "test-client-id".into()),
-            client_name: self
-                .client_name
-                .clone()
-                .unwrap_or_else(|| "Test Client".into()),
-            rp_account: self
-                .rp_account
-                .clone()
-                .unwrap_or_else(|| "test-rp-account".into()),
+            client_id: self.client_id.clone().unwrap_or_else(|| "test-client-id".into()),
+            client_name: self.client_name.clone().unwrap_or_else(|| "Test Client".into()),
+            rp_account: self.rp_account.clone().unwrap_or_else(|| "test-rp-account".into()),
             expires_at: self.expires_at.unwrap_or(now),
             created: self.created.unwrap_or(now),
             updated: self.updated.unwrap_or(now),
-            tms_identity: self
-                .tms_identity
-                .clone()
-                .unwrap_or_else(|| "test-identity".into()),
+            tms_identity: self.tms_identity.clone().unwrap_or_else(|| "test-identity".into()),
             rp_id: self.rp_id.clone().unwrap_or_else(|| "test-rp-id".into()),
         }
     }

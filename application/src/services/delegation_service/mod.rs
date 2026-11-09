@@ -25,12 +25,7 @@ impl DelegationService {
         resource_provider_login_repo: Arc<dyn ResourceProviderLoginRepository>,
         delegation_policy: DelegationPolicyConfig,
     ) -> Self {
-        Self {
-            client_repo,
-            delegation_repo,
-            resource_provider_login_repo,
-            delegation_policy,
-        }
+        Self { client_repo, delegation_repo, resource_provider_login_repo, delegation_policy }
     }
 
     pub async fn add_delegation(
@@ -41,7 +36,7 @@ impl DelegationService {
         rp_account: &str,
     ) -> anyhow::Result<Delegation> {
         let client = self.client_repo.get_by_name(client_name).await?;
-        
+
         let client_id = client.client_id;
         if !ctx.token_matches_client(&client_id) {
             return Err(BadRequest(format!(
@@ -50,29 +45,25 @@ impl DelegationService {
             ))
             .into());
         }
-        
+
         let maybe_recent_login = self
             .resource_provider_login_repo
             .find(
                 &ctx.tms_identity,
                 rp_account,
                 rp_id,
-                Utc::now()
-                    - Duration::minutes(
-                        self.delegation_policy
-                            .delegation_max_mins_since_login
-                            .clone(),
-                    ),
+                Utc::now() - Duration::minutes(self.delegation_policy.delegation_max_mins_since_login.clone()),
                 true,
             )
             .await?;
 
         let _recent_login = match maybe_recent_login {
             Some(recent_login) => recent_login,
-            None => return Err(Unauthorized("User must reauthenticate to delegate".to_string()).into())
+            None => return Err(Unauthorized("User must reauthenticate to delegate".to_string()).into()),
         };
 
-        let delegation = self.delegation_repo
+        let delegation = self
+            .delegation_repo
             .save(
                 &client_id,
                 rp_account,
@@ -119,11 +110,7 @@ impl DelegationService {
         }
 
         let delegations = match client_id_for_delegations {
-            Some(client_id) => {
-                self.delegation_repo
-                    .list_by_client_id(&client_id, &ctx.tms_identity)
-                    .await?
-            }
+            Some(client_id) => self.delegation_repo.list_by_client_id(&client_id, &ctx.tms_identity).await?,
             None => self.delegation_repo.list_all(&ctx.tms_identity).await?,
         };
 
@@ -152,10 +139,7 @@ impl DelegationService {
             .into());
         }
 
-        let delegation = self
-            .delegation_repo
-            .delete(&ctx.tms_identity, &client.client_id, delegation_id)
-            .await?;
+        let delegation = self.delegation_repo.delete(&ctx.tms_identity, &client.client_id, delegation_id).await?;
 
         Ok(delegation)
     }

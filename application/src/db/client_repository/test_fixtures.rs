@@ -1,7 +1,4 @@
-use crate::{
-    obj_model::client::Client,
-    ports::client::ClientRepository,
-};
+use crate::{obj_model::client::Client, ports::client::ClientRepository};
 
 pub struct MockClientRepo {
     clients: Vec<Client>,
@@ -10,10 +7,7 @@ pub struct MockClientRepo {
 
 impl MockClientRepo {
     pub fn new(initial_state: Vec<Client>) -> Self {
-        Self {
-            clients: initial_state,
-            error: None,
-        }
+        Self { clients: initial_state, error: None }
     }
 
     pub fn with_error(mut self, error: impl Into<String>) -> Self {
@@ -22,9 +16,7 @@ impl MockClientRepo {
     }
 
     fn configured_error(&self) -> Option<anyhow::Error> {
-        self.error
-            .as_ref()
-            .map(|error| anyhow::Error::msg(error.clone()))
+        self.error.as_ref().map(|error| anyhow::Error::msg(error.clone()))
     }
 }
 

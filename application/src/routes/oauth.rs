@@ -8,9 +8,7 @@ use crate::services::oauth2_service::{
 };
 use crate::services::resource_service::AccessToken;
 use crate::utils::app_error::AppError;
-use crate::utils::oauth2_authorization_code_utils::{
-    AuthCodeQueryParams, ROOT_COOKIE_PATH, STATE_COOKIE_NAME,
-};
+use crate::utils::oauth2_authorization_code_utils::{AuthCodeQueryParams, ROOT_COOKIE_PATH, STATE_COOKIE_NAME};
 use axum::extract::{Query, State};
 use axum::routing::{get, post};
 use axum::{Json, Router, debug_handler};
@@ -154,12 +152,7 @@ async fn authorize_handler(
             let mut headers = HashMap::new();
             headers.insert("location".to_string(), authorization_result.location);
 
-            Ok((
-                updated_jar,
-                TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT)
-                    .headers(headers)
-                    .build(),
-            ))
+            Ok((updated_jar, TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT).headers(headers).build()))
         } // TODO:  at some point we probably need to handle refresh tokens
     }
 }
@@ -183,9 +176,7 @@ async fn tokens_handler(
                     &oauth_token_request.redirect_uri,
                 )
                 .await?;
-                Ok(TmsResponse::builder(StatusCode::OK)
-                    .entity(OAuthTokenResponse::from(token_response))
-                    .build())
+                Ok(TmsResponse::builder(StatusCode::OK).entity(OAuthTokenResponse::from(token_response)).build())
             } else {
                 Err(BadRequest("Authorization code was not provided".to_string()).into())
             }
@@ -217,23 +208,14 @@ async fn callback_handler(
     )
     .await?;
 
-    let removal_cookie = Cookie::build((STATE_COOKIE_NAME, String::from("")))
-        .path(ROOT_COOKIE_PATH)
-        .http_only(true);
+    let removal_cookie = Cookie::build((STATE_COOKIE_NAME, String::from(""))).path(ROOT_COOKIE_PATH).http_only(true);
 
     let updated_jar = jar.remove(removal_cookie);
 
-    let headers: HashMap<String, String> = HashMap::from_iter(vec![(
-        LOCATION.to_string(),
-        authorization_callback_result.location,
-    )]);
+    let headers: HashMap<String, String> =
+        HashMap::from_iter(vec![(LOCATION.to_string(), authorization_callback_result.location)]);
 
-    Ok((
-        updated_jar,
-        TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT)
-            .headers(headers)
-            .build(),
-    ))
+    Ok((updated_jar, TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT).headers(headers).build()))
 }
 
 #[cfg(test)]
@@ -242,22 +224,10 @@ mod tests {
 
     #[test]
     fn test_grant_type_from_str() {
-        assert_eq!(
-            GrantType::try_from("authorization_code").unwrap(),
-            GrantType::AuthorizationCode
-        );
-        assert_eq!(
-            GrantType::try_from("AuthoRization_code").unwrap(),
-            GrantType::AuthorizationCode
-        );
-        assert_eq!(
-            GrantType::try_from("REFRESH_TOKEN").unwrap(),
-            GrantType::RefreshToken
-        );
-        assert_eq!(
-            GrantType::try_from("refresh_token").unwrap(),
-            GrantType::RefreshToken
-        );
+        assert_eq!(GrantType::try_from("authorization_code").unwrap(), GrantType::AuthorizationCode);
+        assert_eq!(GrantType::try_from("AuthoRization_code").unwrap(), GrantType::AuthorizationCode);
+        assert_eq!(GrantType::try_from("REFRESH_TOKEN").unwrap(), GrantType::RefreshToken);
+        assert_eq!(GrantType::try_from("refresh_token").unwrap(), GrantType::RefreshToken);
         let result = GrantType::try_from("bogus_value");
         assert!(result.is_err());
     }

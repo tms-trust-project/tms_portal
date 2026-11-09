@@ -13,12 +13,7 @@ pub struct JwtDecoderBuilder {
 
 impl JwtDecoderBuilder {
     pub fn builder() -> JwtDecoderBuilder {
-        JwtDecoderBuilder {
-            jwks_url: None,
-            public_key_bytes: None,
-            audience: None,
-            validate_aud: true,
-        }
+        JwtDecoderBuilder { jwks_url: None, public_key_bytes: None, audience: None, validate_aud: true }
     }
     pub fn jwks_url(mut self, jwks_url: &Option<String>) -> Self {
         if let Some(jwks_url) = jwks_url {

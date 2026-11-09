@@ -20,13 +20,12 @@ pub async fn get_allowed_redirect<'a>(
     client_id: &str,
     redirect_uri: &str,
 ) -> Result<AllowedRedirect> {
-    match query(
-        "SELECT uri, client_id, created, updated FROM allowed_redirects WHERE client_id = $1 and uri = $2",
-    )
+    match query("SELECT uri, client_id, created, updated FROM allowed_redirects WHERE client_id = $1 and uri = $2")
         .bind(client_id)
         .bind(redirect_uri)
         .fetch_one(&mut **tx)
-        .await {
+        .await
+    {
         Ok(row) => Ok(AllowedRedirect::from(&row)),
         Err(Error::RowNotFound) => Err(BadRequest("Invalid redirect uri".to_string()).into()),
         Err(error) => Err(anyhow!(error)),

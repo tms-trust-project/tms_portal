@@ -13,21 +13,9 @@ pub trait DelegationRepository: Send + Sync {
         rp_id: &str,
     ) -> anyhow::Result<Delegation>;
 
-    async fn list_all(
-        &self,
-        tms_identity: &str,
-    ) -> anyhow::Result<Vec<Delegation>>;
+    async fn list_all(&self, tms_identity: &str) -> anyhow::Result<Vec<Delegation>>;
 
-    async fn list_by_client_id(
-        &self,
-        client_id: &str,
-        tms_identity: &str,
-    ) -> anyhow::Result<Vec<Delegation>>;
+    async fn list_by_client_id(&self, client_id: &str, tms_identity: &str) -> anyhow::Result<Vec<Delegation>>;
 
-    async fn delete(
-        &self,
-        tms_identity: &str,
-        client_id: &str,
-        delegation_id: i32,
-    ) -> anyhow::Result<Delegation>;
+    async fn delete(&self, tms_identity: &str, client_id: &str, delegation_id: i32) -> anyhow::Result<Delegation>;
 }
