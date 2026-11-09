@@ -134,7 +134,7 @@ async fn add_delegation_succeeds_when_requested_client_id_matches_security_conte
 }
 
 #[tokio::test]
-async fn delegation_fails_when_no_recent_login_found() {
+async fn add_delegation_fails_when_no_recent_login_found() {
     // Initialize the values that will be used in this test
     let values = TestValuesBuilder::new().build();
 
@@ -168,7 +168,7 @@ async fn delegation_fails_when_no_recent_login_found() {
 }
 
 #[tokio::test]
-async fn delegation_fails_due_to_internal_client_repo_error() {
+async fn add_delegation_fails_due_to_internal_client_repo_error() {
     // Initialize the values that will be used in this test
     let values = TestValuesBuilder::new().build();
 
@@ -242,7 +242,7 @@ async fn add_delegation_fails_due_to_internal_rp_login_repo_error() {
 }
 
 #[tokio::test]
-async fn fails_due_to_internal_delegation_repo_error() {
+async fn add_delegation_fails_due_to_internal_delegation_repo_error() {
     // Initialize the values that will be used in this test
     let values = TestValuesBuilder::new().build();
 
