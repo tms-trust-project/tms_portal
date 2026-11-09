@@ -110,7 +110,10 @@ async fn main() -> anyhow::Result<()> {
                         // expired an hour ago
                         let expires_before = Utc::now() - TimeDelta::hours(1);
                         match db_cleanup_tokens(&mut tx, &expires_before).await {
-                            Ok(_) => tx.commit().await.context("Unable to commit transaction for token cleanup"),
+                            Ok(_) => tx
+                                .commit()
+                                .await
+                                .context("Unable to commit transaction for token cleanup"),
                             Err(error) => Err(error),
                         }
                     }
@@ -151,7 +154,9 @@ async fn main() -> anyhow::Result<()> {
         .fallback_service(ServeDir::new("dist/").not_found_service(not_found.into_service()))
         .method_not_allowed_fallback(method_not_allowed);
 
-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", &port)).await.unwrap();
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", &port))
+        .await
+        .unwrap();
 
     Ok(axum::serve(listener, app).await?)
 }

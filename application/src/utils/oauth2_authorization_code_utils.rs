@@ -57,7 +57,10 @@ where
         .context("Error getting response body")?;
     debug!("Response from exchange code: {:?}", response);
 
-    let token_string = response.text().await.context("Error getting response body")?;
+    let token_string = response
+        .text()
+        .await
+        .context("Error getting response body")?;
 
     serde_json::from_str::<R>(&token_string).context("Error deserializing token response body")
 }
@@ -74,5 +77,9 @@ where
     if let Some(key) = &idp.oauth2_public_key {
         builder = builder.public_key(key.as_bytes());
     }
-    builder.audience(audience).decode(id_token).await.context("Error decoding JWT")
+    builder
+        .audience(audience)
+        .decode(id_token)
+        .await
+        .context("Error decoding JWT")
 }

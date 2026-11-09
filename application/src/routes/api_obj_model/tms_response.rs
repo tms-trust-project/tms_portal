@@ -53,6 +53,9 @@ impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let error_tuple = self.as_tuple();
         // build a TmsResponse object, and convert that into a Response
-        TmsResponse::builder(error_tuple.0).entity(error_tuple.1).build().into_response()
+        TmsResponse::builder(error_tuple.0)
+            .entity(error_tuple.1)
+            .build()
+            .into_response()
     }
 }

@@ -11,32 +11,6 @@ use crate::{
 };
 
 #[tokio::test]
-async fn add_delegation_fails_when_client_ids_dont_match_and_not_tms_client() {
-    // Initialize the values that will be used in this test
-    let values = TestValuesBuilder::new().build();
-
-    // Build a DelegationService with mocked dependencies
-    let service = TestDelegationServiceBuilder::new()
-        .with_init_mock_client_repo(vec![
-            ClientBuilder::new().with_client_id(values.client_id.clone()).with_name(values.client_name.clone()).build(),
-        ])
-        .with_init_mock_delegation_repo(vec![])
-        .with_init_mock_rp_login_repo(vec![])
-        .with_delegation_policy(values.delegation_policy.clone())
-        .build();
-
-    // Initialize a security context that uses a different client id than the mocked client
-    // and where the security context is NOT a tms client
-    let ctx = SecurityContextBuilder::new().build_with_non_matching_client_ids_as_non_tms_client(&values);
-
-    // Add the delegation
-    let result = service.add_delegation(&ctx, &values.client_name, &values.rp_id, &values.rp_account).await;
-
-    // Fails as expected
-    assert!(result.is_err())
-}
-
-#[tokio::test]
 async fn add_delegation_succeeds_when_client_ids_dont_match_and_is_tms_client() {
     // Initialize the values that will be used in this test
     let values = TestValuesBuilder::new().build();
@@ -44,7 +18,10 @@ async fn add_delegation_succeeds_when_client_ids_dont_match_and_is_tms_client() 
     // Build a DelegationService with mocked dependencies
     let service = TestDelegationServiceBuilder::new()
         .with_init_mock_client_repo(vec![
-            ClientBuilder::new().with_client_id(values.client_id.clone()).with_name(values.client_name.clone()).build(),
+            ClientBuilder::new()
+                .with_client_id(values.client_id.clone())
+                .with_name(values.client_name.clone())
+                .build(),
         ])
         .with_init_mock_delegation_repo(vec![])
         .with_init_mock_rp_login_repo(vec![utils::build_valid_login_from_delegation_policy(
@@ -60,7 +37,9 @@ async fn add_delegation_succeeds_when_client_ids_dont_match_and_is_tms_client() 
     // and where the security context is a tms client
     let ctx = SecurityContextBuilder::new().build_with_non_match_client_ids_as_tms_client(&values);
 
-    let result = service.add_delegation(&ctx, &values.client_name, &values.rp_id, &values.rp_account).await;
+    let result = service
+        .add_delegation(&ctx, &values.client_name, &values.rp_id, &values.rp_account)
+        .await;
 
     assert!(result.is_ok())
 }
@@ -73,7 +52,10 @@ async fn add_delegation_succeeds_when_requested_client_id_matches_security_conte
     // Build a DelegationService with mocked dependencies
     let service = TestDelegationServiceBuilder::new()
         .with_init_mock_client_repo(vec![
-            ClientBuilder::new().with_client_id(values.client_id.clone()).with_name(values.client_name.clone()).build(),
+            ClientBuilder::new()
+                .with_client_id(values.client_id.clone())
+                .with_name(values.client_name.clone())
+                .build(),
         ])
         .with_init_mock_delegation_repo(vec![])
         .with_init_mock_rp_login_repo(vec![utils::build_valid_login_from_delegation_policy(
@@ -87,9 +69,42 @@ async fn add_delegation_succeeds_when_requested_client_id_matches_security_conte
 
     let ctx = SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
 
-    let result = service.add_delegation(&ctx, &values.client_name, &values.rp_id, &values.rp_account).await;
+    let result = service
+        .add_delegation(&ctx, &values.client_name, &values.rp_id, &values.rp_account)
+        .await;
 
     assert!(result.is_ok())
+}
+
+#[tokio::test]
+async fn add_delegation_fails_when_client_ids_dont_match_and_not_tms_client() {
+    // Initialize the values that will be used in this test
+    let values = TestValuesBuilder::new().build();
+
+    // Build a DelegationService with mocked dependencies
+    let service = TestDelegationServiceBuilder::new()
+        .with_init_mock_client_repo(vec![
+            ClientBuilder::new()
+                .with_client_id(values.client_id.clone())
+                .with_name(values.client_name.clone())
+                .build(),
+        ])
+        .with_init_mock_delegation_repo(vec![])
+        .with_init_mock_rp_login_repo(vec![])
+        .with_delegation_policy(values.delegation_policy.clone())
+        .build();
+
+    // Initialize a security context that uses a different client id than the mocked client
+    // and where the security context is NOT a tms client
+    let ctx = SecurityContextBuilder::new().build_with_non_matching_client_ids_as_non_tms_client(&values);
+
+    // Add the delegation
+    let result = service
+        .add_delegation(&ctx, &values.client_name, &values.rp_id, &values.rp_account)
+        .await;
+
+    // Fails as expected
+    assert!(result.is_err())
 }
 
 #[tokio::test]
@@ -100,7 +115,10 @@ async fn add_delegation_fails_when_no_recent_login_found() {
     // Build a DelegationService with mocked dependencies
     let service = TestDelegationServiceBuilder::new()
         .with_init_mock_client_repo(vec![
-            ClientBuilder::new().with_client_id(values.client_id.clone()).with_name(values.client_name.clone()).build(),
+            ClientBuilder::new()
+                .with_client_id(values.client_id.clone())
+                .with_name(values.client_name.clone())
+                .build(),
         ])
         .with_init_mock_delegation_repo(vec![])
         .with_init_mock_rp_login_repo(vec![])
@@ -109,7 +127,9 @@ async fn add_delegation_fails_when_no_recent_login_found() {
 
     let ctx = SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
 
-    let result = service.add_delegation(&ctx, &values.client_name, &values.rp_id, &values.rp_account).await;
+    let result = service
+        .add_delegation(&ctx, &values.client_name, &values.rp_id, &values.rp_account)
+        .await;
 
     assert!(result.is_err())
 }
@@ -122,7 +142,10 @@ async fn add_delegation_fails_due_to_internal_client_repo_error() {
     // Build a DelegationService with mocked dependencies
     let service = TestDelegationServiceBuilder::new()
         .with_init_mock_client_repo(vec![
-            ClientBuilder::new().with_client_id(values.client_id.clone()).with_name(values.client_name.clone()).build(),
+            ClientBuilder::new()
+                .with_client_id(values.client_id.clone())
+                .with_name(values.client_name.clone())
+                .build(),
         ])
         .with_mock_client_repo_error(&values.client_repo_error_message)
         .with_init_mock_rp_login_repo(vec![])
@@ -131,7 +154,9 @@ async fn add_delegation_fails_due_to_internal_client_repo_error() {
 
     let ctx = SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
 
-    let result = service.add_delegation(&ctx, &values.client_name, &values.rp_id, &values.rp_account).await;
+    let result = service
+        .add_delegation(&ctx, &values.client_name, &values.rp_id, &values.rp_account)
+        .await;
 
     assert!(result.is_err());
 
@@ -147,7 +172,10 @@ async fn add_delegation_fails_due_to_internal_rp_login_repo_error() {
     // Build a DelegationService with mocked dependencies
     let service = TestDelegationServiceBuilder::new()
         .with_init_mock_client_repo(vec![
-            ClientBuilder::new().with_client_id(values.client_id.clone()).with_name(values.client_name.clone()).build(),
+            ClientBuilder::new()
+                .with_client_id(values.client_id.clone())
+                .with_name(values.client_name.clone())
+                .build(),
         ])
         .with_init_mock_delegation_repo(vec![])
         .with_mock_rp_login_repo_error(&values.rp_login_repo_error_message)
@@ -156,7 +184,9 @@ async fn add_delegation_fails_due_to_internal_rp_login_repo_error() {
 
     let ctx = SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
 
-    let result = service.add_delegation(&ctx, &values.client_name, &values.rp_id, &values.rp_account).await;
+    let result = service
+        .add_delegation(&ctx, &values.client_name, &values.rp_id, &values.rp_account)
+        .await;
 
     assert!(result.is_err());
 
@@ -172,7 +202,10 @@ async fn add_delegation_fails_due_to_internal_delegation_repo_error() {
     // Build a DelegationService with mocked dependencies
     let service = TestDelegationServiceBuilder::new()
         .with_init_mock_client_repo(vec![
-            ClientBuilder::new().with_client_id(values.client_id.clone()).with_name(values.client_name.clone()).build(),
+            ClientBuilder::new()
+                .with_client_id(values.client_id.clone())
+                .with_name(values.client_name.clone())
+                .build(),
         ])
         .with_mock_delegation_repo_error(&values.delegation_repo_error_message)
         .with_init_mock_rp_login_repo(vec![utils::build_valid_login_from_delegation_policy(
@@ -186,13 +219,33 @@ async fn add_delegation_fails_due_to_internal_delegation_repo_error() {
 
     let ctx = SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
 
-    let result = service.add_delegation(&ctx, &values.client_name, &values.rp_id, &values.rp_account).await;
+    let result = service
+        .add_delegation(&ctx, &values.client_name, &values.rp_id, &values.rp_account)
+        .await;
 
     assert!(result.is_err());
 
     let err = result.unwrap_err();
     assert!(err.to_string() == values.delegation_repo_error_message)
 }
+
+#[tokio::test]
+async fn only_tms_client_can_list_all_delegations() {}
+
+#[tokio::test]
+async fn tms_client_can_get_any_delegation() {}
+
+#[tokio::test]
+async fn non_tms_client_can_only_list_delegations_it_owns() {}
+
+#[tokio::test]
+async fn tms_client_can_delete_any_delegation() {}
+
+#[tokio::test]
+async fn non_tms_client_can_only_get_a_delegation_it_owns() {}
+
+#[tokio::test]
+async fn non_tms_client_can_only_delete_delegations_it_owns() {}
 
 mod utils {
     use super::*;

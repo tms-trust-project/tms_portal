@@ -38,8 +38,8 @@ impl DelegationService {
         let client = self.client_repo.get_by_name(client_name).await?;
 
         let client_id = client.client_id;
-        if !ctx.token_matches_client(&client_id) {
-            return Err(BadRequest(format!(
+        if !ctx.client_is_authorized(&client_id) {
+            return Err(Unauthorized(format!(
                 "Token client '{}' is not allowed to delegate for client id: '{}' name: '{}'",
                 ctx.client_id, &client_id, client_name
             ))
@@ -52,7 +52,12 @@ impl DelegationService {
                 &ctx.tms_identity,
                 rp_account,
                 rp_id,
-                Utc::now() - Duration::minutes(self.delegation_policy.delegation_max_mins_since_login.clone()),
+                Utc::now()
+                    - Duration::minutes(
+                        self.delegation_policy
+                            .delegation_max_mins_since_login
+                            .clone(),
+                    ),
                 true,
             )
             .await?;
@@ -76,45 +81,39 @@ impl DelegationService {
         Ok(delegation)
     }
 
-    pub async fn get_delegations(
+    pub async fn list_delegations_for_client(
         &self,
         ctx: &SecurityContext,
-        client_name: &Option<String>,
+        client_name: &str,
     ) -> anyhow::Result<Vec<Delegation>> {
-        let mut client_id_for_delegations = None;
+        let client = self.client_repo.get_by_name(client_name).await?;
 
-        match client_name {
-            // must be tms client to get all delegations - if no client id is specified, and the token is for
-            // a client other than the tms portal client, set the client id to what's in the token
-            None => {
-                if !ctx.is_tms_client {
-                    let client = self.client_repo.get_by_id(&ctx.client_id).await?;
-                    client_id_for_delegations = Some(client.client_id)
-                }
-            }
-
-            // Since we have a client name, it must match what's in the token or the token must be for the
-            // tms portal (which is allowed to view all delegations for a user)
-            Some(client_name) => {
-                let client = self.client_repo.get_by_name(client_name).await?;
-                let client_id = client.client_id;
-
-                if !ctx.token_matches_client(&client_id) {
-                    return Err(BadRequest(format!(
-                        "Token client '{}' is not allowed to delegate for client id: '{}' name: '{}'",
-                        &ctx.client_id, &client_id, &client_name
-                    ))
-                    .into());
-                }
-            }
+        if !ctx.client_is_authorized(&client.client_id) {
+            return Err(BadRequest(format!(
+                "Token client '{}' is not allowed to list delegations for client id: '{}' name: '{}'",
+                &ctx.client_id, &client.client_id, &client_name
+            ))
+            .into());
         }
 
-        let delegations = match client_id_for_delegations {
-            Some(client_id) => self.delegation_repo.list_by_client_id(&client_id, &ctx.tms_identity).await?,
-            None => self.delegation_repo.list_all(&ctx.tms_identity).await?,
-        };
+        self.delegation_repo
+            .list_by_client_id(&client.client_id, &ctx.tms_identity)
+            .await
+    }
 
-        Ok(delegations)
+    pub async fn list_delegations(
+        &self,
+        ctx: &SecurityContext,
+    ) -> anyhow::Result<Vec<Delegation>> {
+        // Return all delegations for the tms client
+        if ctx.is_tms_client {
+            return self.delegation_repo.list_all(&ctx.tms_identity).await
+        }
+
+        // Return only the delegations of the requesting client_id
+        self.delegation_repo
+            .list_by_client_id(&ctx.client_id, &ctx.tms_identity)
+            .await
     }
 
     pub async fn delete_delegation(
@@ -139,7 +138,10 @@ impl DelegationService {
             .into());
         }
 
-        let delegation = self.delegation_repo.delete(&ctx.tms_identity, &client.client_id, delegation_id).await?;
+        let delegation = self
+            .delegation_repo
+            .delete(&ctx.tms_identity, &client.client_id, delegation_id)
+            .await?;
 
         Ok(delegation)
     }

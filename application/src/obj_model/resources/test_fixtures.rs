@@ -92,15 +92,27 @@ impl ResourceProviderLoginBuilder {
 
         ResourceProviderLogin {
             id: self.id.unwrap_or(1),
-            tms_identity: self.tms_identity.clone().unwrap_or_else(|| "test-identity".into()),
+            tms_identity: self
+                .tms_identity
+                .clone()
+                .unwrap_or_else(|| "test-identity".into()),
             enabled: self.enabled.unwrap_or(true),
             created: self.created.unwrap_or(now),
             updated: self.updated.unwrap_or(now),
             rp_id: self.rp_id.clone().unwrap_or_else(|| "test-rp-id".into()),
-            rp_account: self.rp_account.clone().unwrap_or_else(|| "test-rp-account".into()),
+            rp_account: self
+                .rp_account
+                .clone()
+                .unwrap_or_else(|| "test-rp-account".into()),
             last_login: self.last_login.unwrap_or(now),
-            rp_token: self.rp_token.clone().unwrap_or_else(|| "test-rp-token".into()),
-            rp_token_refresh: self.rp_token_refresh.clone().unwrap_or_else(|| "test-rp-refresh-token".into()),
+            rp_token: self
+                .rp_token
+                .clone()
+                .unwrap_or_else(|| "test-rp-token".into()),
+            rp_token_refresh: self
+                .rp_token_refresh
+                .clone()
+                .unwrap_or_else(|| "test-rp-refresh-token".into()),
         }
     }
 }

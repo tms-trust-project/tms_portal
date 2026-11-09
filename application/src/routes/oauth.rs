@@ -152,7 +152,12 @@ async fn authorize_handler(
             let mut headers = HashMap::new();
             headers.insert("location".to_string(), authorization_result.location);
 
-            Ok((updated_jar, TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT).headers(headers).build()))
+            Ok((
+                updated_jar,
+                TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT)
+                    .headers(headers)
+                    .build(),
+            ))
         } // TODO:  at some point we probably need to handle refresh tokens
     }
 }
@@ -176,7 +181,9 @@ async fn tokens_handler(
                     &oauth_token_request.redirect_uri,
                 )
                 .await?;
-                Ok(TmsResponse::builder(StatusCode::OK).entity(OAuthTokenResponse::from(token_response)).build())
+                Ok(TmsResponse::builder(StatusCode::OK)
+                    .entity(OAuthTokenResponse::from(token_response))
+                    .build())
             } else {
                 Err(BadRequest("Authorization code was not provided".to_string()).into())
             }
@@ -208,14 +215,21 @@ async fn callback_handler(
     )
     .await?;
 
-    let removal_cookie = Cookie::build((STATE_COOKIE_NAME, String::from(""))).path(ROOT_COOKIE_PATH).http_only(true);
+    let removal_cookie = Cookie::build((STATE_COOKIE_NAME, String::from("")))
+        .path(ROOT_COOKIE_PATH)
+        .http_only(true);
 
     let updated_jar = jar.remove(removal_cookie);
 
     let headers: HashMap<String, String> =
         HashMap::from_iter(vec![(LOCATION.to_string(), authorization_callback_result.location)]);
 
-    Ok((updated_jar, TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT).headers(headers).build()))
+    Ok((
+        updated_jar,
+        TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT)
+            .headers(headers)
+            .build(),
+    ))
 }
 
 #[cfg(test)]

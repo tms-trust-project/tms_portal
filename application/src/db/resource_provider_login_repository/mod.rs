@@ -29,14 +29,14 @@ impl ResourceProviderLoginRepository for PostgresResourceProviderLoginRepository
         let row = query(
             "SELECT * FROM resource_provider_logins WHERE tms_identity = $1 and rp_account=$2 and rp_id=$3 and last_login >= $4 and enabled is $5",
         )
-        .bind(tms_identity)
-        .bind(rp_account)
-        .bind(rp_id)
-        .bind(minimum_last_login)
-        .bind(enabled)
-        .fetch_optional(&self.db_pool)
-        .await
-        .map_err(|error| anyhow::anyhow!(error))?;
+            .bind(tms_identity)
+            .bind(rp_account)
+            .bind(rp_id)
+            .bind(minimum_last_login)
+            .bind(enabled)
+            .fetch_optional(&self.db_pool)
+            .await
+            .map_err(|error| anyhow::anyhow!(error))?;
 
         match row {
             Some(row) => Ok(Some(ResourceProviderLogin::from(&row))),

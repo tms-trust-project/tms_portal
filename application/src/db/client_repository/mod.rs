@@ -74,21 +74,24 @@ impl From<&PgRow> for Client {
     }
 }
 pub async fn get_client_by_id<'a>(tx: &mut PgTransaction<'a>, client_id: &str) -> anyhow::Result<Client> {
-    let row = query("select * from clients where client_id = $1").bind(client_id).fetch_one(&mut **tx).await.map_err(
-        |error| match error {
+    let row = query("select * from clients where client_id = $1")
+        .bind(client_id)
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(|error| match error {
             sqlx::Error::RowNotFound => NotFound(format!("Client id {} not found", client_id)).into(),
             _ => anyhow::anyhow!(error),
-        },
-    )?;
+        })?;
     Ok(Client::from(&row))
 }
 pub async fn get_client_by_name(db_pool: &PgPool, client_name: &str) -> anyhow::Result<Client> {
-    let row =
-        query("select * from clients where name = $1").bind(client_name).fetch_one(db_pool).await.map_err(|error| {
-            match error {
-                sqlx::Error::RowNotFound => NotFound(format!("Client with name '{}' not found", client_name)).into(),
-                _ => anyhow::anyhow!(error),
-            }
+    let row = query("select * from clients where name = $1")
+        .bind(client_name)
+        .fetch_one(db_pool)
+        .await
+        .map_err(|error| match error {
+            sqlx::Error::RowNotFound => NotFound(format!("Client with name '{}' not found", client_name)).into(),
+            _ => anyhow::anyhow!(error),
         })?;
     Ok(Client::from(&row))
 }

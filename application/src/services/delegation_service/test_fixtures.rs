@@ -66,11 +66,22 @@ impl TestDelegationServiceBuilder {
     }
 
     pub fn build(&self) -> DelegationService {
-        let client_repo = self.client_repo.clone().unwrap_or(Arc::new(MockClientRepo::new(vec![])));
-        let delegation_repo = self.delegation_repo.clone().unwrap_or(Arc::new(MockDelegationRepo::new(vec![])));
-        let resource_provider_login_repo =
-            self.resource_provider_login_repo.clone().unwrap_or(Arc::new(MockResourceProviderLoginRepo::new(vec![])));
-        let delegation_policy = self.delegation_policy.clone().unwrap_or(DelegationPolicyConfig::default());
+        let client_repo = self
+            .client_repo
+            .clone()
+            .unwrap_or(Arc::new(MockClientRepo::new(vec![])));
+        let delegation_repo = self
+            .delegation_repo
+            .clone()
+            .unwrap_or(Arc::new(MockDelegationRepo::new(vec![])));
+        let resource_provider_login_repo = self
+            .resource_provider_login_repo
+            .clone()
+            .unwrap_or(Arc::new(MockResourceProviderLoginRepo::new(vec![])));
+        let delegation_policy = self
+            .delegation_policy
+            .clone()
+            .unwrap_or(DelegationPolicyConfig::default());
 
         DelegationService::new(client_repo, delegation_repo, resource_provider_login_repo, delegation_policy)
     }
@@ -180,17 +191,32 @@ impl TestValuesBuilder {
     }
 
     pub fn build(&self) -> TestValues {
-        let tms_identity = self.tms_identity.clone().unwrap_or(Self::DEFAULT_TMS_IDENTITY.into());
-        let client_id = self.client_id.clone().unwrap_or(Self::DEFAULT_CLIENT_ID.into());
+        let tms_identity = self
+            .tms_identity
+            .clone()
+            .unwrap_or(Self::DEFAULT_TMS_IDENTITY.into());
+        let client_id = self
+            .client_id
+            .clone()
+            .unwrap_or(Self::DEFAULT_CLIENT_ID.into());
 
         TestValues {
             delegation_policy: self.delegation_policy.clone().unwrap_or_default(),
             tms_identity,
             rp_id: self.rp_id.clone().unwrap_or(Self::DEFAULT_RP_ID.into()),
-            rp_account: self.rp_account.clone().unwrap_or(Self::DEFAULT_RP_ACCOUNT.into()),
+            rp_account: self
+                .rp_account
+                .clone()
+                .unwrap_or(Self::DEFAULT_RP_ACCOUNT.into()),
             client_id,
-            client_name: self.client_name.clone().unwrap_or(Self::DEFAULT_CLIENT_NAME.into()),
-            ctx_token: self.ctx_token.clone().unwrap_or(Self::DEFAULT_SECURITY_CONTEXT_TOKEN.into()),
+            client_name: self
+                .client_name
+                .clone()
+                .unwrap_or(Self::DEFAULT_CLIENT_NAME.into()),
+            ctx_token: self
+                .ctx_token
+                .clone()
+                .unwrap_or(Self::DEFAULT_SECURITY_CONTEXT_TOKEN.into()),
             delegation_repo_error_message: self
                 .delegation_repo_error_message
                 .clone()
@@ -242,7 +268,10 @@ impl SecurityContextBuilder {
 
     pub fn build_with_matching_client_ids_as_non_tms_client(&self, test_values: &TestValues) -> SecurityContext {
         SecurityContext {
-            tms_identity: self.tms_identity.clone().unwrap_or(test_values.tms_identity.clone()),
+            tms_identity: self
+                .tms_identity
+                .clone()
+                .unwrap_or(test_values.tms_identity.clone()),
             token: self.token.clone().unwrap_or(test_values.ctx_token.clone()),
             client_id: test_values.client_id.clone(),
             is_tms_client: false,
@@ -251,18 +280,34 @@ impl SecurityContextBuilder {
 
     pub fn build_with_non_match_client_ids_as_tms_client(&self, test_values: &TestValues) -> SecurityContext {
         SecurityContext {
-            tms_identity: self.tms_identity.clone().unwrap_or(test_values.tms_identity.clone()),
+            tms_identity: self
+                .tms_identity
+                .clone()
+                .unwrap_or(test_values.tms_identity.clone()),
             token: self.token.clone().unwrap_or(test_values.ctx_token.clone()),
-            client_id: format!("different-{}", self.client_id.clone().unwrap_or(test_values.client_id.clone())),
+            client_id: format!(
+                "different-{}",
+                self.client_id
+                    .clone()
+                    .unwrap_or(test_values.client_id.clone())
+            ),
             is_tms_client: true,
         }
     }
 
     pub fn build_with_non_matching_client_ids_as_non_tms_client(&self, test_values: &TestValues) -> SecurityContext {
         SecurityContext {
-            tms_identity: self.tms_identity.clone().unwrap_or(test_values.tms_identity.clone()),
+            tms_identity: self
+                .tms_identity
+                .clone()
+                .unwrap_or(test_values.tms_identity.clone()),
             token: self.token.clone().unwrap_or(test_values.ctx_token.clone()),
-            client_id: format!("different-{}", self.client_id.clone().unwrap_or(test_values.client_id.clone())),
+            client_id: format!(
+                "different-{}",
+                self.client_id
+                    .clone()
+                    .unwrap_or(test_values.client_id.clone())
+            ),
             is_tms_client: false,
         }
     }

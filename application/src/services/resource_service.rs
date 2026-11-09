@@ -137,7 +137,10 @@ pub async fn get_authenticate_redirect_info(
         client_id: client_id.to_owned(),
         idp_id: rp.id,
         redirect_uri: url.to_string(),
-        exp: SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?.as_secs() + 300,
+        exp: SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)?
+            .as_secs()
+            + 300,
         nonce: generate_nonce(),
         client_state: client_state.clone(),
     };
@@ -193,8 +196,10 @@ pub async fn get_resource_provider_token(
     let access_token = reponse.result.access_token;
     let refresh_token = reponse.result.refresh_token;
 
-    let decoded_token: Value =
-        JwtDecoderBuilder::builder().jwks_url(&rp.oauth2_jwks_url).decode(&access_token.id_token).await?;
+    let decoded_token: Value = JwtDecoderBuilder::builder()
+        .jwks_url(&rp.oauth2_jwks_url)
+        .decode(&access_token.id_token)
+        .await?;
 
     let subject = match decoded_token.get("sub") {
         Some(subject) => match subject.as_str() {
@@ -246,7 +251,13 @@ struct ResourcesWithUsers {
 
 async fn get_resources(url: &str, token: &str) -> anyhow::Result<Vec<ResourceForUser>> {
     let client = reqwest::Client::new();
-    let resp: ResourcesWithUsers = client.get(url).bearer_auth(token).send().await?.json().await?;
+    let resp: ResourcesWithUsers = client
+        .get(url)
+        .bearer_auth(token)
+        .send()
+        .await?
+        .json()
+        .await?;
     Ok(resp.data)
 }
 

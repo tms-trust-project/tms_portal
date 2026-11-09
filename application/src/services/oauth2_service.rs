@@ -40,7 +40,11 @@ pub struct AuthorizationCallbackResult {
 }
 
 fn generate_code() -> String {
-    ThreadRng::default().sample_iter(Alphanumeric).take(32).map(char::from).collect()
+    ThreadRng::default()
+        .sample_iter(Alphanumeric)
+        .take(32)
+        .map(char::from)
+        .collect()
 }
 
 pub async fn authorize_code(
@@ -56,7 +60,9 @@ pub async fn authorize_code(
     let idp = get_login_provider_by_id(&mut tx, &configuration.oauth_config.login_oauth_provider).await?;
 
     // Check redirect uri - this fails if the redirect doesnt exist
-    check_allowed_redirects(&mut tx, client_id, redirect_uri).await.with_context(|| "OAuth redirect is invalid")?;
+    check_allowed_redirects(&mut tx, client_id, redirect_uri)
+        .await
+        .with_context(|| "OAuth redirect is invalid")?;
     tx.commit().await?;
 
     // encode our state
@@ -155,7 +161,10 @@ async fn get_state(
     };
 
     // encode state structure
-    match encode_state(configuration, oauth_state).await.context("Unable to encode state") {
+    match encode_state(configuration, oauth_state)
+        .await
+        .context("Unable to encode state")
+    {
         Ok(state_string) => Ok(state_string),
         Err(error) => Err(Internal(error.to_string()).into()),
     }
@@ -211,12 +220,14 @@ pub async fn get_provider_token(
         return Err(Unauthorized("State cookies do not match".to_string()).into());
     }
 
-    let decoded_state: OAuth2State =
-        decode_state(configuration, state).await.context("Unable to decode state query param")?;
+    let decoded_state: OAuth2State = decode_state(configuration, state)
+        .await
+        .context("Unable to decode state query param")?;
 
     let mut tx = pool.begin().await?;
-    let idp =
-        get_login_provider_by_id(&mut tx, &decoded_state.idp_id).await.context("Unable to get idp for database")?;
+    let idp = get_login_provider_by_id(&mut tx, &decoded_state.idp_id)
+        .await
+        .context("Unable to get idp for database")?;
     let http_config = &configuration.http_config;
     tx.commit().await?;
 

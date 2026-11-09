@@ -23,11 +23,15 @@ impl MockDelegationRepo {
     }
 
     fn configured_error(&self) -> Option<anyhow::Error> {
-        self.error.as_ref().map(|error| anyhow::Error::msg(error.clone()))
+        self.error
+            .as_ref()
+            .map(|error| anyhow::Error::msg(error.clone()))
     }
 
     fn lock_delegations(&self) -> anyhow::Result<std::sync::MutexGuard<'_, Vec<Delegation>>> {
-        self.delegations.lock().map_err(|_| anyhow::Error::msg("Mock delegation repository lock poisoned"))
+        self.delegations
+            .lock()
+            .map_err(|_| anyhow::Error::msg("Mock delegation repository lock poisoned"))
     }
 }
 
@@ -46,7 +50,12 @@ impl DelegationRepository for MockDelegationRepo {
         }
 
         let mut delegations = self.lock_delegations()?;
-        let next_id = delegations.iter().map(|delegation| delegation.id).max().unwrap_or(0) + 1;
+        let next_id = delegations
+            .iter()
+            .map(|delegation| delegation.id)
+            .max()
+            .unwrap_or(0)
+            + 1;
         let delegation = DelegationBuilder::new()
             .with_id(next_id)
             .with_client_id(client_id.into())
@@ -68,7 +77,11 @@ impl DelegationRepository for MockDelegationRepo {
 
         let delegations = self.lock_delegations()?;
 
-        Ok(delegations.iter().filter(|delegation| delegation.tms_identity == tms_identity).cloned().collect())
+        Ok(delegations
+            .iter()
+            .filter(|delegation| delegation.tms_identity == tms_identity)
+            .cloned()
+            .collect())
     }
 
     async fn list_by_client_id(&self, client_id: &str, tms_identity: &str) -> anyhow::Result<Vec<Delegation>> {

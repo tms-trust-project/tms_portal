@@ -57,7 +57,10 @@ impl ClientBuilder {
 
         Client {
             id: self.id.unwrap_or(1),
-            client_id: self.client_id.clone().unwrap_or_else(|| "test-client-id".into()),
+            client_id: self
+                .client_id
+                .clone()
+                .unwrap_or_else(|| "test-client-id".into()),
             secret: self.secret.clone().unwrap_or_else(|| "test-secret".into()),
             name: self.name.clone().unwrap_or_else(|| "Test Client".into()),
             enabled: self.enabled.unwrap_or(true),

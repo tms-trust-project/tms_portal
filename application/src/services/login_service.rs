@@ -55,16 +55,24 @@ pub async fn handle_callback(
         return Err(Unauthorized("State cookies do not match".to_string()).into());
     }
 
-    let decoded_state: OAuth2State =
-        decode_state(configuration, state).await.context("Unable to decode state query param")?;
+    let decoded_state: OAuth2State = decode_state(configuration, state)
+        .await
+        .context("Unable to decode state query param")?;
 
     let mut tx = db_pool.begin().await?;
-    let idp =
-        get_login_provider_by_id(&mut tx, &decoded_state.idp_id).await.context("Unable to get idp for database")?;
+    let idp = get_login_provider_by_id(&mut tx, &decoded_state.idp_id)
+        .await
+        .context("Unable to get idp for database")?;
     tx.commit().await?;
 
-    let token: AuthorizationCodeResponse =
-        get_token_for_provider(&idp, &configuration.http_config.get_identity_provider_callback_url(), code).await?;
+    let token: AuthorizationCodeResponse = get_token_for_provider(
+        &idp,
+        &configuration
+            .http_config
+            .get_identity_provider_callback_url(),
+        code,
+    )
+    .await?;
 
     let mut claims: HashMap<String, Value> = decode_access_token(&idp, &token.id_token).await?;
     // TODO: get iss from config

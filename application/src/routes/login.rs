@@ -89,11 +89,15 @@ pub async fn login_handler(
                     )
                     .into());
                 }
-                redirect_uri.query_pairs_mut().append_pair("client_return_uri", client_return_uri.as_str());
+                redirect_uri
+                    .query_pairs_mut()
+                    .append_pair("client_return_uri", client_return_uri.as_str());
             }
             // It's ok if they give the client_name but no return uri
             if let Some(client_name) = &form_data.client_name {
-                redirect_uri.query_pairs_mut().append_pair("client_name", client_name.as_str());
+                redirect_uri
+                    .query_pairs_mut()
+                    .append_pair("client_name", client_name.as_str());
             }
 
             let oauth_state = OAuth2State {
@@ -101,7 +105,10 @@ pub async fn login_handler(
                 client_id,
                 idp_id: idp.id,
                 redirect_uri: redirect_uri.to_string(),
-                exp: SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?.as_secs() + 300,
+                exp: SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)?
+                    .as_secs()
+                    + 300,
                 nonce: generate_nonce(),
                 client_state: None,
             };
@@ -111,7 +118,9 @@ pub async fn login_handler(
                 Err(error) => return Err(Internal(error.to_string()).into()),
             };
 
-            let callback_url = &configuration.http_config.get_identity_provider_callback_url();
+            let callback_url = &configuration
+                .http_config
+                .get_identity_provider_callback_url();
             let encoded_nonce = BASE64_STANDARD.encode(generate_nonce().to_ne_bytes());
             let mut query_params = vec![
                 ("response_type", "code"),
@@ -128,8 +137,11 @@ pub async fn login_handler(
 
             let location = Url::parse_with_params(&idp.identity_redirect_url, query_params)?;
 
-            let updated_jar =
-                jar.add(Cookie::build((STATE_COOKIE_NAME, encoded_state)).path(ROOT_COOKIE_PATH).http_only(true));
+            let updated_jar = jar.add(
+                Cookie::build((STATE_COOKIE_NAME, encoded_state))
+                    .path(ROOT_COOKIE_PATH)
+                    .http_only(true),
+            );
 
             let mut headers = HashMap::new();
             headers.insert("location".to_string(), location.to_string());
@@ -137,7 +149,12 @@ pub async fn login_handler(
             let authorization = format!("Basic {}", BASE64_STANDARD.encode(&creds));
             headers.insert("Authorization".to_string(), authorization);
 
-            Ok((updated_jar, TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT).headers(headers).build()))
+            Ok((
+                updated_jar,
+                TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT)
+                    .headers(headers)
+                    .build(),
+            ))
         }
 
         Err(error) => Err(BadRequest(error.to_string()).into()),
@@ -158,7 +175,12 @@ pub async fn logout_handler(
     let http_config = &app_state.config.http_config;
     let mut headers = HashMap::new();
     headers.insert("location".to_string(), http_config.base_url.clone());
-    Ok((updated_jar, TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT).headers(headers).build()))
+    Ok((
+        updated_jar,
+        TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT)
+            .headers(headers)
+            .build(),
+    ))
 }
 
 /*
@@ -171,7 +193,9 @@ pub async fn whoami_handler(
     JwtValidator(security_context): JwtValidator,
 ) -> anyhow::Result<TmsResponse<WhoAmIResponse>, AppError> {
     let whoami_response = whoami(&app_state.db_pool, &security_context.token).await?;
-    Ok(TmsResponse::builder(StatusCode::OK).entity(whoami_response.into()).build())
+    Ok(TmsResponse::builder(StatusCode::OK)
+        .entity(whoami_response.into())
+        .build())
 }
 
 /*
@@ -215,11 +239,18 @@ pub async fn callback_handler(
         .build();
 
     // Build a 'removal cookie' to remove the state
-    let removal_cookie = Cookie::build((STATE_COOKIE_NAME, String::from(""))).path(ROOT_COOKIE_PATH).http_only(true);
+    let removal_cookie = Cookie::build((STATE_COOKIE_NAME, String::from("")))
+        .path(ROOT_COOKIE_PATH)
+        .http_only(true);
 
     let updated_jar = jar.add(token_cookie).remove(removal_cookie);
 
-    Ok((updated_jar, TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT).headers(headers).build()))
+    Ok((
+        updated_jar,
+        TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT)
+            .headers(headers)
+            .build(),
+    ))
 }
 
 /*
@@ -230,5 +261,7 @@ pub async fn get_idp_handler(
     State(app_state): State<AppState>,
 ) -> anyhow::Result<TmsResponse<HashSet<IdentityProvider>>, AppError> {
     let idp_result = get_identity_providers(&app_state.db_pool).await?;
-    Ok(TmsResponse::builder(StatusCode::OK).entity(idp_result.iter().map(IdentityProvider::from).collect()).build())
+    Ok(TmsResponse::builder(StatusCode::OK)
+        .entity(idp_result.iter().map(IdentityProvider::from).collect())
+        .build())
 }

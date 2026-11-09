@@ -20,7 +20,9 @@ impl MockResourceProviderLoginRepo {
     }
 
     fn configured_error(&self) -> Option<anyhow::Error> {
-        self.error.as_ref().map(|error| anyhow::Error::msg(error.clone()))
+        self.error
+            .as_ref()
+            .map(|error| anyhow::Error::msg(error.clone()))
     }
 }
 

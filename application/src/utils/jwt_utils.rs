@@ -48,8 +48,15 @@ pub struct SecurityContext {
 }
 
 impl SecurityContext {
+    #[deprecated(
+        note = "Use client_is_authorized instead. This deprecated function incorrectly signals a simple equality check rather than an authorization decision based on client_id equality AND whether or not the requesting client is a TMS client"
+    )]
     pub fn token_matches_client(&self, client_id: &String) -> bool {
-        if self.is_tms_client { true } else { self.client_id == *client_id }
+        self.client_is_authorized(client_id)
+    }
+
+    pub fn client_is_authorized(&self, client_id: &str) -> bool {
+        self.is_tms_client || self.client_id == client_id
     }
 }
 
@@ -132,13 +139,16 @@ async fn get_token_claims(db_pool: &PgPool, token: &String) -> Result<TmsTokenCl
     }?;
     tx.commit().await?;
 
-    let tms_token_claims: TmsTokenClaims =
-        match JwtDecoderBuilder::builder().public_key(key.jwt_public_key.as_bytes()).decode(token).await {
-            Ok(t) => t,
-            Err(e) => {
-                return Err(Unauthorized(e.to_string()).into());
-            }
-        };
+    let tms_token_claims: TmsTokenClaims = match JwtDecoderBuilder::builder()
+        .public_key(key.jwt_public_key.as_bytes())
+        .decode(token)
+        .await
+    {
+        Ok(t) => t,
+        Err(e) => {
+            return Err(Unauthorized(e.to_string()).into());
+        }
+    };
 
     Ok(tms_token_claims)
 }
@@ -166,11 +176,14 @@ impl FromRequestParts<AppState> for JwtValidator {
             let tms_identity = jwt_claims.get_sub()?;
             info!("Request uri: {} TMS Identity: {}", req_parts.uri, tms_identity);
             if enabled!(Level::TRACE) {
-                req_parts.headers.iter().for_each(|(header_name, header_value)| {
-                    trace!("Begin Headers");
-                    trace!("Header: {} Value: {:?}", header_name, header_value);
-                    trace!("End Headers");
-                })
+                req_parts
+                    .headers
+                    .iter()
+                    .for_each(|(header_name, header_value)| {
+                        trace!("Begin Headers");
+                        trace!("Header: {} Value: {:?}", header_name, header_value);
+                        trace!("End Headers");
+                    })
             }
             let client_id = jwt_claims.get_aud()?;
             let is_tms_client = jwt_claims.is_tms_client()?;
@@ -240,7 +253,9 @@ pub async fn get_tms_token_claims(
         tms_account_type: Value::from("user"),
         tms_name: claims.get(CLAIM_NAME).map(|value| (*value).clone()),
         tms_idp_provider: idp_type.clone(),
-        tms_idp_display_name: claims.get(CLAIM_IDP_DISPLAY_NAME).map(|value| (*value).clone()),
+        tms_idp_display_name: claims
+            .get(CLAIM_IDP_DISPLAY_NAME)
+            .map(|value| (*value).clone()),
         tms_organization: claims.get(CLAIM_ORGANIZATION).map(|value| (*value).clone()),
         exp: Value::from(expiration.duration_since(UNIX_EPOCH)?.as_millis()),
     };
@@ -260,11 +275,15 @@ fn get_string_claim(claims: &JwtClaims, name: &str) -> Result<String> {
     get_string_from_value(value)
 }
 fn get_string_from_value(value: &Value) -> Result<String> {
-    let string_slice_value = value.as_str().ok_or(Unauthorized(format!("Value '{0}' is not a string", value)))?;
+    let string_slice_value = value
+        .as_str()
+        .ok_or(Unauthorized(format!("Value '{0}' is not a string", value)))?;
     Ok(String::from(string_slice_value))
 }
 fn get_datetime_from_value(value: &Value) -> Result<DateTime<Utc>> {
-    let timestamp = value.as_i64().ok_or(Unauthorized(format!("Value '{0}' is not a timestamp", value)))?;
+    let timestamp = value
+        .as_i64()
+        .ok_or(Unauthorized(format!("Value '{0}' is not a timestamp", value)))?;
     let Some(datetime) = DateTime::from_timestamp_millis(timestamp) else {
         return Err(Internal("Unable to determine expiration for token".to_string()).into());
     };

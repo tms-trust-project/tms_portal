@@ -75,7 +75,12 @@ pub async fn authorize_handler(
     headers.insert("location".to_string(), authorize_info.identity_redirect_url.to_string());
     headers.insert("Authorization".to_string(), authorization);
 
-    Ok((updated_jar, TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT).headers(headers).build()))
+    Ok((
+        updated_jar,
+        TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT)
+            .headers(headers)
+            .build(),
+    ))
 }
 
 fn get_rp_state_cookie_name(rp_name: &String) -> String {
@@ -91,7 +96,9 @@ pub async fn list_resource_provider_handler(
     let linked_only = query_params.linked_only.unwrap_or(false);
     let result = get_resource_providers(&security_context, &app_state.db_pool, &linked_only).await?;
     let response = result.iter().map(ResourceProvider::from).collect();
-    Ok(TmsResponse::builder(StatusCode::OK).entity(response).build())
+    Ok(TmsResponse::builder(StatusCode::OK)
+        .entity(response)
+        .build())
 }
 #[debug_handler]
 pub async fn unlink_resource_provider_handler(
@@ -100,7 +107,9 @@ pub async fn unlink_resource_provider_handler(
     JwtValidator(security_context): JwtValidator,
 ) -> Result<TmsResponse<ResourceAccountLogin>, AppError> {
     let result = unlink_resource_provider(&security_context, &app_state.db_pool, &resource_provider_link_id).await?;
-    Ok(TmsResponse::builder(StatusCode::OK).entity(result.into()).build())
+    Ok(TmsResponse::builder(StatusCode::OK)
+        .entity(result.into())
+        .build())
 }
 #[debug_handler]
 pub async fn get_linked_resource_provider_handler(
@@ -109,7 +118,9 @@ pub async fn get_linked_resource_provider_handler(
 ) -> Result<TmsResponse<HashSet<ResourceAccountLink>>, AppError> {
     let result = get_linked_resource_providers(&security_context, &app_state.db_pool).await?;
     let response = result.iter().map(ResourceAccountLink::from).collect();
-    Ok(TmsResponse::builder(StatusCode::OK).entity(response).build())
+    Ok(TmsResponse::builder(StatusCode::OK)
+        .entity(response)
+        .build())
 }
 #[debug_handler]
 pub async fn get_resource_handler(
@@ -185,5 +196,10 @@ pub async fn get_resource_provider_callback_handler(
         Cookie::build((get_rp_state_cookie_name(&resource_provider_id), String::from(""))).path(RP_COOKIE_PATH);
     let updated_jar = jar.remove(removal_cookie);
 
-    Ok((updated_jar, TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT).headers(headers).build()))
+    Ok((
+        updated_jar,
+        TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT)
+            .headers(headers)
+            .build(),
+    ))
 }

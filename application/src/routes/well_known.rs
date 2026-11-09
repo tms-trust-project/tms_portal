@@ -74,7 +74,9 @@ pub async fn openid_configuration_handler(
     };
 
     debug!("Client Id:{:?}", client_id);
-    Ok(TmsResponse::builder(StatusCode::OK).entity(openid_configuration).build())
+    Ok(TmsResponse::builder(StatusCode::OK)
+        .entity(openid_configuration)
+        .build())
 }
 pub async fn jwks_json_handler(
     Path(client_id): Path<String>,

@@ -6,7 +6,11 @@ use std::path::Path;
 
 pub async fn init_db(connection_url: &str) -> PgPool {
     // unwrap - panic and exist if we can't conenct to db
-    PgPoolOptions::new().max_connections(5).connect(connection_url).await.unwrap()
+    PgPoolOptions::new()
+        .max_connections(5)
+        .connect(connection_url)
+        .await
+        .unwrap()
 }
 
 pub async fn init_logging(runtime_config: &RuntimeConfig) {
