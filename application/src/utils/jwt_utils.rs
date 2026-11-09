@@ -37,6 +37,8 @@ pub trait Claims {
     fn get_string_claim(&self, name: &str) -> Result<String>;
 }
 pub type JwtClaims = HashMap<String, Value>;
+
+#[derive(Debug, Clone)]
 pub struct SecurityContext {
     pub tms_identity: String,
     // the original token

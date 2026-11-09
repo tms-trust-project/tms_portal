@@ -1,19 +1,17 @@
 use chrono::{Duration, Utc};
 
 use crate::{
-    obj_model::{
-        client::test_fixtures::ClientBuilder,
-        configuration::DelegationPolicyConfig,
-        resources::{ResourceProviderLogin, test_fixtures::ResourceProviderLoginBuilder},
-    },
-    services::delegation_service::test_fixtures::TestDelegationServiceBuilder,
-    utils::jwt_utils::SecurityContext,
+    obj_model::client::test_fixtures::ClientBuilder,
+    obj_model::configuration::DelegationPolicyConfig,
+    obj_model::resources::ResourceProviderLogin,
+    obj_model::resources::test_fixtures::ResourceProviderLoginBuilder,
+    services::delegation_service::test_fixtures::{SecurityContextBuilder, TestDelegationServiceBuilder, TestValuesBuilder},
 };
 
 #[tokio::test]
-async fn delegation_fails_when_client_ids_dont_match_and_not_tms_client() {
+async fn add_delegation_fails_when_client_ids_dont_match_and_not_tms_client() {
     // Initialize the values that will be used in this test
-    let values = utils::TestValues::new();
+    let values = TestValuesBuilder::new().build();
 
     // Build a DelegationService with mocked dependencies
     let service = TestDelegationServiceBuilder::new()
@@ -32,12 +30,7 @@ async fn delegation_fails_when_client_ids_dont_match_and_not_tms_client() {
     
     // Initialize a security context that uses a different client id than the mocked client
     // and where the security context is NOT a tms client
-    let ctx = SecurityContext {
-        client_id: "different-client-id".into(),
-        is_tms_client: false,
-        tms_identity: values.tms_identity.clone(),
-        token: values.ctx_token.clone(),
-    };
+    let ctx = SecurityContextBuilder::new().build_with_non_matching_client_ids_as_non_tms_client(&values);
 
     // Add the delegation
     let result = service.add_delegation(
@@ -53,9 +46,9 @@ async fn delegation_fails_when_client_ids_dont_match_and_not_tms_client() {
 }
 
 #[tokio::test]
-async fn delegation_succeeds_when_client_ids_dont_match_and_is_tms_client() {
+async fn add_delegation_succeeds_when_client_ids_dont_match_and_is_tms_client() {
     // Initialize the values that will be used in this test
-    let values = utils::TestValues::new();
+    let values = TestValuesBuilder::new().build();
 
     // Build a DelegationService with mocked dependencies
     let service = TestDelegationServiceBuilder::new()
@@ -83,12 +76,7 @@ async fn delegation_succeeds_when_client_ids_dont_match_and_is_tms_client() {
 
     // Initialize a security context that uses a different client id than the mocked client
     // and where the security context is a tms client
-    let ctx = SecurityContext {
-        client_id: "different-client-id".into(),
-        is_tms_client: true,
-        tms_identity: values.tms_identity.clone(),
-        token: values.ctx_token.clone(),
-    };
+    let ctx = SecurityContextBuilder::new().build_with_non_match_client_ids_as_tms_client(&values);
 
     let result = service
         .add_delegation(
@@ -103,9 +91,9 @@ async fn delegation_succeeds_when_client_ids_dont_match_and_is_tms_client() {
 }
 
 #[tokio::test]
-async fn delegation_succeeds_when_requested_client_id_matches_security_context() {
+async fn add_delegation_succeeds_when_requested_client_id_matches_security_context() {
     // Initialize the values that will be used in this test
-    let values = utils::TestValues::new();
+    let values = TestValuesBuilder::new().build();
 
     // Build a DelegationService with mocked dependencies
     let service = TestDelegationServiceBuilder::new()
@@ -131,12 +119,7 @@ async fn delegation_succeeds_when_requested_client_id_matches_security_context()
         .with_delegation_policy(values.delegation_policy.clone())
         .build();
 
-    let ctx = SecurityContext {
-        client_id: values.client_id.clone(),
-        is_tms_client: false,
-        tms_identity: values.tms_identity.clone(),
-        token: values.ctx_token.clone(),
-    };
+    let ctx = SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
 
     let result = service
         .add_delegation(
@@ -153,7 +136,7 @@ async fn delegation_succeeds_when_requested_client_id_matches_security_context()
 #[tokio::test]
 async fn delegation_fails_when_no_recent_login_found() {
     // Initialize the values that will be used in this test
-    let values = utils::TestValues::new();
+    let values = TestValuesBuilder::new().build();
 
     // Build a DelegationService with mocked dependencies
     let service = TestDelegationServiceBuilder::new()
@@ -170,12 +153,7 @@ async fn delegation_fails_when_no_recent_login_found() {
         .with_delegation_policy(values.delegation_policy.clone())
         .build();
 
-    let ctx = SecurityContext {
-        client_id: values.client_id.clone(),
-        is_tms_client: false,
-        tms_identity: values.tms_identity.clone(),
-        token: values.ctx_token.clone(),
-    };
+        let ctx = SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
 
     let result = service
         .add_delegation(
@@ -192,7 +170,7 @@ async fn delegation_fails_when_no_recent_login_found() {
 #[tokio::test]
 async fn delegation_fails_due_to_internal_client_repo_error() {
     // Initialize the values that will be used in this test
-    let values = utils::TestValues::new();
+    let values = TestValuesBuilder::new().build();
 
     // Build a DelegationService with mocked dependencies
     let service = TestDelegationServiceBuilder::new()
@@ -209,12 +187,7 @@ async fn delegation_fails_due_to_internal_client_repo_error() {
         .with_delegation_policy(values.delegation_policy.clone())
         .build();
 
-    let ctx = SecurityContext {
-        client_id: values.client_id.clone(),
-        is_tms_client: false,
-        tms_identity: values.tms_identity.clone(),
-        token: values.ctx_token.clone(),
-    };
+    let ctx = SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
 
     let result = service
         .add_delegation(
@@ -232,9 +205,9 @@ async fn delegation_fails_due_to_internal_client_repo_error() {
 }
 
 #[tokio::test]
-async fn fails_due_to_internal_rp_login_repo_error() {
+async fn add_delegation_fails_due_to_internal_rp_login_repo_error() {
     // Initialize the values that will be used in this test
-    let values = utils::TestValues::new();
+    let values = TestValuesBuilder::new().build();
 
     // Build a DelegationService with mocked dependencies
     let service = TestDelegationServiceBuilder::new()
@@ -251,12 +224,7 @@ async fn fails_due_to_internal_rp_login_repo_error() {
         .with_delegation_policy(values.delegation_policy.clone())
         .build();
 
-    let ctx = SecurityContext {
-        client_id: values.client_id.clone(),
-        is_tms_client: false,
-        tms_identity: values.tms_identity.clone(),
-        token: values.ctx_token.clone(),
-    };
+    let ctx = SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
 
     let result = service
         .add_delegation(
@@ -276,7 +244,7 @@ async fn fails_due_to_internal_rp_login_repo_error() {
 #[tokio::test]
 async fn fails_due_to_internal_delegation_repo_error() {
     // Initialize the values that will be used in this test
-    let values = utils::TestValues::new();
+    let values = TestValuesBuilder::new().build();
 
     // Build a DelegationService with mocked dependencies
     let service = TestDelegationServiceBuilder::new()
@@ -302,12 +270,7 @@ async fn fails_due_to_internal_delegation_repo_error() {
         .with_delegation_policy(values.delegation_policy.clone())
         .build();
 
-    let ctx = SecurityContext {
-        client_id: values.client_id.clone(),
-        is_tms_client: false,
-        tms_identity: values.tms_identity.clone(),
-        token: values.ctx_token.clone(),
-    };
+    let ctx = SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
 
     let result = service
         .add_delegation(
@@ -346,34 +309,4 @@ mod utils {
             .build()
     }
 
-    #[derive(Clone, Debug)]
-    pub(super) struct TestValues {
-        pub delegation_policy: DelegationPolicyConfig,
-        pub tms_identity: String,
-        pub rp_id: String,
-        pub rp_account: String,
-        pub client_id: String,
-        pub client_name: String,
-        pub ctx_token: String,
-        pub delegation_repo_error_message: String,
-        pub rp_login_repo_error_message: String,
-        pub client_repo_error_message: String,
-    }
-
-    impl TestValues {
-        pub fn new() -> Self {
-            Self {
-                delegation_policy: DelegationPolicyConfig::default(),
-                tms_identity: "test-tms-identity".into(),
-                rp_id: "test-rp-id".into(),
-                rp_account: "test-rp-account".into(),
-                client_id: "test-client-id".into(),
-                client_name: "test-client-name".into(),
-                ctx_token: "test-token".into(),
-                client_repo_error_message: "Client Repo Network Error".into(),
-                delegation_repo_error_message: "Delegation Repo Network Error".into(),
-                rp_login_repo_error_message: "Resource Provider Login Repo Network Error".into(),
-            }
-        }
-    }
 }
