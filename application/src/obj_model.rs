@@ -4,6 +4,7 @@ pub mod client;
 pub mod configuration;
 pub mod delegation;
 pub mod identity_provider;
+pub mod institution;
 pub mod keys;
 pub mod login;
 pub(crate) mod oauth;

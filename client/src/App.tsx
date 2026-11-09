@@ -9,6 +9,7 @@ import { useAuth } from "./tms-hooks/useAuth"
 import { LinkSuccessAlert } from "./components/tms-ui/LinkSuccessAlert"
 import { DelegationsListing } from "./components/tms-ui/DelegationsListing"
 import { LinkIdentityModal } from "./components/tms-ui/LinkIdentityModal"
+import { LoginLanding } from "./components/tms-ui/LoginLanding"
 //import { ProviderWizard } from "./components/tms-ui/ProviderWizard"
 
 function ProviderCardList() {
@@ -50,11 +51,14 @@ function App() {
       </header>
 
       <main className="mx-auto max-w-5xl space-y-2 px-4 py-6 sm:px-6 lg:px-8">
-        {!isAuthenticated && (
+        {!isAuthenticated && window.location.pathname === "/signin" && (
+          <LoginLanding />
+        )}
+        {!isAuthenticated && window.location.pathname !== "/signin" && (
           <div>
             Please{" "}
             <a
-              href={`/login?idp_id=globus_idp&redirect_uri=${__REDIRECT_URI__}`}
+              href="/signin"
               className="text-primary underline-offset-4 hover:underline"
             >
               log in

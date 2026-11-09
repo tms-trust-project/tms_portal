@@ -21,7 +21,7 @@ export function UserMenu() {
         role="link"
         nativeButton={false}
         render={
-          <a href={`/login?idp_id=globus_idp&redirect_uri=${__REDIRECT_URI__}`}>
+          <a href="/signin">
             <LogIn /> Log In
           </a>
         }
@@ -43,9 +43,19 @@ export function UserMenu() {
         <DropdownMenuGroup>
           <DropdownMenuLabel>Provider: {whoami.organization}</DropdownMenuLabel>
           <DropdownMenuItem>
-            <a href="/logout" className="flex items-center gap-2">
-              <LogOut /> Log Out
-            </a>
+            {/* a POST, so another site can't log the user out with a link */}
+            <form
+              method="post"
+              action="/logout"
+              onSubmit={() => {
+                if (whoami.logoutUrl)
+                  window.open(whoami.logoutUrl, "_blank", "noopener")
+              }}
+            >
+              <button type="submit" className="flex items-center gap-2">
+                <LogOut /> Log Out
+              </button>
+            </form>
           </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>
