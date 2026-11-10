@@ -1,7 +1,8 @@
 use chrono::{DateTime, Utc};
 
 use crate::{
-    obj_model::resources::ResourceProviderLogin, ports::resource_provider_login::ResourceProviderLoginRepository,
+    obj_model::resources::ResourceProviderLogin,
+    ports::resource_provider_login::ResourceProviderLoginRepository,
 };
 
 pub struct MockResourceProviderLoginRepo {

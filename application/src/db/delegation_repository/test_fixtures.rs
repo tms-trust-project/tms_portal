@@ -84,7 +84,11 @@ impl DelegationRepository for MockDelegationRepo {
             .collect())
     }
 
-    async fn list_by_client_id(&self, client_id: &str, tms_identity: &str) -> anyhow::Result<Vec<Delegation>> {
+    async fn list_by_client_id(
+        &self,
+        client_id: &str,
+        tms_identity: &str,
+    ) -> anyhow::Result<Vec<Delegation>> {
         if let Some(error) = self.configured_error() {
             return Err(error);
         }
@@ -93,12 +97,19 @@ impl DelegationRepository for MockDelegationRepo {
 
         Ok(delegations
             .iter()
-            .filter(|delegation| delegation.client_id == client_id && delegation.tms_identity == tms_identity)
+            .filter(|delegation| {
+                delegation.client_id == client_id && delegation.tms_identity == tms_identity
+            })
             .cloned()
             .collect())
     }
 
-    async fn delete(&self, tms_identity: &str, client_id: &str, delegation_id: i32) -> anyhow::Result<Delegation> {
+    async fn delete(
+        &self,
+        tms_identity: &str,
+        client_id: &str,
+        delegation_id: i32,
+    ) -> anyhow::Result<Delegation> {
         if let Some(error) = self.configured_error() {
             return Err(error);
         }

@@ -1,4 +1,6 @@
-use crate::obj_model::resources::{Resource, ResourceAccountLink, ResourceForUser, ResourceProviderLogin, Username};
+use crate::obj_model::resources::{
+    Resource, ResourceAccountLink, ResourceForUser, ResourceProviderLogin, Username,
+};
 use anyhow::anyhow;
 use chrono::{DateTime, Utc};
 use sqlx::postgres::PgRow;
@@ -145,8 +147,13 @@ pub async fn db_add_or_update_resources_with_username<'a>(
             rp_id.clone(),
         )
         .await?;
-        let _username =
-            db_add_or_update_username(tx, resource.id, resource_provider_login_id, resource_for_user.username).await?;
+        let _username = db_add_or_update_username(
+            tx,
+            resource.id,
+            resource_provider_login_id,
+            resource_for_user.username,
+        )
+        .await?;
     }
     Ok(())
 }
@@ -268,7 +275,8 @@ mod tests {
         config::init_db,
         database_url,
         db::{
-            allowed_redirects_dao::get_allowed_redirect, identity_provider_dao::get_login_provider_by_id,
+            allowed_redirects_dao::get_allowed_redirect,
+            identity_provider_dao::get_login_provider_by_id,
             resource_provider_logins_dao::db_add_or_update_resource,
         },
     };
@@ -297,7 +305,12 @@ mod tests {
         let db_string = database_url()?;
         let db_pool = init_db(&db_string).await;
         let mut tx = db_pool.begin().await?;
-        let x = get_allowed_redirect(&mut tx, &"tms".to_string(), &"http://localhost:8080/".to_string()).await?;
+        let x = get_allowed_redirect(
+            &mut tx,
+            &"tms".to_string(),
+            &"http://localhost:8080/".to_string(),
+        )
+        .await?;
         dbg!(x);
         Ok(())
     }

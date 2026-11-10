@@ -64,7 +64,9 @@ impl DelegationService {
 
         let _recent_login = match maybe_recent_login {
             Some(recent_login) => recent_login,
-            None => return Err(Unauthorized("User must reauthenticate to delegate".to_string()).into()),
+            None => {
+                return Err(Unauthorized("User must reauthenticate to delegate".to_string()).into());
+            }
         };
 
         let delegation = self
@@ -101,13 +103,10 @@ impl DelegationService {
             .await
     }
 
-    pub async fn list_delegations(
-        &self,
-        ctx: &SecurityContext,
-    ) -> anyhow::Result<Vec<Delegation>> {
+    pub async fn list_delegations(&self, ctx: &SecurityContext) -> anyhow::Result<Vec<Delegation>> {
         // Return all delegations for the tms client
         if ctx.is_tms_client {
-            return self.delegation_repo.list_all(&ctx.tms_identity).await
+            return self.delegation_repo.list_all(&ctx.tms_identity).await;
         }
 
         // Return only the delegations of the requesting client_id

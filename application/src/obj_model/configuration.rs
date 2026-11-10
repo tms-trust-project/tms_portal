@@ -23,7 +23,11 @@ pub struct JwtConfig {
 
 impl Default for JwtConfig {
     fn default() -> Self {
-        Self { default_expiration_minutes: 60, signing_key_kid: Default::default(), key: Default::default() }
+        Self {
+            default_expiration_minutes: 60,
+            signing_key_kid: Default::default(),
+            key: Default::default(),
+        }
     }
 }
 
@@ -40,7 +44,10 @@ pub struct RuntimeConfig {
 
 impl Default for RuntimeConfig {
     fn default() -> Self {
-        Self { config_directory: "application/resources/config".into(), logging_config_file_name: "log4rs.yml".into() }
+        Self {
+            config_directory: "application/resources/config".into(),
+            logging_config_file_name: "log4rs.yml".into(),
+        }
     }
 }
 
@@ -53,7 +60,9 @@ impl DelegationPolicyConfig {
     pub fn get_delegation_expiration(&self) -> anyhow::Result<DateTime<Utc>> {
         match DateTime::parse_from_rfc3339(&self.delegation_expiration) {
             Ok(date_time) => Ok(date_time.with_timezone(&Utc)),
-            Err(error) => Err(anyhow::anyhow!(error)).context("Parsing delegation expiration time string"),
+            Err(error) => {
+                Err(anyhow::anyhow!(error)).context("Parsing delegation expiration time string")
+            }
         }
     }
 }

@@ -2,11 +2,13 @@ use std::sync::Arc;
 
 use crate::{
     db::{
-        client_repository::test_fixtures::MockClientRepo, delegation_repository::test_fixtures::MockDelegationRepo,
+        client_repository::test_fixtures::MockClientRepo,
+        delegation_repository::test_fixtures::MockDelegationRepo,
         resource_provider_login_repository::test_fixtures::MockResourceProviderLoginRepo,
     },
     obj_model::{
-        client::Client, configuration::DelegationPolicyConfig, delegation::Delegation, resources::ResourceProviderLogin,
+        client::Client, configuration::DelegationPolicyConfig, delegation::Delegation,
+        resources::ResourceProviderLogin,
     },
     ports::{
         client::ClientRepository, delegation::DelegationRepository,
@@ -26,7 +28,12 @@ pub(super) struct TestDelegationServiceBuilder {
 
 impl TestDelegationServiceBuilder {
     pub fn new() -> Self {
-        Self { client_repo: None, delegation_repo: None, resource_provider_login_repo: None, delegation_policy: None }
+        Self {
+            client_repo: None,
+            delegation_repo: None,
+            resource_provider_login_repo: None,
+            delegation_policy: None,
+        }
     }
 
     pub fn with_init_mock_client_repo(mut self, clients: Vec<Client>) -> Self {
@@ -50,7 +57,8 @@ impl TestDelegationServiceBuilder {
     }
 
     pub fn with_init_mock_rp_login_repo(mut self, logins: Vec<ResourceProviderLogin>) -> Self {
-        self.resource_provider_login_repo = Some(Arc::new(MockResourceProviderLoginRepo::new(logins)));
+        self.resource_provider_login_repo =
+            Some(Arc::new(MockResourceProviderLoginRepo::new(logins)));
         self
     }
 
@@ -83,7 +91,12 @@ impl TestDelegationServiceBuilder {
             .clone()
             .unwrap_or(DelegationPolicyConfig::default());
 
-        DelegationService::new(client_repo, delegation_repo, resource_provider_login_repo, delegation_policy)
+        DelegationService::new(
+            client_repo,
+            delegation_repo,
+            resource_provider_login_repo,
+            delegation_policy,
+        )
     }
 }
 
@@ -266,7 +279,10 @@ impl SecurityContextBuilder {
         self
     }
 
-    pub fn build_with_matching_client_ids_as_non_tms_client(&self, test_values: &TestValues) -> SecurityContext {
+    pub fn build_with_matching_client_ids_as_non_tms_client(
+        &self,
+        test_values: &TestValues,
+    ) -> SecurityContext {
         SecurityContext {
             tms_identity: self
                 .tms_identity
@@ -278,7 +294,10 @@ impl SecurityContextBuilder {
         }
     }
 
-    pub fn build_with_matching_client_ids_as_tms_client(&self, test_values: &TestValues) -> SecurityContext {
+    pub fn build_with_matching_client_ids_as_tms_client(
+        &self,
+        test_values: &TestValues,
+    ) -> SecurityContext {
         SecurityContext {
             tms_identity: self
                 .tms_identity
@@ -290,7 +309,10 @@ impl SecurityContextBuilder {
         }
     }
 
-    pub fn build_with_non_matching_client_ids_as_tms_client(&self, test_values: &TestValues) -> SecurityContext {
+    pub fn build_with_non_matching_client_ids_as_tms_client(
+        &self,
+        test_values: &TestValues,
+    ) -> SecurityContext {
         SecurityContext {
             tms_identity: self
                 .tms_identity
@@ -307,7 +329,10 @@ impl SecurityContextBuilder {
         }
     }
 
-    pub fn build_with_non_matching_client_ids_as_non_tms_client(&self, test_values: &TestValues) -> SecurityContext {
+    pub fn build_with_non_matching_client_ids_as_non_tms_client(
+        &self,
+        test_values: &TestValues,
+    ) -> SecurityContext {
         SecurityContext {
             tms_identity: self
                 .tms_identity

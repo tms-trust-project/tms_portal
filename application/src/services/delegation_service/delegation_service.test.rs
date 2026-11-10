@@ -1,7 +1,12 @@
 use chrono::{Duration, Utc};
 
 use crate::{
-    obj_model::{client::test_fixtures::ClientBuilder, configuration::DelegationPolicyConfig, delegation::test_fixtures::DelegationBuilder, resources::{ResourceProviderLogin, test_fixtures::ResourceProviderLoginBuilder}},
+    obj_model::{
+        client::test_fixtures::ClientBuilder,
+        configuration::DelegationPolicyConfig,
+        delegation::test_fixtures::DelegationBuilder,
+        resources::{ResourceProviderLogin, test_fixtures::ResourceProviderLoginBuilder},
+    },
     services::delegation_service::test_fixtures::{
         SecurityContextBuilder, TestDelegationServiceBuilder, TestValuesBuilder,
     },
@@ -34,7 +39,8 @@ async fn add_delegation_succeeds_when_client_ids_dont_match_and_is_tms_client() 
 
     // Initialize a security context that uses a different client id than the mocked client
     // and where the security context is a tms client
-    let ctx = SecurityContextBuilder::new().build_with_non_matching_client_ids_as_tms_client(&values);
+    let ctx =
+        SecurityContextBuilder::new().build_with_non_matching_client_ids_as_tms_client(&values);
 
     let result = service
         .add_delegation(&ctx, &values.client_name, &values.rp_id, &values.rp_account)
@@ -66,7 +72,8 @@ async fn add_delegation_succeeds_when_requested_client_id_matches_security_conte
         .with_delegation_policy(values.delegation_policy.clone())
         .build();
 
-    let ctx = SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
+    let ctx =
+        SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
 
     let result = service
         .add_delegation(&ctx, &values.client_name, &values.rp_id, &values.rp_account)
@@ -95,7 +102,8 @@ async fn add_delegation_fails_when_client_ids_dont_match_and_not_tms_client() {
 
     // Initialize a security context that uses a different client id than the mocked client
     // and where the security context is NOT a tms client
-    let ctx = SecurityContextBuilder::new().build_with_non_matching_client_ids_as_non_tms_client(&values);
+    let ctx =
+        SecurityContextBuilder::new().build_with_non_matching_client_ids_as_non_tms_client(&values);
 
     // Add the delegation
     let result = service
@@ -124,7 +132,8 @@ async fn add_delegation_fails_when_no_recent_login_found() {
         .with_delegation_policy(values.delegation_policy.clone())
         .build();
 
-    let ctx = SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
+    let ctx =
+        SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
 
     let result = service
         .add_delegation(&ctx, &values.client_name, &values.rp_id, &values.rp_account)
@@ -151,7 +160,8 @@ async fn add_delegation_fails_due_to_internal_client_repo_error() {
         .with_delegation_policy(values.delegation_policy.clone())
         .build();
 
-    let ctx = SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
+    let ctx =
+        SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
 
     let result = service
         .add_delegation(&ctx, &values.client_name, &values.rp_id, &values.rp_account)
@@ -181,7 +191,8 @@ async fn add_delegation_fails_due_to_internal_rp_login_repo_error() {
         .with_delegation_policy(values.delegation_policy.clone())
         .build();
 
-    let ctx = SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
+    let ctx =
+        SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
 
     let result = service
         .add_delegation(&ctx, &values.client_name, &values.rp_id, &values.rp_account)
@@ -216,7 +227,8 @@ async fn add_delegation_fails_due_to_internal_delegation_repo_error() {
         .with_delegation_policy(values.delegation_policy.clone())
         .build();
 
-    let ctx = SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
+    let ctx =
+        SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
 
     let result = service
         .add_delegation(&ctx, &values.client_name, &values.rp_id, &values.rp_account)
@@ -266,14 +278,13 @@ async fn tms_client_can_list_all_delegations_for_a_tms_identity() {
         .with_delegation_policy(values.delegation_policy.clone())
         .build();
 
-    let ctx = SecurityContextBuilder::new().build_with_non_matching_client_ids_as_tms_client(&values);
+    let ctx =
+        SecurityContextBuilder::new().build_with_non_matching_client_ids_as_tms_client(&values);
 
-    let result = service
-        .list_delegations(&ctx)
-        .await;
+    let result = service.list_delegations(&ctx).await;
 
     let delegations = result.expect("Returns delegations with no error");
-    
+
     assert_eq!(delegations.len(), 2);
 }
 
@@ -315,14 +326,13 @@ async fn non_tms_clients_can_only_list_delegations_it_issued_for_a_tms_identity(
         .with_delegation_policy(values.delegation_policy.clone())
         .build();
 
-    let ctx = SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
+    let ctx =
+        SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
 
-    let result = service
-        .list_delegations(&ctx)
-        .await;
+    let result = service.list_delegations(&ctx).await;
 
     let delegations = result.expect("Returns delegations with no error");
-    
+
     assert_eq!(delegations.len(), 1);
 }
 
@@ -371,13 +381,14 @@ async fn tms_client_can_list_delegations_issued_by_any_client_for_a_tms_identity
         .with_delegation_policy(values.delegation_policy.clone())
         .build();
 
-    let ctx = SecurityContextBuilder::new().build_with_non_matching_client_ids_as_tms_client(&values);
+    let ctx =
+        SecurityContextBuilder::new().build_with_non_matching_client_ids_as_tms_client(&values);
 
     let owned_delegations = service
         .list_delegations_for_client(&ctx, &values.client_name)
         .await
         .expect("Returns owned delegations with no error");
-    
+
     assert_eq!(owned_delegations.len(), 1);
     assert_eq!(owned_delegations.get(0).map(|c| &c.client_id), Some(&values.client_id));
 
@@ -387,9 +398,12 @@ async fn tms_client_can_list_delegations_issued_by_any_client_for_a_tms_identity
         .expect("Returns non-owned delegations with no error");
 
     print!("{:#?}", &non_owned_delegations);
-    
+
     assert_eq!(non_owned_delegations.len(), 1);
-    assert_eq!(non_owned_delegations.get(0).map(|c| &c.client_id), Some(&OTHER_CLIENT_ID.to_string()));
+    assert_eq!(
+        non_owned_delegations.get(0).map(|c| &c.client_id),
+        Some(&OTHER_CLIENT_ID.to_string())
+    );
 }
 
 #[tokio::test]
@@ -437,22 +451,26 @@ async fn non_tms_client_fails_to_list_delegations_it_did_not_issue() {
         .with_delegation_policy(values.delegation_policy.clone())
         .build();
 
-    let ctx = SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
+    let ctx =
+        SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
 
     let owned_delegations = service
         .list_delegations_for_client(&ctx, &values.client_name)
         .await
         .expect("Returns owned delegations with no error");
-    
+
     assert_eq!(owned_delegations.len(), 1);
     assert_eq!(owned_delegations.get(0).map(|c| &c.client_id), Some(&values.client_id));
-    
+
     let result = service
         .list_delegations_for_client(&ctx, OTHER_CLIENT_NAME)
         .await;
-    
+
     assert!(result.is_err());
-    assert!(matches!(result.unwrap_err().downcast_ref::<ServiceError>(), Some(ServiceError::Unauthorized(_))))
+    assert!(matches!(
+        result.unwrap_err().downcast_ref::<ServiceError>(),
+        Some(ServiceError::Unauthorized(_))
+    ))
 }
 
 #[tokio::test]
@@ -504,9 +522,12 @@ async fn non_tms_client_successfully_deletes_its_own_delegations() {
         .with_delegation_policy(values.delegation_policy.clone())
         .build();
 
-    let ctx = SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
+    let ctx =
+        SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
 
-    let result = service.delete_delegation(&ctx, &values.client_name, NON_TMS_OWNED_DELEGATION_ID).await;
+    let result = service
+        .delete_delegation(&ctx, &values.client_name, NON_TMS_OWNED_DELEGATION_ID)
+        .await;
 
     assert!(result.is_ok());
 }
@@ -562,11 +583,15 @@ async fn tms_client_successfully_deletes_any_delegations() {
 
     let ctx = SecurityContextBuilder::new().build_with_matching_client_ids_as_tms_client(&values);
 
-    let result = service.delete_delegation(&ctx, &values.client_name, TMS_OWNED_DELEGATION_ID).await;
+    let result = service
+        .delete_delegation(&ctx, &values.client_name, TMS_OWNED_DELEGATION_ID)
+        .await;
 
     assert!(result.is_ok());
 
-    let result = service.delete_delegation(&ctx, OTHER_CLIENT_NAME, NON_TMS_OWNED_DELEGATION_ID).await;
+    let result = service
+        .delete_delegation(&ctx, OTHER_CLIENT_NAME, NON_TMS_OWNED_DELEGATION_ID)
+        .await;
 
     assert!(result.is_ok());
 }
@@ -620,9 +645,12 @@ async fn non_tms_client_failes_to_delete_a_delegation_it_does_not_own() {
         .with_delegation_policy(values.delegation_policy.clone())
         .build();
 
-    let ctx = SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
+    let ctx =
+        SecurityContextBuilder::new().build_with_matching_client_ids_as_non_tms_client(&values);
 
-    let result = service.delete_delegation(&ctx, OTHER_CLIENT_NAME, NON_TMS_OWNED_DELEGATION_ID).await;
+    let result = service
+        .delete_delegation(&ctx, OTHER_CLIENT_NAME, NON_TMS_OWNED_DELEGATION_ID)
+        .await;
 
     assert!(result.is_err());
 }
@@ -636,7 +664,8 @@ mod utils {
         rp_id: &str,
         rp_account: &str,
     ) -> ResourceProviderLogin {
-        let earliest_login = Utc::now() - Duration::minutes(policy.delegation_max_mins_since_login.clone());
+        let earliest_login =
+            Utc::now() - Duration::minutes(policy.delegation_max_mins_since_login.clone());
 
         ResourceProviderLoginBuilder::new()
             .with_unexpired_last_login(earliest_login)

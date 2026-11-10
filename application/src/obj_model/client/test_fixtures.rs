@@ -14,7 +14,15 @@ pub struct ClientBuilder {
 
 impl ClientBuilder {
     pub fn new() -> Self {
-        Self { id: None, client_id: None, secret: None, name: None, enabled: None, created: None, updated: None }
+        Self {
+            id: None,
+            client_id: None,
+            secret: None,
+            name: None,
+            enabled: None,
+            created: None,
+            updated: None,
+        }
     }
 
     pub fn with_id(mut self, id: i32) -> Self {

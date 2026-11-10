@@ -8,7 +8,9 @@ use crate::services::oauth2_service::{
 };
 use crate::services::resource_service::AccessToken;
 use crate::utils::app_error::AppError;
-use crate::utils::oauth2_authorization_code_utils::{AuthCodeQueryParams, ROOT_COOKIE_PATH, STATE_COOKIE_NAME};
+use crate::utils::oauth2_authorization_code_utils::{
+    AuthCodeQueryParams, ROOT_COOKIE_PATH, STATE_COOKIE_NAME,
+};
 use axum::extract::{Query, State};
 use axum::routing::{get, post};
 use axum::{Json, Router, debug_handler};
@@ -238,8 +240,14 @@ mod tests {
 
     #[test]
     fn test_grant_type_from_str() {
-        assert_eq!(GrantType::try_from("authorization_code").unwrap(), GrantType::AuthorizationCode);
-        assert_eq!(GrantType::try_from("AuthoRization_code").unwrap(), GrantType::AuthorizationCode);
+        assert_eq!(
+            GrantType::try_from("authorization_code").unwrap(),
+            GrantType::AuthorizationCode
+        );
+        assert_eq!(
+            GrantType::try_from("AuthoRization_code").unwrap(),
+            GrantType::AuthorizationCode
+        );
         assert_eq!(GrantType::try_from("REFRESH_TOKEN").unwrap(), GrantType::RefreshToken);
         assert_eq!(GrantType::try_from("refresh_token").unwrap(), GrantType::RefreshToken);
         let result = GrantType::try_from("bogus_value");

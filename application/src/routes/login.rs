@@ -6,9 +6,12 @@ use crate::services::login_service::{get_identity_providers, handle_callback, lo
 use crate::utils::app_error::AppError;
 use crate::utils::jwt_utils::JwtValidator;
 use crate::utils::oauth2_authorization_code_utils::{
-    AuthCodeQueryParams, CLIENT_ID_TMS, OAuth2State, ROOT_COOKIE_PATH, STATE_COOKIE_NAME, TOKEN_COOKIE_NAME,
+    AuthCodeQueryParams, CLIENT_ID_TMS, OAuth2State, ROOT_COOKIE_PATH, STATE_COOKIE_NAME,
+    TOKEN_COOKIE_NAME,
 };
-use crate::utils::redirect_utils::{check_allowed_redirects, check_allowed_redirects_by_client_name};
+use crate::utils::redirect_utils::{
+    check_allowed_redirects, check_allowed_redirects_by_client_name,
+};
 use crate::utils::state_utils::{decode_state, encode_state};
 use anyhow::Context;
 use axum::extract::{Query, State};
@@ -78,9 +81,13 @@ pub async fn login_handler(
                 if let Some(return_client_name) = &form_data.client_name {
                     // check to make sure the client name / return uri are in the allowed list
                     let mut tx = app_state.db_pool.begin().await?;
-                    check_allowed_redirects_by_client_name(&mut tx, return_client_name, client_return_uri)
-                        .await
-                        .with_context(|| "Invalid redirect url for login")?;
+                    check_allowed_redirects_by_client_name(
+                        &mut tx,
+                        return_client_name,
+                        client_return_uri,
+                    )
+                    .await
+                    .with_context(|| "Invalid redirect url for login")?;
                     tx.commit().await?;
                 } else {
                     // if the client name was not specified, it's an error
@@ -170,7 +177,8 @@ pub async fn logout_handler(
     logout(&app_state.db_pool, &security_context.token).await?;
 
     // remove the token cookie
-    let updated_jar = jar.remove(Cookie::build((TOKEN_COOKIE_NAME, String::from(""))).path(ROOT_COOKIE_PATH));
+    let updated_jar =
+        jar.remove(Cookie::build((TOKEN_COOKIE_NAME, String::from(""))).path(ROOT_COOKIE_PATH));
 
     let http_config = &app_state.config.http_config;
     let mut headers = HashMap::new();
@@ -227,8 +235,10 @@ pub async fn callback_handler(
     let expiration_time = Utc::now() + TimeDelta::seconds(expires_in);
 
     // redirect browser back to the post-login page (taken from state - validated in login step).
-    let decoded_state: OAuth2State = decode_state(&app_state.config, &state_cookie.value().to_owned()).await?;
-    let headers: HashMap<String, String> = HashMap::from_iter(vec![(LOCATION.to_string(), decoded_state.redirect_uri)]);
+    let decoded_state: OAuth2State =
+        decode_state(&app_state.config, &state_cookie.value().to_owned()).await?;
+    let headers: HashMap<String, String> =
+        HashMap::from_iter(vec![(LOCATION.to_string(), decoded_state.redirect_uri)]);
 
     // Build a new cookie and save it with the TMS token.
     let token_cookie = Cookie::build((TOKEN_COOKIE_NAME, token))

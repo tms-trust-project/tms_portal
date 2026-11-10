@@ -29,23 +29,30 @@ pub struct OAuth2State {
     pub tms_identity: String, // the tms "cloud identity"
     pub idp_id: String,       // id of the cloud identity provider a.k.a. login identity provider
     pub client_id: String,    // client id of the tms client
-    pub exp: u64,             // TODO: this is supposed to be an expiration for the state, but it should
+    pub exp: u64, // TODO: this is supposed to be an expiration for the state, but it should
     // TODO: have a date time or something maybe?  This needs work.
-    pub redirect_uri: String,         // redirect_uri requested by the tms client
+    pub redirect_uri: String, // redirect_uri requested by the tms client
     pub client_state: Option<String>, // state provided to authorize endpoint by tms client
-    pub nonce: u32,                   // nonce - used to help prevent replay attacks
+    pub nonce: u32,           // nonce - used to help prevent replay attacks
 }
 /*
 Exchanges an auth code for an auth token.  The parameter <R> is the structure
 that it is deserialized into.
  */
-pub async fn get_token_for_provider<R>(idp: &IdentityProvider, callback_url: &String, code: &String) -> Result<R>
+pub async fn get_token_for_provider<R>(
+    idp: &IdentityProvider,
+    callback_url: &String,
+    code: &String,
+) -> Result<R>
 where
     R: DeserializeOwned,
 {
     debug!("exchange_code_for_token called");
-    let form_params =
-        [("grant_type", &"authorization_code".to_string()), ("redirect_uri", callback_url), ("code", &code.to_owned())];
+    let form_params = [
+        ("grant_type", &"authorization_code".to_string()),
+        ("redirect_uri", callback_url),
+        ("code", &code.to_owned()),
+    ];
     debug!("Form params: {:?}", form_params);
     let client = reqwest::Client::new();
     let response = client

@@ -48,12 +48,13 @@ struct AppState {
 }
 
 fn database_url() -> anyhow::Result<String> {
-    let database_host =
-        std::env::var("TMS_PORTAL_DB_HOST").map_err(|_| anyhow::anyhow!("TMS_PORTAL_DB_HOST must be set"))?;
+    let database_host = std::env::var("TMS_PORTAL_DB_HOST")
+        .map_err(|_| anyhow::anyhow!("TMS_PORTAL_DB_HOST must be set"))?;
     let database_port = std::env::var("TMS_PORTAL_DB_PORT").unwrap_or(String::from("5432"));
     let database_name = std::env::var("TMS_PORTAL_DB_NAME").unwrap_or(String::from("tms_db"));
     let database_user = std::env::var("TMS_PORTAL_DB_USER").unwrap_or(String::from("tms"));
-    let database_password = std::env::var("TMS_PORTAL_DB_PASSWORD").expect("TMS_PORTAL_DB_PASSWORD must be set");
+    let database_password =
+        std::env::var("TMS_PORTAL_DB_PASSWORD").expect("TMS_PORTAL_DB_PASSWORD must be set");
 
     let database_url_string = format!(
         "postgres://{0}:{1}@{2}:{3}/{4}",
@@ -62,7 +63,10 @@ fn database_url() -> anyhow::Result<String> {
 
     // just parsing the db url to determine if it seems valid.  We actually use database_url_string.
     let _database_url = Url::parse(database_url_string.as_str()).map_err(|e| {
-        anyhow::anyhow!(format!("The database url {0} is not valid (error: {1})", &database_url_string, e))
+        anyhow::anyhow!(format!(
+            "The database url {0} is not valid (error: {1})",
+            &database_url_string, e
+        ))
     })?;
 
     Ok(database_url_string)
@@ -77,7 +81,8 @@ async fn main() -> anyhow::Result<()> {
     let config = Configuration::from_env()?;
     let client_repo = PostgresClientRepository::new(db_pool.clone());
     let delegation_repo = PostgresDelegationRepository::new(db_pool.clone());
-    let resource_provider_login_repo = PostgresResourceProviderLoginRepository::new(db_pool.clone());
+    let resource_provider_login_repo =
+        PostgresResourceProviderLoginRepository::new(db_pool.clone());
     let delegation_service = DelegationService::new(
         Arc::new(client_repo),
         Arc::new(delegation_repo),

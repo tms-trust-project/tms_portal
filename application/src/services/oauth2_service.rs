@@ -5,7 +5,9 @@ use crate::obj_model::identity_provider::IdentityProvider;
 use crate::services::login_service::AuthorizationCodeResponse;
 use crate::utils::configuration::Configuration;
 use crate::utils::jwt_utils::{JwtClaims, get_tms_token_claims, make_auth_token};
-use crate::utils::oauth2_authorization_code_utils::{OAuth2State, decode_access_token, get_token_for_provider};
+use crate::utils::oauth2_authorization_code_utils::{
+    OAuth2State, decode_access_token, get_token_for_provider,
+};
 use crate::utils::redirect_utils::check_allowed_redirects;
 use crate::utils::state_utils::{decode_state, encode_state};
 use anyhow::Context;
@@ -57,7 +59,8 @@ pub async fn authorize_code(
     // get what we need from the database
     let mut tx = db_pool.begin().await?;
 
-    let idp = get_login_provider_by_id(&mut tx, &configuration.oauth_config.login_oauth_provider).await?;
+    let idp =
+        get_login_provider_by_id(&mut tx, &configuration.oauth_config.login_oauth_provider).await?;
 
     // Check redirect uri - this fails if the redirect doesnt exist
     check_allowed_redirects(&mut tx, client_id, redirect_uri)
@@ -192,7 +195,8 @@ pub async fn get_access_token_from_code(
     // this will remove the auth code data, but return it.  It's only valid for a single use, so we
     // don't want it hanging around.
     // TODO: we could invalidate the record insted if we think it might help debuging / tracking errors down.  They would still need to be removed at some point, but we could do that once a day or whatever.  I prefer just deleting them I think.
-    let auth_code_data = delete_auth_code_data(&mut tx, code, client_id, redirect_uri, time_delta).await?;
+    let auth_code_data =
+        delete_auth_code_data(&mut tx, code, client_id, redirect_uri, time_delta).await?;
     // let idp = db_get_login_provider_by_id(&mut tx, &auth_code_data.idp_id).await?;
     tx.commit().await?;
 
@@ -244,14 +248,18 @@ pub async fn process_authorization_callback(
     code: &String,
 ) -> anyhow::Result<AuthorizationCallbackResult> {
     // redirect browser back to the post-login page (taken from state - validated in login step).
-    let decoded_internal_state: OAuth2State = decode_state(configuration, internal_oauth_state).await?;
+    let decoded_internal_state: OAuth2State =
+        decode_state(configuration, internal_oauth_state).await?;
 
     let mut tx = db_pool.begin().await?;
-    let identity_provider = get_login_provider_by_id(&mut tx, &decoded_internal_state.idp_id).await?;
+    let identity_provider =
+        get_login_provider_by_id(&mut tx, &decoded_internal_state.idp_id).await?;
     tx.commit().await?;
 
     // exchange code for token (state validated in handle_callback)
-    let provider_token = get_provider_token(configuration, db_pool, client_state, code, internal_oauth_state).await?;
+    let provider_token =
+        get_provider_token(configuration, db_pool, client_state, code, internal_oauth_state)
+            .await?;
 
     let location = generate_code_and_redirect(
         db_pool,

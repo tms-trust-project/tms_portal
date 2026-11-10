@@ -9,7 +9,9 @@ use crate::services::token_provider::TokenProvider;
 use crate::utils::app_error::AppError;
 use crate::utils::configuration::Configuration;
 use crate::utils::jwt_utils::{TmsTokenClaims, get_tms_token_claims, make_auth_token};
-use crate::utils::oauth2_authorization_code_utils::{OAuth2State, decode_access_token, get_token_for_provider};
+use crate::utils::oauth2_authorization_code_utils::{
+    OAuth2State, decode_access_token, get_token_for_provider,
+};
 use crate::utils::state_utils::decode_state;
 use anyhow::{Context, Result};
 use jsonwebtoken::decode_header;
@@ -78,9 +80,14 @@ pub async fn handle_callback(
     // TODO: get iss from config
     claims.insert("iss".to_string(), Value::from("https://tms.tacc.edu/"));
 
-    let tms_token_claims =
-        get_tms_token_claims(configuration, &decoded_state.client_id, &idp.id, &idp.identity_provider_type, &claims)
-            .await?;
+    let tms_token_claims = get_tms_token_claims(
+        configuration,
+        &decoded_state.client_id,
+        &idp.id,
+        &idp.identity_provider_type,
+        &claims,
+    )
+    .await?;
 
     // make sure the tms_identity is stored in the db
     let mut tx = db_pool.begin().await?;
@@ -117,7 +124,11 @@ pub async fn whoami(db_pool: &PgPool, token: &String) -> anyhow::Result<WhoAmIRe
     let token_provider = match idp_provider {
         IdentityProviderType::Globus => GlobusTokenProvider {},
         _ => {
-            return Err(ServiceError::Internal(format!("Unsupported provider type {0}", idp_provider)).into());
+            return Err(ServiceError::Internal(format!(
+                "Unsupported provider type {0}",
+                idp_provider
+            ))
+            .into());
         }
     };
 

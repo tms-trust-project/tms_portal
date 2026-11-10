@@ -77,7 +77,10 @@ pub struct TmsTokenClaims {
     pub tms_account_type: Value,
     #[serde(rename = "tms/name", skip_serializing_if = "Option::is_none")]
     pub tms_name: Option<Value>,
-    #[serde(rename = "tms/identity_provider_display_name", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "tms/identity_provider_display_name",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub tms_idp_display_name: Option<Value>,
     #[serde(rename = "identity_provider_type")]
     pub tms_idp_provider: IdentityProviderType,
@@ -155,19 +158,26 @@ async fn get_token_claims(db_pool: &PgPool, token: &String) -> Result<TmsTokenCl
 impl FromRequestParts<AppState> for JwtValidator {
     type Rejection = AppError;
 
-    async fn from_request_parts(req_parts: &mut Parts, app_state: &AppState) -> Result<Self, Self::Rejection> {
-        let bearer = match TypedHeader::<Authorization<Bearer>>::from_request_parts(req_parts, &app_state).await {
-            Ok(bearer) => bearer.token().to_string(),
-            Err(_) => {
-                let mut result: String = String::default();
-                let Ok(app_state) = State::<AppState>::from_request_parts(req_parts, app_state).await;
-                let Ok(jar) = CookieJar::from_request_parts(req_parts, &app_state).await;
-                if let Some(token) = jar.get(TMS_TOKEN_COOKIE_NAME) {
-                    result = token.value().to_string();
-                };
-                result
-            }
-        };
+    async fn from_request_parts(
+        req_parts: &mut Parts,
+        app_state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
+        let bearer =
+            match TypedHeader::<Authorization<Bearer>>::from_request_parts(req_parts, &app_state)
+                .await
+            {
+                Ok(bearer) => bearer.token().to_string(),
+                Err(_) => {
+                    let mut result: String = String::default();
+                    let Ok(app_state) =
+                        State::<AppState>::from_request_parts(req_parts, app_state).await;
+                    let Ok(jar) = CookieJar::from_request_parts(req_parts, &app_state).await;
+                    if let Some(token) = jar.get(TMS_TOKEN_COOKIE_NAME) {
+                        result = token.value().to_string();
+                    };
+                    result
+                }
+            };
 
         if bearer.is_empty() {
             Err(Unauthorized(String::from("Unable to find TMS token")).into())
@@ -218,10 +228,14 @@ pub async fn make_auth_token(
     //         &jwt_config, &client_id, &idp_id, &idp_type, &claims).await?;
 
     // TODO: add kid, alg, and jti in header ... maybe other stuff?
-    let tms_token_string =
-        JwtEncoderBuilder::builder(tms_token_claims, keys.jwt_private_key.as_bytes(), DEFAULT_ALGORITHM, kid)
-            .encode()
-            .await?;
+    let tms_token_string = JwtEncoderBuilder::builder(
+        tms_token_claims,
+        keys.jwt_private_key.as_bytes(),
+        DEFAULT_ALGORITHM,
+        kid,
+    )
+    .encode()
+    .await?;
 
     let mut tx = db_pool.begin().await?;
     db_insert_token(&mut tx, &tms_token_string, &tms_token_claims.get_expires_at_dt()?).await?;

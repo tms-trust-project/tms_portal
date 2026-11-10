@@ -21,11 +21,17 @@ impl Configuration {
     }
 
     pub fn from_env() -> anyhow::Result<Self> {
-        let http_config = HttpConfig { base_url: std::env::var("TMS_PORTAL_BASE_URL")?, ..Default::default() };
-        let oauth_config = OAuthConfig { login_oauth_provider: std::env::var("TMS_PORTAL_LOGIN_PROVIDER")? };
+        let http_config =
+            HttpConfig { base_url: std::env::var("TMS_PORTAL_BASE_URL")?, ..Default::default() };
+        let oauth_config =
+            OAuthConfig { login_oauth_provider: std::env::var("TMS_PORTAL_LOGIN_PROVIDER")? };
         let signing_key_kid = std::env::var("TMS_PORTAL_SIGNING_KEY_ID")?;
         let mut jwt_config = JwtConfig {
-            key: Key::from_env(&signing_key_kid, "TMS_PORTAL_SIGNING_KEY_PUB", "TMS_PORTAL_SIGNING_KEY_SEC")?,
+            key: Key::from_env(
+                &signing_key_kid,
+                "TMS_PORTAL_SIGNING_KEY_PUB",
+                "TMS_PORTAL_SIGNING_KEY_SEC",
+            )?,
             signing_key_kid,
             ..Default::default()
         };
@@ -46,6 +52,13 @@ impl Configuration {
             )?,
             kid: state_key_kid,
         };
-        Ok(Configuration { http_config, oauth_config, jwt_config, runtime_config, delegation_policy_config, state_key })
+        Ok(Configuration {
+            http_config,
+            oauth_config,
+            jwt_config,
+            runtime_config,
+            delegation_policy_config,
+            state_key,
+        })
     }
 }

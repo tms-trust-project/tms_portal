@@ -5,18 +5,27 @@ use tms_lib::utils::service_error::ServiceError::NotFound;
 
 impl From<&PgRow> for TmsIdentity {
     fn from(row: &PgRow) -> Self {
-        TmsIdentity { seq_id: row.get("seq_id"), tms_identity: row.get("tms_identity"), created: row.get("created") }
+        TmsIdentity {
+            seq_id: row.get("seq_id"),
+            tms_identity: row.get("tms_identity"),
+            created: row.get("created"),
+        }
     }
 }
 
 #[allow(dead_code)]
-pub async fn get_tms_identity<'a>(tx: &mut PgTransaction<'a>, tms_identity: &String) -> anyhow::Result<TmsIdentity> {
+pub async fn get_tms_identity<'a>(
+    tx: &mut PgTransaction<'a>,
+    tms_identity: &String,
+) -> anyhow::Result<TmsIdentity> {
     let row = query("select * from tms_identity where tms_identity = $1")
         .bind(tms_identity)
         .fetch_one(&mut **tx)
         .await
         .map_err(|error| match error {
-            sqlx::Error::RowNotFound => NotFound(format!("Tms Identity {} not found", tms_identity)).into(),
+            sqlx::Error::RowNotFound => {
+                NotFound(format!("Tms Identity {} not found", tms_identity)).into()
+            }
             _ => anyhow::anyhow!(error),
         })?;
     Ok(TmsIdentity::from(&row))

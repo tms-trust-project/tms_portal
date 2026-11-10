@@ -18,7 +18,9 @@ where
 {
     fn into_response(self) -> Response {
         let result = match self.entity {
-            Some(entity) => ApiResponseBody { status: self.status_code.to_string(), result: Some(entity) },
+            Some(entity) => {
+                ApiResponseBody { status: self.status_code.to_string(), result: Some(entity) }
+            }
 
             None => ApiResponseBody { status: self.status_code.to_string(), result: None },
         };
