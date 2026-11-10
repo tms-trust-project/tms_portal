@@ -1,19 +1,7 @@
 use crate::obj_model::allowed_redirects::AllowedRedirect;
 use anyhow::{Result, anyhow};
-use sqlx::postgres::PgRow;
-use sqlx::{Error, PgTransaction, Row, query};
+use sqlx::{Error, PgTransaction, query};
 use tms_lib::utils::service_error::ServiceError::BadRequest;
-
-impl From<&PgRow> for AllowedRedirect {
-    fn from(row: &PgRow) -> Self {
-        AllowedRedirect {
-            uri: row.get("uri"),
-            client_id: row.get("client_id"),
-            created: row.get("created"),
-            updated: row.get("updated"),
-        }
-    }
-}
 
 pub async fn get_allowed_redirect<'a>(
     tx: &mut PgTransaction<'a>,
