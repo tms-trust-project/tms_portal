@@ -51,6 +51,7 @@ impl From<obj_model::identity_provider::IdentityProvider> for IdentityProvider {
         }
     }
 }
+
 impl From<&obj_model::identity_provider::IdentityProvider> for IdentityProvider {
     fn from(value: &obj_model::identity_provider::IdentityProvider) -> Self {
         IdentityProvider {

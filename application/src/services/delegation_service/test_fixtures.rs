@@ -278,7 +278,19 @@ impl SecurityContextBuilder {
         }
     }
 
-    pub fn build_with_non_match_client_ids_as_tms_client(&self, test_values: &TestValues) -> SecurityContext {
+    pub fn build_with_matching_client_ids_as_tms_client(&self, test_values: &TestValues) -> SecurityContext {
+        SecurityContext {
+            tms_identity: self
+                .tms_identity
+                .clone()
+                .unwrap_or(test_values.tms_identity.clone()),
+            token: self.token.clone().unwrap_or(test_values.ctx_token.clone()),
+            client_id: test_values.client_id.clone(),
+            is_tms_client: true,
+        }
+    }
+
+    pub fn build_with_non_matching_client_ids_as_tms_client(&self, test_values: &TestValues) -> SecurityContext {
         SecurityContext {
             tms_identity: self
                 .tms_identity

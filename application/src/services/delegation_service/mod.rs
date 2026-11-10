@@ -89,7 +89,7 @@ impl DelegationService {
         let client = self.client_repo.get_by_name(client_name).await?;
 
         if !ctx.client_is_authorized(&client.client_id) {
-            return Err(BadRequest(format!(
+            return Err(Unauthorized(format!(
                 "Token client '{}' is not allowed to list delegations for client id: '{}' name: '{}'",
                 &ctx.client_id, &client.client_id, &client_name
             ))
@@ -130,7 +130,7 @@ impl DelegationService {
         // };
 
         let client = self.client_repo.get_by_name(client_name).await?;
-        if !ctx.token_matches_client(&client.client_id) {
+        if !ctx.client_is_authorized(&client.client_id) {
             return Err(BadRequest(format!(
                 "Token client '{}' is not allowed to delegate for client id: '{}' name: '{}'",
                 ctx.client_id, &client.client_id, client_name

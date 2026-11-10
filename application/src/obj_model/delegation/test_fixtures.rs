@@ -6,12 +6,12 @@ pub struct DelegationBuilder {
     id: Option<i32>,
     client_id: Option<String>,
     client_name: Option<String>,
+    rp_id: Option<String>,
     rp_account: Option<String>,
     expires_at: Option<DateTime<Utc>>,
     created: Option<DateTime<Utc>>,
     updated: Option<DateTime<Utc>>,
     tms_identity: Option<String>,
-    rp_id: Option<String>,
 }
 
 impl DelegationBuilder {
