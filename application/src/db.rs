@@ -1,4 +1,5 @@
-pub mod allowed_redirects_dao;
+pub mod allowed_redirects_repository;
+pub use allowed_redirects_repository::allowed_redirects_dao;
 pub mod auth_code_data_dao;
 pub mod client_repository;
 pub mod delegation_repository;
