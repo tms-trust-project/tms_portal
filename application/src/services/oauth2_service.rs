@@ -1,7 +1,9 @@
 use crate::db::auth_code_data_dao::{db_delete_auth_code_data, db_insert_auth_code_data};
 use crate::db::client_dao::db_get_client_by_credentials;
 use crate::db::identity_provider_dao::db_get_login_provider_by_id;
+use crate::obj_model::configuration::HttpConfig;
 use crate::obj_model::identity_provider::IdentityProvider;
+use crate::routes::login::SIGNIN_PATH;
 use crate::services::login_service::{
     CallbackCheck, LoginIdentity, LoginRejection, LoginTarget, check_login_callback,
     epoch_seconds_now, get_login_authorize_url, get_login_identity, get_login_target,
@@ -66,9 +68,23 @@ pub async fn authorize_code(
         .with_context(|| "OAuth redirect is invalid")?;
     tx.commit().await?;
 
+    // Without an institution, the user picks one on our sign in page, which sends the
+    // browser back here with the same request plus the institution.
+    let Some(institution_id) = institution_id else {
+        return Ok(AuthorizationResult {
+            location: get_hosted_signin_url(
+                &configuration.http_config,
+                client_id,
+                redirect_uri,
+                state,
+            )?,
+            encoded_state: None,
+        });
+    };
+
     // the login idp, and the approved institution the client asked to steer the login to.
-    // Without one the login can't start, so tell the client why.
-    let login_target = match get_login_target(configuration, db_pool, institution_id).await {
+    // An institution that isn't approved can't start the login, so tell the client why.
+    let login_target = match get_login_target(configuration, db_pool, Some(institution_id)).await {
         Ok(login_target) => login_target,
         Err(rejection) => {
             return Ok(AuthorizationResult {
@@ -93,6 +109,30 @@ pub async fn authorize_code(
         location: location.to_string(),
         encoded_state: Some(encoded_state),
     })
+}
+
+/*
+The sign in page, carrying a client's authorize request so the page can pick the
+institution and send the request back to the authorize endpoint.  Nothing here is
+trusted: the authorize endpoint checks the client and redirect uri again.
+ */
+fn get_hosted_signin_url(
+    http_config: &HttpConfig,
+    client_id: &str,
+    redirect_uri: &str,
+    client_state: &Option<String>,
+) -> anyhow::Result<String> {
+    let mut signin_url = Url::parse(&http_config.make_tms_url(&http_config.base_url, SIGNIN_PATH))?;
+    {
+        let mut query_pairs = signin_url.query_pairs_mut();
+        query_pairs.append_pair("response_type", "code");
+        query_pairs.append_pair("client_id", client_id);
+        query_pairs.append_pair("redirect_uri", redirect_uri);
+        if let Some(client_state) = client_state {
+            query_pairs.append_pair("state", client_state);
+        }
+    }
+    Ok(signin_url.to_string())
 }
 
 pub async fn generate_code_and_redirect(
@@ -305,10 +345,14 @@ pub async fn process_authorization_callback(
 
 #[cfg(test)]
 mod tests {
+    use crate::obj_model::configuration::HttpConfig;
     use crate::services::login_service::LoginRejection;
-    use crate::services::oauth2_service::{error_redirect_url, get_error_redirect};
+    use crate::services::oauth2_service::{
+        error_redirect_url, get_error_redirect, get_hosted_signin_url,
+    };
     use crate::utils::oauth2_authorization_code_utils::OAuth2State;
     use std::collections::HashMap;
+    use url::Url;
 
     #[test]
     fn test_error_redirect() -> anyhow::Result<()> {
@@ -361,6 +405,40 @@ mod tests {
         let query: HashMap<_, _> = url.query_pairs().into_owned().collect();
         assert_eq!(query["error"], "temporarily_unavailable");
         assert!(!query.contains_key("state"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_hosted_signin_url() -> anyhow::Result<()> {
+        let http_config = HttpConfig {
+            base_url: "https://tms.example.org".to_string(),
+            ..Default::default()
+        };
+        let url = Url::parse(&get_hosted_signin_url(
+            &http_config,
+            "gateway",
+            "https://gateway.example.org/callback?keep=1",
+            &Some("client state".to_string()),
+        )?)?;
+        let query: HashMap<_, _> = url.query_pairs().into_owned().collect();
+        assert_eq!(url.host_str(), Some("tms.example.org"));
+        assert_eq!(url.path(), "/signin");
+        assert_eq!(query["response_type"], "code");
+        assert_eq!(query["client_id"], "gateway");
+        assert_eq!(
+            query["redirect_uri"],
+            "https://gateway.example.org/callback?keep=1"
+        );
+        assert_eq!(query["state"], "client state");
+        assert!(!query.contains_key("institution"));
+
+        let url = Url::parse(&get_hosted_signin_url(
+            &http_config,
+            "gateway",
+            "https://gateway.example.org/callback",
+            &None,
+        )?)?;
+        assert!(!url.query_pairs().any(|(key, _)| key == "state"));
         Ok(())
     }
 }

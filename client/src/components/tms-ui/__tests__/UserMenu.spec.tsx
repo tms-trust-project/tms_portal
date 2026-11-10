@@ -39,6 +39,50 @@ describe("UserMenu", () => {
     expect(logout.closest("form")).toHaveAttribute("action", "/logout")
   })
 
+  test("shows the token's claims from the provider link", async () => {
+    const claims = {
+      sub: "jrosenberg@utexas.edu",
+      tms_institution: "utexas",
+      name: "Jake Rosenbérg",
+      exp: 1794337246,
+    }
+    // base64url, from UTF-8 bytes, without padding
+    const payload = btoa(
+      String.fromCharCode(...new TextEncoder().encode(JSON.stringify(claims)))
+    )
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "")
+    Cookies.set("tmstoken", `eyJhbGciOiJSUzI1NiJ9.${payload}.signature`)
+    renderWithQueryClient(<UserMenu />)
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Jake Rosenberg" })
+    )
+    fireEvent.click(
+      await screen.findByRole("menuitem", {
+        name: "Provider: University of Texas at Austin",
+      })
+    )
+    const dialog = await screen.findByRole("dialog", { name: "Token claims" })
+    expect(JSON.parse(dialog.querySelector("pre")!.textContent!)).toEqual(
+      claims
+    )
+  })
+
+  test("says when the token can't be decoded", async () => {
+    Cookies.set("tmstoken", "test-token")
+    renderWithQueryClient(<UserMenu />)
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Jake Rosenberg" })
+    )
+    fireEvent.click(await screen.findByRole("menuitem", { name: /^Provider:/ }))
+    expect(
+      await screen.findByText("The token could not be decoded.")
+    ).toBeInTheDocument()
+  })
+
   test("opens the Tapis sign-out page when logging out of a Tapis login", async () => {
     Cookies.set("tmstoken", "test-token")
     server.use(

@@ -10,6 +10,7 @@ import { LinkSuccessAlert } from "./components/tms-ui/LinkSuccessAlert"
 import { DelegationsListing } from "./components/tms-ui/DelegationsListing"
 import { LinkIdentityModal } from "./components/tms-ui/LinkIdentityModal"
 import { LoginLanding } from "./components/tms-ui/LoginLanding"
+import { getAuthorizeRequest } from "./lib/authorizeRequest"
 //import { ProviderWizard } from "./components/tms-ui/ProviderWizard"
 
 function ProviderCardList() {
@@ -38,6 +39,9 @@ function ProviderCardList() {
 
 function App() {
   const { data: isAuthenticated } = useAuth()
+  const onSignin = window.location.pathname === "/signin"
+  // another app's login, which doesn't depend on being logged in to the portal
+  const hostedSignin = onSignin && !!getAuthorizeRequest(window.location.search)
   return (
     <div className="min-h-screen bg-muted/30">
       <header className="border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
@@ -51,10 +55,8 @@ function App() {
       </header>
 
       <main className="mx-auto max-w-5xl space-y-2 px-4 py-6 sm:px-6 lg:px-8">
-        {!isAuthenticated && window.location.pathname === "/signin" && (
-          <LoginLanding />
-        )}
-        {!isAuthenticated && window.location.pathname !== "/signin" && (
+        {(hostedSignin || (!isAuthenticated && onSignin)) && <LoginLanding />}
+        {!isAuthenticated && !onSignin && (
           <div>
             Please{" "}
             <a
@@ -66,7 +68,7 @@ function App() {
             to manage resources.
           </div>
         )}
-        {!!isAuthenticated && (
+        {!!isAuthenticated && !hostedSignin && (
           <>
             <h2 className="flex items-center gap-2 text-lg font-semibold">
               Linked Providers <LinkIdentityModal />

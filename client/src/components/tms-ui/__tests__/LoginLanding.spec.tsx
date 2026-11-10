@@ -12,13 +12,14 @@ const bannerText =
 afterEach(() => window.history.replaceState(null, "", "/"))
 
 describe("LoginLanding", () => {
-  test("lists the Globus institutions and logs in through the selected one", async () => {
+  test("lists the institutions and logs in through the selected one", async () => {
     renderWithQueryClient(<LoginLanding />)
 
     const select = await screen.findByLabelText("Institution")
     expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual([
       "The University of Texas at Austin",
       "University of Chicago",
+      "Texas Advanced Computing Center",
     ])
     expect(screen.getByRole("link", { name: "Log In" })).toHaveAttribute(
       "href",
@@ -32,12 +33,93 @@ describe("LoginLanding", () => {
     )
   })
 
-  test("links to Tapis through its institution entry", async () => {
+  test("logs in with Tapis through its entry in the list", async () => {
     renderWithQueryClient(<LoginLanding />)
 
-    expect(
-      await screen.findByRole("link", { name: "Log in with Tapis" })
-    ).toHaveAttribute("href", `${loginBase}&institution=tacc`)
+    fireEvent.change(await screen.findByLabelText("Institution"), {
+      target: { value: "tacc" },
+    })
+    expect(screen.getAllByRole("link")).toHaveLength(1)
+    expect(screen.getByRole("link", { name: "Log In" })).toHaveAttribute(
+      "href",
+      `${loginBase}&institution=tacc`
+    )
+  })
+
+  test("leaves out institutions with providers the portal can't log in through", async () => {
+    server.use(
+      http.get("/login/institutions", () =>
+        HttpResponse.json({
+          result: [
+            { id: "other", name: "Other Provider", provider: "other" },
+            {
+              id: "tacc",
+              name: "Texas Advanced Computing Center",
+              provider: "tacc_tapis",
+            },
+          ],
+        })
+      )
+    )
+    renderWithQueryClient(<LoginLanding />)
+
+    await screen.findByLabelText("Institution")
+    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual([
+      "Texas Advanced Computing Center",
+    ])
+    expect(screen.getByRole("link", { name: "Log In" })).toHaveAttribute(
+      "href",
+      `${loginBase}&institution=tacc`
+    )
+  })
+
+  test("sends another app's authorize request back with the chosen institution", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/signin?response_type=code&client_id=gateway&redirect_uri=https%3A%2F%2Fgateway.example.org%2Fcallback%3Fkeep%3D1&state=a%26b%3Dc&scope=ignored"
+    )
+    renderWithQueryClient(<LoginLanding />)
+
+    expect(screen.getByText("Log in with TMS")).toBeInTheDocument()
+    const authorizeBase =
+      "/oauth2/authorize?response_type=code&client_id=gateway&redirect_uri=https%3A%2F%2Fgateway.example.org%2Fcallback%3Fkeep%3D1&state=a%26b%3Dc"
+    expect(await screen.findByRole("link", { name: "Log In" })).toHaveAttribute(
+      "href",
+      `${authorizeBase}&institution=utexas`
+    )
+    fireEvent.change(screen.getByLabelText("Institution"), {
+      target: { value: "tacc" },
+    })
+    expect(screen.getByRole("link", { name: "Log In" })).toHaveAttribute(
+      "href",
+      `${authorizeBase}&institution=tacc`
+    )
+  })
+
+  test("needs a client and redirect uri to be another app's request", async () => {
+    window.history.replaceState(null, "", "/signin?client_id=gateway")
+    renderWithQueryClient(<LoginLanding />)
+
+    expect(screen.getByText("Log in to TMS")).toBeInTheDocument()
+    expect(await screen.findByRole("link", { name: "Log In" })).toHaveAttribute(
+      "href",
+      `${loginBase}&institution=utexas`
+    )
+  })
+
+  test("keeps another app's authorize request when an error is dismissed", () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/signin?client_id=gateway&redirect_uri=https%3A%2F%2Fgateway.example.org%2F&error=login_failed"
+    )
+    renderWithQueryClient(<LoginLanding />)
+
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }))
+    expect(window.location.search).toBe(
+      "?client_id=gateway&redirect_uri=https%3A%2F%2Fgateway.example.org%2F"
+    )
   })
 
   test("shows no login links when the list fails to load", async () => {

@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { authorizeHref, getAuthorizeRequest } from "@/lib/authorizeRequest"
 import { useListInstitutions } from "@/tms-hooks"
 
 // set by the login callback when it rejects a login (LoginRejection::error_code)
@@ -34,7 +35,15 @@ const LOGIN_ERRORS: Record<string, string> = {
     "Logging in is unavailable right now. Please try again later.",
 }
 
-function loginHref(institutionId: string) {
+// the providers the portal can log in through (institution_service.rs skips any others)
+const LOGIN_PROVIDERS = ["globus", "tacc_tapis"]
+
+// another app's authorize request continues at /oauth2/authorize, the portal's own at /login
+function loginHref(
+  institutionId: string,
+  authorizeRequest: URLSearchParams | undefined
+) {
+  if (authorizeRequest) return authorizeHref(authorizeRequest, institutionId)
   return `/login?idp_id=globus_idp&redirect_uri=${__REDIRECT_URI__}&institution=${encodeURIComponent(institutionId)}`
 }
 
@@ -47,8 +56,15 @@ function LoginErrorAlert() {
 
   const dismiss = () => {
     setMessage(undefined)
-    // drop the error so a reload doesn't show it again
-    window.history.replaceState(null, "", window.location.pathname)
+    // drop the error so a reload doesn't show it again, keeping any authorize request
+    const params = new URLSearchParams(window.location.search)
+    params.delete("error")
+    const query = params.toString()
+    window.history.replaceState(
+      null,
+      "",
+      query ? `${window.location.pathname}?${query}` : window.location.pathname
+    )
   }
   return (
     <Alert variant="destructive" className="mx-auto mb-4 max-w-md">
@@ -71,22 +87,25 @@ function LoginErrorAlert() {
 export function LoginLanding() {
   const { data: institutions, isPending, isError } = useListInstitutions()
   const [selected, setSelected] = useState("")
-  const globusInstitutions = (institutions ?? []).filter(
-    (institution) => institution.provider === "globus"
+  // Globus institutions and Tapis share the list; the portal picks the login idp by provider
+  const loginInstitutions = (institutions ?? []).filter((institution) =>
+    LOGIN_PROVIDERS.includes(institution.provider)
   )
-  const tapis = institutions?.find(
-    (institution) => institution.provider === "tacc_tapis"
-  )
-  const institutionId = selected || globusInstitutions[0]?.id
+  const institutionId = selected || loginInstitutions[0]?.id
+  const authorizeRequest = getAuthorizeRequest(window.location.search)
 
   return (
     <>
       <LoginErrorAlert />
       <Card className="mx-auto max-w-md">
         <CardHeader>
-          <CardTitle>Log in to TMS</CardTitle>
+          <CardTitle>
+            {authorizeRequest ? "Log in with TMS" : "Log in to TMS"}
+          </CardTitle>
           <CardDescription>
             Choose your institution to go straight to its login page.
+            {authorizeRequest &&
+              " You'll then return to the app that asked you to log in."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -96,7 +115,7 @@ export function LoginLanding() {
               The list of institutions could not be loaded.
             </p>
           )}
-          {!!globusInstitutions.length && (
+          {!!loginInstitutions.length && (
             <>
               <Label htmlFor="institution">Institution</Label>
               <select
@@ -105,7 +124,7 @@ export function LoginLanding() {
                 value={institutionId}
                 onChange={(event) => setSelected(event.target.value)}
               >
-                {globusInstitutions.map((institution) => (
+                {loginInstitutions.map((institution) => (
                   <option key={institution.id} value={institution.id}>
                     {institution.name}
                   </option>
@@ -114,25 +133,17 @@ export function LoginLanding() {
             </>
           )}
         </CardContent>
-        <CardFooter className="flex flex-col items-start gap-3">
+        <CardFooter>
           {institutionId && (
             <Button
               role="link"
               nativeButton={false}
               render={
-                <a href={loginHref(institutionId)}>
+                <a href={loginHref(institutionId, authorizeRequest)}>
                   <LogIn /> Log In
                 </a>
               }
             />
-          )}
-          {tapis && (
-            <a
-              href={loginHref(tapis.id)}
-              className="text-sm text-primary underline-offset-4 hover:underline"
-            >
-              Log in with Tapis
-            </a>
           )}
         </CardFooter>
       </Card>
