@@ -18,6 +18,35 @@ describe("UserMenu", () => {
     expect(screen.queryByText("Jake Rosenberg")).not.toBeInTheDocument()
   })
 
+  test("leaves Log In to the sign in page's own button", async () => {
+    window.history.pushState({}, "", "/signin")
+    try {
+      renderWithQueryClient(<UserMenu />)
+
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("link", { name: /Log In/i })
+        ).not.toBeInTheDocument()
+      )
+    } finally {
+      window.history.pushState({}, "", "/")
+    }
+  })
+
+  test("shows the user menu on the sign in page when logged in", async () => {
+    Cookies.set("tmstoken", "test-token")
+    window.history.pushState({}, "", "/signin")
+    try {
+      renderWithQueryClient(<UserMenu />)
+
+      expect(
+        await screen.findByRole("button", { name: "Jake Rosenberg" })
+      ).toBeInTheDocument()
+    } finally {
+      window.history.pushState({}, "", "/")
+    }
+  })
+
   test("shows the user menu when the tmstoken cookie is present", async () => {
     Cookies.set("tmstoken", "test-token")
     renderWithQueryClient(<UserMenu />)

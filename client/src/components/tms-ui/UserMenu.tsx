@@ -16,7 +16,9 @@ export function UserMenu() {
   const { data: isAuthenticated } = useAuth()
   const [claimsOpen, setClaimsOpen] = useState(false)
   const { data: whoami } = useWhoami({ enabled: !!isAuthenticated })
-  if (!isAuthenticated || !whoami)
+  if (!isAuthenticated || !whoami) {
+    // the sign in page has its own Log In button
+    if (window.location.pathname === "/signin") return null
     return (
       <Button
         variant="outline"
@@ -29,6 +31,7 @@ export function UserMenu() {
         }
       />
     )
+  }
   return (
     <>
       <DropdownMenu>
