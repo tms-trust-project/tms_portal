@@ -21,8 +21,8 @@ export function UserMenu() {
     if (window.location.pathname === "/signin") return null
     return (
       <Button
-        variant="outline"
         role="link"
+        className="bg-neutral-200 text-black hover:bg-burnt-orange"
         nativeButton={false}
         render={
           <a href="/signin">
@@ -37,7 +37,7 @@ export function UserMenu() {
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button variant="outline" className="h-12">
+            <Button variant="outline" className="h-12 dark:hover:bg-black/50">
               <UserCircle2 className="size-6 text-muted-foreground" />
               <span className="hidden md:block">{whoami.name}</span>
 
@@ -48,12 +48,12 @@ export function UserMenu() {
         <DropdownMenuContent>
           <DropdownMenuGroup>
             <DropdownMenuItem
-              className="text-primary underline-offset-4 hover:underline"
+              className="text-primary hover:text-burnt-orange focus:text-burnt-orange dark:focus:bg-black/50"
               onClick={() => setClaimsOpen(true)}
             >
               Provider: {whoami.organization}
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem className="hover:text-burnt-orange focus:text-burnt-orange not-data-[variant=destructive]:focus:**:text-burnt-orange dark:focus:bg-black/50">
               {/* a POST, so another site can't log the user out with a link */}
               <form
                 method="post"
