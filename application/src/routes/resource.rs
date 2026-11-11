@@ -176,7 +176,7 @@ pub async fn get_resource_provider_callback_handler(
     jar: CookieJar,
     query_params: Query<AuthCodeQueryParams>,
 ) -> anyhow::Result<(CookieJar, TmsResponse<()>), AppError> {
-    let decoded_state: OAuth2State = decode_state(&app_state.config, &query_params.state).await?;
+    let decoded_state: OAuth2State = decode_state(&app_state.config.state_key, &query_params.state).await?;
     let resource_provider_id = decoded_state.idp_id;
 
     // Get the state cookie set during the login process.
@@ -190,7 +190,7 @@ pub async fn get_resource_provider_callback_handler(
     }
 
     let decoded_state: OAuth2State =
-        decode_state(&app_state.config, &state_cookie.value().to_string()).await?;
+        decode_state(&app_state.config.state_key, &state_cookie.value().to_string()).await?;
 
     get_resource_provider_token(
         &app_state.config,

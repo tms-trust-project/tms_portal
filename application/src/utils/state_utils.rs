@@ -1,3 +1,4 @@
+use crate::obj_model::configuration::StateKey;
 use crate::utils::configuration::Configuration;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -7,13 +8,12 @@ use tms_lib::utils::jwt_encoder::JwtEncoderBuilder;
 const DEFAULT_STATE_ALGORITHM: &str = "RS256";
 
 pub async fn encode_state<T>(
-    configuration: &Configuration,
+    state_key: &StateKey,
     oauth_state: T,
 ) -> anyhow::Result<String>
 where
     T: Serialize,
 {
-    let state_key = &configuration.state_key;
     let keys = &state_key.key;
 
     JwtEncoderBuilder::builder(
@@ -27,13 +27,12 @@ where
 }
 
 pub async fn decode_state<T>(
-    configuration: &Configuration,
+    state_key: &StateKey,
     state_string: &String,
 ) -> anyhow::Result<T>
 where
     T: DeserializeOwned,
 {
-    let state_key = &configuration.state_key;
     let keys = &state_key.key;
     // let decoding_key = Some(DecodingKey::from_rsa_pem(&keys.jwt_public_key.as_bytes())?);
 

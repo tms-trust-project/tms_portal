@@ -164,7 +164,7 @@ async fn get_state(
     };
 
     // encode state structure
-    match encode_state(configuration, oauth_state)
+    match encode_state(&configuration.state_key, oauth_state)
         .await
         .context("Unable to encode state")
     {
@@ -224,7 +224,7 @@ pub async fn get_provider_token(
         return Err(Unauthorized("State cookies do not match".to_string()).into());
     }
 
-    let decoded_state: OAuth2State = decode_state(configuration, state)
+    let decoded_state: OAuth2State = decode_state(&configuration.state_key, state)
         .await
         .context("Unable to decode state query param")?;
 
@@ -249,7 +249,7 @@ pub async fn process_authorization_callback(
 ) -> anyhow::Result<AuthorizationCallbackResult> {
     // redirect browser back to the post-login page (taken from state - validated in login step).
     let decoded_internal_state: OAuth2State =
-        decode_state(configuration, internal_oauth_state).await?;
+        decode_state(&configuration.state_key, internal_oauth_state).await?;
 
     let mut tx = db_pool.begin().await?;
     let identity_provider =

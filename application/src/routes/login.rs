@@ -120,7 +120,7 @@ pub async fn login_handler(
                 client_state: None,
             };
 
-            let encoded_state = match encode_state(&app_state.config, oauth_state).await {
+            let encoded_state = match encode_state(&app_state.config.state_key, oauth_state).await {
                 Ok(state_string) => state_string,
                 Err(error) => return Err(Internal(error.to_string()).into()),
             };
@@ -236,7 +236,7 @@ pub async fn callback_handler(
 
     // redirect browser back to the post-login page (taken from state - validated in login step).
     let decoded_state: OAuth2State =
-        decode_state(&app_state.config, &state_cookie.value().to_owned()).await?;
+        decode_state(&app_state.config.state_key, &state_cookie.value().to_owned()).await?;
     let headers: HashMap<String, String> =
         HashMap::from_iter(vec![(LOCATION.to_string(), decoded_state.redirect_uri)]);
 

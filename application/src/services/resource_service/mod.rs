@@ -151,7 +151,7 @@ pub async fn get_authenticate_redirect_info(
         client_state: client_state.clone(),
     };
 
-    let encoded_state = match encode_state(configuration, oauth_state).await {
+    let encoded_state = match encode_state(&configuration.state_key, oauth_state).await {
         Ok(state_string) => state_string,
         Err(error) => return Err(Internal(error.to_string()).into()),
     };

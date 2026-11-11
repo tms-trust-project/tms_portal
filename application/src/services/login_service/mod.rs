@@ -57,7 +57,7 @@ pub async fn handle_callback(
         return Err(Unauthorized("State cookies do not match".to_string()).into());
     }
 
-    let decoded_state: OAuth2State = decode_state(configuration, state)
+    let decoded_state: OAuth2State = decode_state(&configuration.state_key, state)
         .await
         .context("Unable to decode state query param")?;
 
