@@ -4,9 +4,9 @@ mod config;
 mod infra;
 mod obj_model;
 mod ports;
-mod routes;
 mod requests;
 mod responses;
+mod routes;
 mod services;
 mod utils;
 

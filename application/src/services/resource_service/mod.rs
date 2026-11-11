@@ -1,4 +1,6 @@
-use crate::infra::persistence::identity_provider_repository::{get_resource_provider_by_id, list_resource_providers};
+use crate::infra::persistence::identity_provider_repository::{
+    get_resource_provider_by_id, list_resource_providers,
+};
 use crate::infra::persistence::resource_provider_login_repository::resource_provider_logins_dao::{
     db_add_or_update_resource_account_login, db_delete_resource_provider_link,
     db_get_resource_provider_links_for_identity,

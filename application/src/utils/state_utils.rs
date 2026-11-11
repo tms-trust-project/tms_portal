@@ -7,10 +7,7 @@ use tms_lib::utils::jwt_encoder::JwtEncoderBuilder;
 
 const DEFAULT_STATE_ALGORITHM: &str = "RS256";
 
-pub async fn encode_state<T>(
-    state_key: &StateKey,
-    oauth_state: T,
-) -> anyhow::Result<String>
+pub async fn encode_state<T>(state_key: &StateKey, oauth_state: T) -> anyhow::Result<String>
 where
     T: Serialize,
 {
@@ -26,10 +23,7 @@ where
     .await
 }
 
-pub async fn decode_state<T>(
-    state_key: &StateKey,
-    state_string: &String,
-) -> anyhow::Result<T>
+pub async fn decode_state<T>(state_key: &StateKey, state_string: &String) -> anyhow::Result<T>
 where
     T: DeserializeOwned,
 {

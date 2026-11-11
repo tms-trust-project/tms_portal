@@ -1,4 +1,6 @@
-use crate::infra::persistence::allowed_redirects_dao::{get_allowed_redirect, get_allowed_redirect_by_client_name};
+use crate::infra::persistence::allowed_redirects_dao::{
+    get_allowed_redirect, get_allowed_redirect_by_client_name,
+};
 use anyhow::{Context, Result};
 use sqlx::PgTransaction;
 use url::Url;

@@ -1,8 +1,8 @@
 use crate::AppState;
+use crate::requests::resources::ResourceProviderAuthorizeRequest;
 use crate::responses::resources::{
     Resource, ResourceAccountLink, ResourceAccountLogin, ResourceProvider,
 };
-use crate::requests::resources::ResourceProviderAuthorizeRequest;
 use crate::responses::tms_response::TmsResponse;
 use crate::services::resource_service::{
     get_authenticate_redirect_info, get_linked_resource_providers, get_resource_provider_token,
@@ -176,7 +176,8 @@ pub async fn get_resource_provider_callback_handler(
     jar: CookieJar,
     query_params: Query<AuthCodeQueryParams>,
 ) -> anyhow::Result<(CookieJar, TmsResponse<()>), AppError> {
-    let decoded_state: OAuth2State = decode_state(&app_state.config.state_key, &query_params.state).await?;
+    let decoded_state: OAuth2State =
+        decode_state(&app_state.config.state_key, &query_params.state).await?;
     let resource_provider_id = decoded_state.idp_id;
 
     // Get the state cookie set during the login process.
