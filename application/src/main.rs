@@ -1,7 +1,7 @@
 extern crate core;
 
 mod config;
-mod db;
+mod infra;
 mod obj_model;
 mod ports;
 mod routes;
@@ -15,11 +15,11 @@ use crate::routes::{delegation, login, oauth, resource, well_known};
 use crate::services::delegation_service::DelegationService;
 use anyhow::Context;
 use axum::body::Body;
-use db::client_repository::PostgresClientRepository;
-use db::delegation_repository::PostgresDelegationRepository;
-use db::resource_provider_login_repository::PostgresResourceProviderLoginRepository;
+use infra::persistence::client_repository::PostgresClientRepository;
+use infra::persistence::delegation_repository::PostgresDelegationRepository;
+use infra::persistence::resource_provider_login_repository::PostgresResourceProviderLoginRepository;
 //use axum_extra::extract::cookie::Key;
-use crate::db::issued_token_repository::db_cleanup_tokens;
+use crate::infra::persistence::issued_token_repository::db_cleanup_tokens;
 use crate::utils::app_error::AppError;
 use crate::utils::configuration::Configuration;
 use axum::handler::HandlerWithoutStateExt;

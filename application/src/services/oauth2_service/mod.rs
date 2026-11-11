@@ -1,6 +1,6 @@
-use crate::db::auth_code_data_repository::{delete_auth_code_data, insert_auth_code_data};
-use crate::db::client_repository::get_client_by_credentials;
-use crate::db::identity_provider_repository::get_login_provider_by_id;
+use crate::infra::persistence::auth_code_data_repository::{delete_auth_code_data, insert_auth_code_data};
+use crate::infra::persistence::client_repository::get_client_by_credentials;
+use crate::infra::persistence::identity_provider_repository::get_login_provider_by_id;
 use crate::obj_model::identity_provider::IdentityProvider;
 use crate::services::login_service::AuthorizationCodeResponse;
 use crate::utils::configuration::Configuration;

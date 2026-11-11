@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    db::{
+    infra::persistence::{
         client_repository::test_fixtures::MockClientRepo,
         delegation_repository::test_fixtures::MockDelegationRepo,
         resource_provider_login_repository::test_fixtures::MockResourceProviderLoginRepo,

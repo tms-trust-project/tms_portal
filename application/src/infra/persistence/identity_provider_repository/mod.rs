@@ -142,7 +142,7 @@ pub async fn get_resource_provider_by_id<'a>(
 }
 #[cfg(test)]
 mod tests {
-    use crate::db::identity_provider_repository::IdentityProviderType;
+    use crate::infra::persistence::identity_provider_repository::IdentityProviderType;
     use std::str::FromStr;
 
     #[test]
