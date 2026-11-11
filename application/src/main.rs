@@ -136,6 +136,8 @@ async fn main() -> anyhow::Result<()> {
         .layer(TraceLayer::new_for_http())
         .with_state(state)
         .nest_service("/debug", ServeFile::new("dist/debug.html"))
+        // login landing page (served by the client app)
+        .route_service("/signin", ServeFile::new("dist/index.html"))
         .nest_service("/assets", ServeDir::new("dist/assets"))
         .fallback_service(ServeDir::new("dist/").not_found_service(not_found.into_service()))
         .method_not_allowed_fallback(method_not_allowed);

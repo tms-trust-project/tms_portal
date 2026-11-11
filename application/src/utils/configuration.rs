@@ -23,10 +23,12 @@ impl Configuration {
     pub fn from_env() -> anyhow::Result<Self> {
         let http_config = HttpConfig {
             base_url: std::env::var("TMS_PORTAL_BASE_URL")?,
+            tms_server_url: std::env::var("TMS_PORTAL_TMS_SERVER_URL").ok(),
             ..Default::default()
         };
         let oauth_config = OAuthConfig {
             login_oauth_provider: std::env::var("TMS_PORTAL_LOGIN_PROVIDER")?,
+            tapis_login_oauth_provider: std::env::var("TMS_PORTAL_TAPIS_LOGIN_PROVIDER").ok(),
         };
         let signing_key_kid = std::env::var("TMS_PORTAL_SIGNING_KEY_ID")?;
         let mut jwt_config = JwtConfig {

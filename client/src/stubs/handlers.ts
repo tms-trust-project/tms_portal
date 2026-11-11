@@ -18,6 +18,20 @@ const whoamiStub = {
   organization: "University of Texas at Austin",
 }
 
+const institutionStubs = [
+  {
+    id: "utexas",
+    name: "The University of Texas at Austin",
+    provider: "globus",
+  },
+  { id: "uchicago", name: "University of Chicago", provider: "globus" },
+  {
+    id: "tacc",
+    name: "Texas Advanced Computing Center",
+    provider: "tacc_tapis",
+  },
+]
+
 const resourceStubs: Record<string, string>[] = [
   {
     id: "cffc01ff-a85d-437c-aebb-a42e05b817a9",
@@ -89,6 +103,10 @@ export const handlers = [
   }),
   http.get("/login/whoami", () => {
     return HttpResponse.json({ result: whoamiStub })
+  }),
+
+  http.get("/login/institutions", () => {
+    return HttpResponse.json({ result: institutionStubs })
   }),
 
   http.get("/resources/providers", () => {

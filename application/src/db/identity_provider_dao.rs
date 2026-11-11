@@ -19,8 +19,9 @@ impl TryFrom<&PgRow> for IdentityProvider {
         Ok(IdentityProvider {
             id: row.get("id"),
             name: row.get("name"),
-            client_id: row.get("client_id"),
-            client_secret: row.get("client_secret"),
+            // identity_providers' oauth2_client_id/oauth2_client_secret (renamed in tms_server)
+            client_id: row.get("oauth2_client_id"),
+            client_secret: row.get("oauth2_client_secret"),
             identity_redirect_url: row.get("identity_redirect_url"),
             oauth2_token_url: row.get("oauth2_token_url"),
             oauth2_jwks_url: row.get("oauth2_jwks_url"),
@@ -43,7 +44,7 @@ pub async fn db_get_login_providers<'a>(
     tx: &mut PgTransaction<'a>,
 ) -> Result<HashSet<IdentityProvider>> {
     let idp_query_result = query(
-        "select id, name, client_id, client_secret, identity_redirect_url,
+        "select id, name, oauth2_client_id, oauth2_client_secret, identity_redirect_url,
                      oauth2_token_url, oauth2_jwks_url, oidc_user_info_url,
                      oauth2_public_key, scope, provider_type,
                      supports_login, supports_resources, resources_endpoint, created, updated
@@ -67,7 +68,7 @@ pub async fn db_get_login_provider_by_id<'a>(
     id: &String,
 ) -> Result<IdentityProvider> {
     let row = query(
-        "select id, name, client_id, client_secret, identity_redirect_url,
+        "select id, name, oauth2_client_id, oauth2_client_secret, identity_redirect_url,
                      oauth2_token_url, oauth2_jwks_url, oidc_user_info_url,
                      oauth2_public_key, scope, provider_type,
                      supports_login, supports_resources, resources_services_url, created, updated 

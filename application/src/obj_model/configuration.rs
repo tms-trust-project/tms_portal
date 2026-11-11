@@ -34,6 +34,8 @@ impl Default for JwtConfig {
 #[derive(Debug, Clone, Deserialize)]
 pub struct OAuthConfig {
     pub login_oauth_provider: String,
+    // identity provider used for institutions whose provider is tacc_tapis
+    pub tapis_login_oauth_provider: Option<String>,
 }
 #[derive(Debug, Clone, Deserialize)]
 pub struct RuntimeConfig {
@@ -85,6 +87,8 @@ pub struct HttpConfig {
     pub authorization_endpoint: String,
     pub revocation_endpoint: String,
     pub jwks_endpoint: String,
+    // base url of tms_server, which serves the approved institutions list
+    pub tms_server_url: Option<String>,
 }
 
 impl Default for HttpConfig {
@@ -98,6 +102,7 @@ impl Default for HttpConfig {
             authorization_endpoint: "oauth2/authorization".into(),
             revocation_endpoint: "oauth2/token/revoke".into(),
             jwks_endpoint: "jwks.json".into(),
+            tms_server_url: None,
         }
     }
 }

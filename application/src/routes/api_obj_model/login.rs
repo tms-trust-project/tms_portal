@@ -11,6 +11,9 @@ pub struct WhoAmIResponse {
     pub idp_display_name: Option<Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub organization: Option<Value>,
+    // a sign-out page the browser should open, for providers the portal can't redirect through
+    #[serde(skip_serializing_if = "Option::is_none", rename = "logoutUrl")]
+    pub logout_url: Option<String>,
 }
 
 impl From<crate::obj_model::login::WhoAmIResponse> for WhoAmIResponse {
@@ -20,6 +23,7 @@ impl From<crate::obj_model::login::WhoAmIResponse> for WhoAmIResponse {
             username: value.username,
             idp_display_name: value.idp_display_name,
             organization: value.organization,
+            logout_url: value.logout_url,
         }
     }
 }
@@ -70,4 +74,31 @@ pub struct AuthorizeRequest {
     pub redirect_uri: String,
     pub client_return_uri: Option<String>,
     pub client_name: Option<String>,
+    pub institution: Option<String>,
+}
+
+/*
+A sign-in option for the login landing page.  The redirect domain is not sent to
+the browser; login_handler looks it up again by id.
+ */
+#[derive(Debug, Serialize)]
+pub struct LoginInstitution {
+    pub id: String,
+    pub name: String,
+    pub provider: String,
+}
+
+impl From<&obj_model::institution::Institution> for LoginInstitution {
+    fn from(value: &obj_model::institution::Institution) -> Self {
+        LoginInstitution {
+            id: value.id.clone(),
+            name: value.name.clone(),
+            provider: value.provider.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LogoutIdpRequest {
+    pub institution: String,
 }
