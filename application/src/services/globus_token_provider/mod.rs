@@ -1,5 +1,5 @@
 use crate::obj_model::login::WhoAmIResponse;
-use crate::services::token_provider::TokenProvider;
+use crate::ports::token_provider::TokenProvider;
 use crate::utils::app_error::AppError;
 use crate::utils::jwt_utils::TmsTokenClaims;
 

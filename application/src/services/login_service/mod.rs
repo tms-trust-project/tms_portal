@@ -5,7 +5,7 @@ use crate::db::tms_identity_repository::db_insert_tms_identity_if_absent;
 use crate::obj_model::identity_provider::{IdentityProvider, IdentityProviderType};
 use crate::obj_model::login::WhoAmIResponse;
 use crate::services::globus_token_provider::GlobusTokenProvider;
-use crate::services::token_provider::TokenProvider;
+use crate::ports::token_provider::TokenProvider;
 use crate::utils::app_error::AppError;
 use crate::utils::configuration::Configuration;
 use crate::utils::jwt_utils::{TmsTokenClaims, get_tms_token_claims, make_auth_token};
