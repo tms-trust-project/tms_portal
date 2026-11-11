@@ -7,5 +7,4 @@ pub mod identity_provider_repository;
 pub mod issued_tokens_repository;
 pub mod keys_repository;
 pub mod resource_provider_login_repository;
-pub mod resource_provider_logins_dao;
 pub mod tms_identities_dao;

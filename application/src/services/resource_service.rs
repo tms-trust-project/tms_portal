@@ -1,5 +1,5 @@
 use crate::db::identity_provider_repository::{get_resource_provider_by_id, list_resource_providers};
-use crate::db::resource_provider_logins_dao::{
+use crate::db::resource_provider_login_repository::resource_provider_logins_dao::{
     db_add_or_update_resource_account_login, db_delete_resource_provider_link,
     db_get_resource_provider_links_for_identity,
 };
@@ -11,7 +11,7 @@ use crate::utils::oauth2_authorization_code_utils::{OAuth2State, get_token_for_p
 use crate::utils::redirect_utils::check_allowed_redirects;
 use crate::utils::state_utils::encode_state;
 use crate::{
-    db::resource_provider_logins_dao::db_add_or_update_resources_with_username,
+    db::resource_provider_login_repository::resource_provider_logins_dao::db_add_or_update_resources_with_username,
     obj_model::resources::ResourceForUser, utils::configuration::Configuration,
 };
 use anyhow::{Context, Result};
