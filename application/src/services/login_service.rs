@@ -1,5 +1,5 @@
 use crate::db::identity_provider_repository::{get_login_provider_by_id, get_login_providers};
-use crate::db::issued_tokens_dao::db_revoke_token;
+use crate::db::issued_tokens_repository::db_revoke_token;
 use crate::db::keys_dao::get_key_by_id;
 use crate::db::tms_identities_dao::db_insert_tms_identity_if_absent;
 use crate::obj_model::identity_provider::{IdentityProvider, IdentityProviderType};

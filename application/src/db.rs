@@ -4,7 +4,7 @@ pub mod auth_code_data_repository;
 pub mod client_repository;
 pub mod delegation_repository;
 pub mod identity_provider_repository;
-pub mod issued_tokens_dao;
+pub mod issued_tokens_repository;
 pub mod keys_dao;
 pub mod resource_provider_login_repository;
 pub mod resource_provider_logins_dao;

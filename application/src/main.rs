@@ -19,7 +19,7 @@ use db::client_repository::PostgresClientRepository;
 use db::delegation_repository::PostgresDelegationRepository;
 use db::resource_provider_login_repository::PostgresResourceProviderLoginRepository;
 //use axum_extra::extract::cookie::Key;
-use crate::db::issued_tokens_dao::db_cleanup_tokens;
+use crate::db::issued_tokens_repository::db_cleanup_tokens;
 use crate::utils::app_error::AppError;
 use crate::utils::configuration::Configuration;
 use axum::handler::HandlerWithoutStateExt;
