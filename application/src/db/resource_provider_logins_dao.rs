@@ -276,7 +276,7 @@ mod tests {
         database_url,
         db::{
             allowed_redirects_dao::get_allowed_redirect,
-            identity_provider_dao::get_login_provider_by_id,
+            identity_provider_repository::get_login_provider_by_id,
             resource_provider_logins_dao::db_add_or_update_resource,
         },
     };

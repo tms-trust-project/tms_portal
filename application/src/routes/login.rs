@@ -1,5 +1,5 @@
 use crate::AppState;
-use crate::db::identity_provider_dao::get_login_provider_by_id;
+use crate::db::identity_provider_repository::get_login_provider_by_id;
 use crate::routes::api_obj_model::login::{AuthorizeRequest, IdentityProvider, WhoAmIResponse};
 use crate::routes::api_obj_model::tms_response::TmsResponse;
 use crate::services::login_service::{get_identity_providers, handle_callback, logout, whoami};
