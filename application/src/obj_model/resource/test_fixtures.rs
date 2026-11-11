@@ -81,8 +81,8 @@ impl ResourceProviderLoginBuilder {
         self
     }
 
-    pub fn with_unexpired_last_login(mut self, earliest_login: DateTime<Utc>) -> Self {
-        let last_login = earliest_login + Duration::minutes(5);
+    pub fn with_unexpired_last_login(self, expiration: DateTime<Utc>) -> Self {
+        let last_login = expiration + Duration::minutes(5);
 
         self.with_last_login(last_login)
     }

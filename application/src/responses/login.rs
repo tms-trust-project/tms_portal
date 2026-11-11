@@ -1,5 +1,5 @@
 use crate::obj_model;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use serde_json::Value;
 
 #[derive(Debug, Serialize)]
@@ -64,11 +64,4 @@ impl From<&obj_model::identity_provider::IdentityProvider> for IdentityProvider 
             updated: value.updated.to_rfc3339().clone(),
         }
     }
-}
-
-#[derive(Debug, Deserialize)]
-pub struct AuthorizeRequest {
-    pub redirect_uri: String,
-    pub client_return_uri: Option<String>,
-    pub client_name: Option<String>,
 }

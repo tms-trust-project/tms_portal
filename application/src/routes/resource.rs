@@ -1,9 +1,9 @@
 use crate::AppState;
-use crate::routes::api_obj_model::resources::{
+use crate::responses::resources::{
     Resource, ResourceAccountLink, ResourceAccountLogin, ResourceProvider,
-    ResourceProviderAuthorizeRequest,
 };
-use crate::routes::api_obj_model::tms_response::TmsResponse;
+use crate::requests::resources::ResourceProviderAuthorizeRequest;
+use crate::responses::tms_response::TmsResponse;
 use crate::services::resource_service::{
     get_authenticate_redirect_info, get_linked_resource_providers, get_resource_provider_token,
     get_resource_providers, unlink_resource_provider,

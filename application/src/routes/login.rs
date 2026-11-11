@@ -1,7 +1,8 @@
 use crate::AppState;
 use crate::infra::persistence::identity_provider_repository::get_login_provider_by_id;
-use crate::routes::api_obj_model::login::{AuthorizeRequest, IdentityProvider, WhoAmIResponse};
-use crate::routes::api_obj_model::tms_response::TmsResponse;
+use crate::responses::login::{IdentityProvider, WhoAmIResponse};
+use crate::responses::tms_response::TmsResponse;
+use crate::requests::login::AuthorizeRequest;
 use crate::services::login_service::{get_identity_providers, handle_callback, logout, whoami};
 use crate::utils::app_error::AppError;
 use crate::utils::jwt_utils::JwtValidator;

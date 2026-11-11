@@ -1,6 +1,6 @@
 use crate::AppState;
-use crate::routes::api_obj_model::delegations::Delegation;
-use crate::routes::api_obj_model::tms_response::TmsResponse;
+use crate::responses::delegations::Delegation;
+use crate::responses::tms_response::TmsResponse;
 use crate::utils::app_error::AppError;
 use crate::utils::jwt_utils::JwtValidator;
 use axum::extract::{Path, State};
@@ -93,6 +93,7 @@ pub async fn delete_delegations_handler(
         .delegation_service
         .delete_delegation(&security_context, &client_name, delegation_id)
         .await?;
+
     Ok(TmsResponse::builder(StatusCode::OK)
         .entity(delegation.into())
         .build())

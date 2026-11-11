@@ -1,4 +1,3 @@
-mod api_obj_model;
 pub mod delegation;
 pub mod login;
 pub mod oauth;

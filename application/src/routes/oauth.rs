@@ -2,7 +2,7 @@
 - This file handles the oauth authrization routes
  */
 use crate::AppState;
-use crate::routes::api_obj_model::tms_response::TmsResponse;
+use crate::responses::tms_response::TmsResponse;
 use crate::services::oauth2_service::{
     TokenResponse, authorize_code, get_access_token_from_code, process_authorization_callback,
 };

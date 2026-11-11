@@ -57,12 +57,7 @@ pub struct ResourceProvider {
     #[serde(rename = "userInfoUrl")]
     pub user_info_url: Option<String>,
 }
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct ResourceProviderAuthorizeRequest {
-    pub provider_id: String,
-    pub redirect_url: String,
-    pub state: Option<String>,
-}
+
 impl From<&obj_model::identity_provider::IdentityProvider> for ResourceProvider {
     fn from(value: &obj_model::identity_provider::IdentityProvider) -> Self {
         ResourceProvider {

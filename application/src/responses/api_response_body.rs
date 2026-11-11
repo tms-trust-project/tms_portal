@@ -1,4 +1,4 @@
-use crate::routes::api_obj_model::tms_response::TmsResponse;
+use crate::responses::tms_response::TmsResponse;
 use axum::body::Body;
 use axum::response::{IntoResponse, Response};
 use http::StatusCode;
