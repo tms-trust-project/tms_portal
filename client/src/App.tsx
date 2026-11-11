@@ -47,7 +47,7 @@ function App() {
       <header className="border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
         <div className="mx-auto flex max-w-5xl flex-row items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <h1 className="text-2xl font-semibold tracking-tight">
-            <a href="/" className="hover:text-burnt-orange">
+            <a href="/" className="hover:text-highlight">
               Trust Manager System
             </a>
           </h1>

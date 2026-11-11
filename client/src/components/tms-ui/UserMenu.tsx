@@ -22,7 +22,7 @@ export function UserMenu() {
     return (
       <Button
         role="link"
-        className="bg-neutral-200 text-black hover:bg-burnt-orange"
+        className="bg-neutral-200 text-black hover:bg-highlight"
         nativeButton={false}
         render={
           <a href="/signin">
@@ -48,12 +48,12 @@ export function UserMenu() {
         <DropdownMenuContent>
           <DropdownMenuGroup>
             <DropdownMenuItem
-              className="text-primary hover:text-burnt-orange focus:text-burnt-orange dark:focus:bg-black/50"
+              className="text-primary hover:text-highlight focus:text-highlight dark:focus:bg-black/50"
               onClick={() => setClaimsOpen(true)}
             >
               Provider: {whoami.organization}
             </DropdownMenuItem>
-            <DropdownMenuItem className="hover:text-burnt-orange focus:text-burnt-orange not-data-[variant=destructive]:focus:**:text-burnt-orange dark:focus:bg-black/50">
+            <DropdownMenuItem className="hover:text-highlight focus:text-highlight not-data-[variant=destructive]:focus:**:text-highlight dark:focus:bg-black/50">
               {/* a POST, so another site can't log the user out with a link */}
               <form
                 method="post"

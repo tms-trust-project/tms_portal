@@ -137,7 +137,7 @@ export function LoginLanding() {
           {institutionId && (
             <Button
               role="link"
-              className="bg-neutral-200 text-black hover:bg-burnt-orange"
+              className="bg-neutral-200 text-black hover:bg-highlight"
               nativeButton={false}
               render={
                 <a href={loginHref(institutionId, authorizeRequest)}>

@@ -22,7 +22,7 @@ export function TokenClaimsModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="text-burnt-orange">Token claims</DialogTitle>
+          <DialogTitle className="text-highlight">Token claims</DialogTitle>
           <DialogDescription>
             Decoded from your TMS token. The portal verifies the token, not this
             page.
