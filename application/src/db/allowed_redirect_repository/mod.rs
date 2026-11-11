@@ -1,6 +1,6 @@
 pub mod allowed_redirects_dao;
 
-use crate::obj_model::allowed_redirects::AllowedRedirect;
+use crate::obj_model::allowed_redirect::AllowedRedirect;
 use crate::ports::allowed_redirect::AllowedRedirectRepository;
 use sqlx::postgres::PgRow;
 use sqlx::{PgPool, Row, query};

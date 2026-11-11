@@ -1,4 +1,4 @@
-use crate::obj_model::keys::Key;
+use crate::obj_model::key::Key;
 use sqlx::postgres::PgRow;
 use sqlx::{PgTransaction, Row, query};
 use tms_lib::utils::service_error::ServiceError::NotFound;

@@ -1,4 +1,4 @@
-use crate::obj_model::allowed_redirects::AllowedRedirect;
+use crate::obj_model::allowed_redirect::AllowedRedirect;
 
 #[async_trait::async_trait]
 pub trait AllowedRedirectRepository: Send + Sync {

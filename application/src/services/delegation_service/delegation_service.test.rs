@@ -5,7 +5,7 @@ use crate::{
         client::test_fixtures::ClientBuilder,
         configuration::DelegationPolicyConfig,
         delegation::test_fixtures::DelegationBuilder,
-        resources::{ResourceProviderLogin, test_fixtures::ResourceProviderLoginBuilder},
+        resource::{ResourceProviderLogin, test_fixtures::ResourceProviderLoginBuilder},
     },
     services::delegation_service::test_fixtures::{
         SecurityContextBuilder, TestDelegationServiceBuilder, TestValuesBuilder,

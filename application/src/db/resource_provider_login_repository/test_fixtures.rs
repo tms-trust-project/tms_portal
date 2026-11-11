@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 
 use crate::{
-    obj_model::resources::ResourceProviderLogin,
+    obj_model::resource::ResourceProviderLogin,
     ports::resource_provider_login::ResourceProviderLoginRepository,
 };
 

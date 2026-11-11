@@ -1,7 +1,7 @@
 use crate::obj_model::configuration::{
     DelegationPolicyConfig, HttpConfig, JwtConfig, OAuthConfig, RuntimeConfig, StateKey,
 };
-use crate::obj_model::keys::Key;
+use crate::obj_model::key::Key;
 use sqlx::PgPool;
 
 #[derive(Debug, Clone)]

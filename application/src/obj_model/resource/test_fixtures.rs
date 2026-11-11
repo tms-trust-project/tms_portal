@@ -1,6 +1,6 @@
 use chrono::{DateTime, Duration, Utc};
 
-use crate::obj_model::resources::ResourceProviderLogin;
+use crate::obj_model::resource::ResourceProviderLogin;
 
 pub struct ResourceProviderLoginBuilder {
     id: Option<i32>,

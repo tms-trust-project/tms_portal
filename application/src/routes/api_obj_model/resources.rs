@@ -11,8 +11,8 @@ pub struct ResourceAccountLogin {
     pub enabled: bool,
 }
 
-impl From<obj_model::resources::ResourceProviderLogin> for ResourceAccountLogin {
-    fn from(value: obj_model::resources::ResourceProviderLogin) -> Self {
+impl From<obj_model::resource::ResourceProviderLogin> for ResourceAccountLogin {
+    fn from(value: obj_model::resource::ResourceProviderLogin) -> Self {
         ResourceAccountLogin {
             id: value.id,
             tms_identity: value.tms_identity.clone(),
@@ -33,8 +33,8 @@ pub struct ResourceAccountLink {
     pub last_login: String,
     pub enabled: bool,
 }
-impl From<&obj_model::resources::ResourceAccountLink> for ResourceAccountLink {
-    fn from(value: &obj_model::resources::ResourceAccountLink) -> Self {
+impl From<&obj_model::resource::ResourceAccountLink> for ResourceAccountLink {
+    fn from(value: &obj_model::resource::ResourceAccountLink) -> Self {
         ResourceAccountLink {
             id: value.id,
             tms_identity: value.tms_identity.clone(),

@@ -1,4 +1,4 @@
-use crate::obj_model::allowed_redirects::AllowedRedirect;
+use crate::obj_model::allowed_redirect::AllowedRedirect;
 use anyhow::{Result, anyhow};
 use sqlx::{Error, PgTransaction, query};
 use tms_lib::utils::service_error::ServiceError::BadRequest;

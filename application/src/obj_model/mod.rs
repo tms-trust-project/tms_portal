@@ -1,11 +1,11 @@
-pub mod allowed_redirects;
+pub mod allowed_redirect;
 pub mod auth_code_data;
 pub mod client;
 pub mod configuration;
 pub mod delegation;
 pub mod identity_provider;
-pub mod keys;
+pub mod key;
 pub mod login;
 pub(crate) mod oauth;
-pub mod resources;
+pub mod resource;
 pub mod tms_identity;

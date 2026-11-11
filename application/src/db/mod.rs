@@ -5,6 +5,6 @@ pub mod client_repository;
 pub mod delegation_repository;
 pub mod identity_provider_repository;
 pub mod issued_token_repository;
-pub mod keys_repository;
+pub mod key_repository;
 pub mod resource_provider_login_repository;
 pub mod tms_identity_repository;

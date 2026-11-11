@@ -8,7 +8,7 @@ use crate::{
     },
     obj_model::{
         client::Client, configuration::DelegationPolicyConfig, delegation::Delegation,
-        resources::ResourceProviderLogin,
+        resource::ResourceProviderLogin,
     },
     ports::{
         client::ClientRepository, delegation::DelegationRepository,

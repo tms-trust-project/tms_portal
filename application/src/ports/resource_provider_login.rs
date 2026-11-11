@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 
-use crate::obj_model::resources::ResourceProviderLogin;
+use crate::obj_model::resource::ResourceProviderLogin;
 
 #[async_trait::async_trait]
 pub trait ResourceProviderLoginRepository: Send + Sync {

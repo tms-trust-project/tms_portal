@@ -5,7 +5,7 @@ use serde::Deserialize;
 use std::borrow::Cow;
 use url::Url;
 
-use crate::obj_model::keys::Key;
+use crate::obj_model::key::Key;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct StateKey {

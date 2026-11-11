@@ -4,7 +4,7 @@ use crate::db::resource_provider_login_repository::resource_provider_logins_dao:
     db_get_resource_provider_links_for_identity,
 };
 use crate::obj_model::identity_provider::ResourceProvider;
-use crate::obj_model::resources::{ResourceAccountLink, ResourceProviderLogin};
+use crate::obj_model::resource::{ResourceAccountLink, ResourceProviderLogin};
 use crate::utils::app_error::AppError;
 use crate::utils::jwt_utils::SecurityContext;
 use crate::utils::oauth2_authorization_code_utils::{OAuth2State, get_token_for_provider};
@@ -12,7 +12,7 @@ use crate::utils::redirect_utils::check_allowed_redirects;
 use crate::utils::state_utils::encode_state;
 use crate::{
     db::resource_provider_login_repository::resource_provider_logins_dao::db_add_or_update_resources_with_username,
-    obj_model::resources::ResourceForUser, utils::configuration::Configuration,
+    obj_model::resource::ResourceForUser, utils::configuration::Configuration,
 };
 use anyhow::{Context, Result};
 use base64::Engine;

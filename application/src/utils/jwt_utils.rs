@@ -1,6 +1,6 @@
 use crate::AppState;
 use crate::db::issued_token_repository::{db_get_token, db_insert_token};
-use crate::db::keys_repository::get_key_by_id;
+use crate::db::key_repository::get_key_by_id;
 use crate::obj_model::identity_provider::IdentityProviderType;
 use crate::utils::app_error::AppError;
 use crate::utils::configuration::Configuration;

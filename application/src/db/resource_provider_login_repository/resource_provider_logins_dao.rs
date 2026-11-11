@@ -1,4 +1,4 @@
-use crate::obj_model::resources::{
+use crate::obj_model::resource::{
     Resource, ResourceAccountLink, ResourceForUser, ResourceProviderLogin, Username,
 };
 use anyhow::anyhow;
