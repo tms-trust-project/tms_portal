@@ -1,6 +1,8 @@
 #[cfg(test)]
 pub mod test_fixtures;
 
+pub mod resource_provider_logins_dao;
+
 use crate::obj_model::resources::ResourceProviderLogin;
 use crate::ports::resource_provider_login::ResourceProviderLoginRepository;
 use chrono::{DateTime, Utc};
