@@ -1,6 +1,6 @@
 // extern crate core;
 
-mod api;
+mod presentation;
 mod config;
 mod infra;
 mod obj_model;
@@ -10,8 +10,12 @@ mod utils;
 
 use std::sync::Arc;
 
-use crate::api::http::v1::routers::{
-    delegations_router, login_router, oauth_router, resources_router, well_known_router,
+use crate::presentation::http::v1::{
+    delegations::router as delegations_router,
+    login::router as login_router,
+    oauth2::router as oauth_router,
+    resources::router as resources_router,
+    well_known::router as well_known_router,
 };
 use crate::config::{init_db, init_logging};
 use crate::services::delegation_service::DelegationService;
