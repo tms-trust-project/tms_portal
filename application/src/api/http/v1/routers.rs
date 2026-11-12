@@ -7,10 +7,11 @@ use crate::api::http::v1::handlers::{
     delete_delegation::delete_delegation, get_resource::get_resource,
     list_delegations::list_delegations,
     list_delegations_by_client_id::list_delegations_by_client_id,
+    list_identity_providers::list_identity_providers,
     list_linked_resource_providers::list_linked_resource_providers,
-    list_resource_providers::list_resource_providers,
-    resource_provider_callback::resource_provider_callback,
-    unlink_resource_provider::unlink_resource_provider,
+    list_resource_providers::list_resource_providers, login::login, login_callback::login_callback,
+    logout::logout, resource_provider_callback::resource_provider_callback,
+    unlink_resource_provider::unlink_resource_provider, whoami::whoami,
 };
 
 pub async fn delegations_router() -> Router<AppState> {
@@ -32,4 +33,14 @@ pub async fn resources_router() -> Router<AppState> {
         .route("/resources/providers/links", get(list_linked_resource_providers))
         .route("/resources/providers/authorize", get(authorize_resource_provider))
         .route("/resources/providers/callback", get(resource_provider_callback))
+}
+
+pub async fn login_router() -> Router<AppState> {
+    Router::new()
+        .route("/login", post(login))
+        .route("/login", get(login))
+        .route("/logout", get(logout))
+        .route("/login/whoami", get(whoami))
+        .route("/login/callback", get(login_callback))
+        .route("/login/idps", get(list_identity_providers))
 }
