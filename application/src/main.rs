@@ -10,9 +10,8 @@ mod utils;
 
 use std::sync::Arc;
 
-use crate::api::http::v1::handlers::well_known;
 use crate::api::http::v1::routers::{
-    delegations_router, login_router, oauth_router, resources_router,
+    delegations_router, login_router, oauth_router, resources_router, well_known_router,
 };
 use crate::config::{init_db, init_logging};
 use crate::services::delegation_service::DelegationService;
@@ -145,7 +144,7 @@ async fn main() -> anyhow::Result<()> {
     // build our application with a single route
     let app = Router::new()
         //        .merge(auth::router().await)
-        .merge(well_known::router().await)
+        .merge(well_known_router().await)
         .merge(login_router().await)
         .merge(resources_router().await)
         .merge(oauth_router().await)

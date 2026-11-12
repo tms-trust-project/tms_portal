@@ -6,6 +6,7 @@ use crate::api::http::v1::handlers::{
     add_delegation::add_delegation, authorize_oauth::authorize_oauth,
     authorize_resource_provider::authorize_resource_provider,
     create_oauth_token::create_oauth_token, delete_delegation::delete_delegation,
+    get_jwks::get_jwks, get_openid_configuration::get_openid_configuration,
     get_resource::get_resource, list_delegations::list_delegations,
     list_delegations_by_client_id::list_delegations_by_client_id,
     list_identity_providers::list_identity_providers,
@@ -52,4 +53,10 @@ pub async fn oauth_router() -> Router<AppState> {
         .route("/oauth2/authorize", get(authorize_oauth))
         .route("/oauth2/tokens", post(create_oauth_token))
         .route("/oauth2/callback", get(oauth_callback))
+}
+
+pub async fn well_known_router() -> Router<AppState> {
+    Router::new()
+        .route("/{client_id}/.well-known/openid-configuration", get(get_openid_configuration))
+        .route("/{client_id}/jwks.json", get(get_jwks))
 }

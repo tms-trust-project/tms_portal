@@ -1,16 +1,11 @@
-use crate::AppState;
-use crate::api::http::v1::responses::tms_response::TmsResponse;
-use crate::infra::persistence::client_repository::get_client_by_id;
-use crate::utils::app_error::AppError;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::routing::get;
-use axum::{Router, debug_handler};
-use jwtk::PublicKeyToJwk;
-use jwtk::jwk::JwkSet;
-use jwtk::rsa::RsaPublicKey;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
+
+use crate::AppState;
+use crate::api::http::v1::responses::tms_response::TmsResponse;
+use crate::utils::app_error::AppError;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OpenidConfiguration {
@@ -53,14 +48,8 @@ pub struct OpenidConfiguration {
 //     "subject_types_supported" : ["public"]
 // }
 
-pub async fn router() -> Router<AppState> {
-    Router::new()
-        .route("/{client_id}/.well-known/openid-configuration", get(openid_configuration_handler))
-        .route("/{client_id}/jwks.json", get(jwks_json_handler))
-}
-
-#[debug_handler]
-pub async fn openid_configuration_handler(
+#[axum::debug_handler]
+pub async fn get_openid_configuration(
     Path(client_id): Path<String>,
     State(app_state): State<AppState>,
 ) -> Result<TmsResponse<OpenidConfiguration>, AppError> {
@@ -77,28 +66,4 @@ pub async fn openid_configuration_handler(
     Ok(TmsResponse::builder(StatusCode::OK)
         .entity(openid_configuration)
         .build())
-}
-pub async fn jwks_json_handler(
-    Path(client_id): Path<String>,
-    State(app_state): State<AppState>,
-) -> Result<TmsResponse<JwkSet>, AppError> {
-    let mut tx = app_state.db_pool.begin().await?;
-    // lookup client ot make sure it's a real client id
-    let _client = get_client_by_id(&mut tx, &client_id).await?;
-    let jwt_config = &app_state.config.jwt_config;
-    let key = &jwt_config.key;
-    tx.commit().await?;
-
-    let public_key_string = &key.jwt_public_key;
-    let rpk = RsaPublicKey::from_pem(public_key_string.as_bytes(), None)?;
-    // let encoding_key = EncodingKey::from_rsa_pem(&public_key_string.as_bytes())?;
-    // let jwk = Jwk::from_encoding_key(&encoding_key, RS256)?;
-    // let jwks = JwkSet { keys: vec![jwk] };
-
-    let jwk = rpk.public_key_to_jwk()?;
-    let keys = vec![jwk];
-    let jwks = JwkSet { keys };
-    // let key = serde_json::to_string(&jwks)?;
-    // let key = "stuff".to_string();
-    Ok(TmsResponse::builder(StatusCode::OK).entity(jwks).build())
 }
