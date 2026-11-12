@@ -2,7 +2,7 @@
 - This file handles the oauth authrization routes
  */
 use crate::AppState;
-use crate::responses::tms_response::TmsResponse;
+use crate::api::http::v1::responses::tms_response::TmsResponse;
 use crate::services::oauth2_service::{
     TokenResponse, authorize_code, get_access_token_from_code, process_authorization_callback,
 };
@@ -236,7 +236,7 @@ async fn callback_handler(
 
 #[cfg(test)]
 mod tests {
-    use crate::routes::oauth::{GrantType, ResponseType};
+    use crate::api::http::v1::handlers::oauth::{GrantType, ResponseType};
 
     #[test]
     fn test_grant_type_from_str() {

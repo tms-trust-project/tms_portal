@@ -1,19 +1,18 @@
-extern crate core;
+// extern crate core;
 
+mod api;
 mod config;
 mod infra;
 mod obj_model;
 mod ports;
-mod requests;
-mod responses;
-mod routes;
 mod services;
 mod utils;
 
 use std::sync::Arc;
 
+use crate::api::http::v1::handlers::{login, oauth, resource, well_known};
+use crate::api::http::v1::routers::delegations_router;
 use crate::config::{init_db, init_logging};
-use crate::routes::{delegation, login, oauth, resource, well_known};
 use crate::services::delegation_service::DelegationService;
 use anyhow::Context;
 use axum::body::Body;
@@ -148,7 +147,7 @@ async fn main() -> anyhow::Result<()> {
         .merge(login::router().await)
         .merge(resource::router().await)
         .merge(oauth::router().await)
-        .merge(delegation::router().await)
+        .merge(delegations_router().await)
         .layer(middleware::from_fn(|request: Request<Body>, next: Next| async move {
             let request_id = Uuid::new_v4().to_string();
             log_mdc::insert("request_id", request_id.clone());

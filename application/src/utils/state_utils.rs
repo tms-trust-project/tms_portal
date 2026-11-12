@@ -1,5 +1,4 @@
 use crate::obj_model::configuration::StateKey;
-use crate::utils::configuration::Configuration;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use tms_lib::utils::jwt_decoder::JwtDecoderBuilder;

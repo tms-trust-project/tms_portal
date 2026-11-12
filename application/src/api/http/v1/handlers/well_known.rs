@@ -1,6 +1,6 @@
 use crate::AppState;
+use crate::api::http::v1::responses::tms_response::TmsResponse;
 use crate::infra::persistence::client_repository::get_client_by_id;
-use crate::responses::tms_response::TmsResponse;
 use crate::utils::app_error::AppError;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
