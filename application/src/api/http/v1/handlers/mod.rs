@@ -1,5 +1,7 @@
 pub mod add_delegation;
+pub mod authorize_oauth;
 pub mod authorize_resource_provider;
+pub mod create_oauth_token;
 pub mod delete_delegation;
 pub mod get_resource;
 pub mod list_delegations;
@@ -10,7 +12,7 @@ pub mod list_resource_providers;
 pub mod login;
 pub mod login_callback;
 pub mod logout;
-pub mod oauth;
+pub mod oauth_callback;
 pub mod resource_provider_callback;
 mod resource_provider_state;
 pub mod unlink_resource_provider;

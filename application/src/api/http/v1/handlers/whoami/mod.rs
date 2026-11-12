@@ -19,6 +19,7 @@ pub async fn whoami(
 ) -> anyhow::Result<TmsResponse<WhoAmIResponse>, AppError> {
     let whoami_response =
         login_service::whoami(&app_state.db_pool, &security_context.token).await?;
+
     Ok(TmsResponse::builder(StatusCode::OK)
         .entity(whoami_response.into())
         .build())

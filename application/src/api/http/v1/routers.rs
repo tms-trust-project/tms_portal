@@ -3,14 +3,16 @@ use axum::routing::{delete, get, post};
 
 use crate::AppState;
 use crate::api::http::v1::handlers::{
-    add_delegation::add_delegation, authorize_resource_provider::authorize_resource_provider,
-    delete_delegation::delete_delegation, get_resource::get_resource,
-    list_delegations::list_delegations,
+    add_delegation::add_delegation, authorize_oauth::authorize_oauth,
+    authorize_resource_provider::authorize_resource_provider,
+    create_oauth_token::create_oauth_token, delete_delegation::delete_delegation,
+    get_resource::get_resource, list_delegations::list_delegations,
     list_delegations_by_client_id::list_delegations_by_client_id,
     list_identity_providers::list_identity_providers,
     list_linked_resource_providers::list_linked_resource_providers,
     list_resource_providers::list_resource_providers, login::login, login_callback::login_callback,
-    logout::logout, resource_provider_callback::resource_provider_callback,
+    logout::logout, oauth_callback::oauth_callback,
+    resource_provider_callback::resource_provider_callback,
     unlink_resource_provider::unlink_resource_provider, whoami::whoami,
 };
 
@@ -43,4 +45,11 @@ pub async fn login_router() -> Router<AppState> {
         .route("/login/whoami", get(whoami))
         .route("/login/callback", get(login_callback))
         .route("/login/idps", get(list_identity_providers))
+}
+
+pub async fn oauth_router() -> Router<AppState> {
+    Router::new()
+        .route("/oauth2/authorize", get(authorize_oauth))
+        .route("/oauth2/tokens", post(create_oauth_token))
+        .route("/oauth2/callback", get(oauth_callback))
 }
