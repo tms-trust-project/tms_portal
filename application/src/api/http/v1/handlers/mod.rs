@@ -1,8 +1,14 @@
 pub mod add_delegation;
+pub mod authorize_resource_provider;
 pub mod delete_delegation;
+pub mod get_resource;
 pub mod list_delegations;
 pub mod list_delegations_by_client_id;
+pub mod list_linked_resource_providers;
+pub mod list_resource_providers;
 pub mod login;
 pub mod oauth;
-pub mod resource;
+pub mod resource_provider_callback;
+mod resource_provider_state;
+pub mod unlink_resource_provider;
 pub mod well_known;
