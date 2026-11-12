@@ -1,8 +1,7 @@
 [workspace]
 resolver = "3"
 members = [
-    "application",
-    "libraries/tms_lib",
-    "libraries/tms_proc_macros"
+    "services/tms_portal_api",
+    "libs/tms_lib",
+    "libs/tms_proc_macros"
 ]
-
