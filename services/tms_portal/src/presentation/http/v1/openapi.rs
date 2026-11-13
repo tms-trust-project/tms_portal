@@ -1,10 +1,9 @@
 use utoipa::OpenApi;
 
 use super::delegations::handlers::{
-    add_delegation::__path_add_delegation,
+    add_delegation::__path_add_delegation, delete_delegation::__path_delete_delegation,
     list_delegations::__path_list_delegations,
     list_delegations_by_client_id::__path_list_delegations_by_client_id,
-    delete_delegation::__path_delete_delegation,
 };
 
 #[derive(OpenApi)]

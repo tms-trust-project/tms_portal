@@ -11,13 +11,12 @@ pub struct AddDelegationRequestBody {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Path)]
 pub struct ListDelegationByClientPathParams {
-    pub client_name: String
+    pub client_name: String,
 }
-
 
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Path)]
 pub struct DeleteDelegationPathParams {
     pub delegation_id: i32,
-    pub client_name: String
+    pub client_name: String,
 }

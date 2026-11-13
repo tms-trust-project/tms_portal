@@ -1,6 +1,6 @@
 use crate::AppState;
-use crate::presentation::http::v1::delegations::responses::{AddDelegationResponse, Delegation};
 use crate::presentation::http::v1::delegations::requests::AddDelegationRequestBody;
+use crate::presentation::http::v1::delegations::responses::{AddDelegationResponse, Delegation};
 use crate::presentation::http::v1::utils::tms_response::TmsResponse;
 
 use crate::utils::app_error::AppError;

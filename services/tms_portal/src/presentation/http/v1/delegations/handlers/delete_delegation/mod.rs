@@ -8,7 +8,7 @@ use axum::extract::{Path, State};
 use http::StatusCode;
 use tms_lib::http::requests::TmsErrorResponse;
 
-/// Deletes the specified delegation for the 
+/// Deletes the specified delegation for the
 #[utoipa::path(
     delete,
     path = "/delegations/{client_name}/{delegation_id}",
