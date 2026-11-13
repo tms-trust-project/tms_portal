@@ -31,7 +31,6 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - resolve_image_tag
-      - diffs
     steps:
       - uses: actions/checkout@v4
       - name: Setup Rust
