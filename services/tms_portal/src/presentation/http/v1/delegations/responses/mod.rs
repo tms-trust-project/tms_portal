@@ -3,6 +3,18 @@ use serde::Serialize;
 use utoipa::ToSchema;
 
 #[derive(Debug, Hash, Serialize, ToSchema, Clone, PartialEq, Eq)]
+pub struct AddDelegationResponse {
+    pub status: u16,
+    pub result: Delegation,
+}
+
+#[derive(Debug, Hash, Serialize, ToSchema, Clone, PartialEq, Eq)]
+pub struct DeleteDelegationResponse {
+    pub status: u16,
+    pub result: (),
+}
+
+#[derive(Debug, Hash, Serialize, ToSchema, Clone, PartialEq, Eq)]
 pub struct Delegation {
     pub id: i32,
     pub client_id: String,

@@ -5,7 +5,7 @@ fn main() {
     println!(
         "{}",
         ApiDoc::openapi()
-            .to_json()
+            .to_yaml()
             .expect("OpenAPI document serializes")
     );
 }

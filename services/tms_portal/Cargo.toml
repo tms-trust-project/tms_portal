@@ -26,7 +26,7 @@ tms_lib = { path = "../../libs/tms_lib"}
 tokio = { version = "1", features = ["full"] }
 tower-http = { version = "0.6.8", features = ["trace", "fs"] }
 tracing = "0.1.44"
-utoipa = "6.0.0"
+utoipa = { workspace = true }
 utoipa-axum = "0.3.0"
 url = "2.5.8"
 uuid = { version = "1.22.0", features = ["v4"] }

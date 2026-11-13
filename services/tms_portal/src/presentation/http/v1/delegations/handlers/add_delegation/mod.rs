@@ -1,29 +1,23 @@
 use crate::AppState;
-use crate::presentation::http::v1::delegations::responses::Delegation;
-use crate::presentation::http::v1::utils::api_response_body::ApiResponseBody;
+use crate::presentation::http::v1::delegations::responses::{AddDelegationResponse, Delegation};
+use crate::presentation::http::v1::delegations::requests::AddDelegationRequestBody;
 use crate::presentation::http::v1::utils::tms_response::TmsResponse;
+
 use crate::utils::app_error::AppError;
 use crate::utils::jwt_utils::JwtValidator;
+
+use tms_lib::http::requests::TmsErrorResponse;
+
 use axum::Json;
 use axum::extract::State;
 use http::StatusCode;
-use serde::Deserialize;
-use utoipa::ToSchema;
-
-// params for tokens request
-#[derive(Debug, Deserialize, ToSchema)]
-pub struct AddDelegationRequestBody {
-    client_name: String,
-    resource_provider_id: String,
-    resource_provider_account: String,
-}
 
 /// Create a delegation after verifying that the authenticated user recently logged in to the
 /// requested resource provider.
 #[utoipa::path(
     post,
     path = "/delegations",
-    tag = "delegations",
+    tag = "Delegations",
     request_body(
         content = AddDelegationRequestBody,
         description = "The client and resource-provider account receiving delegated access",
@@ -33,17 +27,17 @@ pub struct AddDelegationRequestBody {
         (
             status = 200,
             description = "Delegation created",
-            body = ApiResponseBody<Delegation>
+            body = AddDelegationResponse
         ),
         (
             status = 401,
             description = "The client is not authorized or the resource-provider login is stale",
-            body = ApiResponseBody<String>
+            body = TmsErrorResponse
         ),
         (
             status = 500,
             description = "The delegation could not be created",
-            body = ApiResponseBody<String>
+            body = TmsErrorResponse
         )
     )
 )]

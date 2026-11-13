@@ -5,7 +5,26 @@ use crate::utils::app_error::AppError;
 use crate::utils::jwt_utils::JwtValidator;
 use axum::extract::State;
 use http::StatusCode;
+use tms_lib::http::requests::TmsErrorResponse;
 
+/// List all the delegations issued by the the requesting client and tms identity
+#[utoipa::path(
+    get,
+    path = "/delegations",
+    tag = "Delegations",
+    responses(
+        (
+            status = 200,
+            description = "Delegations listed",
+            body = Vec<Delegation>
+        ),
+        (
+            status = 500,
+            description = "Internal error",
+            body = TmsErrorResponse
+        )
+    )
+)]
 #[axum::debug_handler]
 pub async fn list_delegations(
     State(app_state): State<AppState>,
