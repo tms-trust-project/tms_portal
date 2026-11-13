@@ -67,6 +67,11 @@ pub struct ResourceProviderAuthorizeInfo {
     pub client_id: String,
     pub client_secret: String,
 }
+
+// TODO Refactor these methods into an application service
+pub struct ResourceService {
+}
+
 pub async fn get_resource_providers(
     security_context: &SecurityContext,
     db_pool: &PgPool,

@@ -1,4 +1,4 @@
-use crate::infra::persistence::auth_code_data_repository::{
+use crate::infra::persistence::auth_code_data_repository::auth_code_data_dao::{
     delete_auth_code_data, insert_auth_code_data,
 };
 use crate::infra::persistence::client_repository::get_client_by_credentials;
