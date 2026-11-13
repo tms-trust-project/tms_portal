@@ -1,0 +1,41 @@
+use crate::infra::persistence::allowed_redirects_dao::{
+    get_allowed_redirect, get_allowed_redirect_by_client_name,
+};
+use anyhow::{Context, Result};
+use sqlx::PgTransaction;
+use url::Url;
+
+pub async fn check_allowed_redirects<'a>(
+    tx: &mut PgTransaction<'a>,
+    client_id: &str,
+    url: &str,
+) -> Result<()> {
+    // Check the allowed redirect, but ignore query params
+    let mut bare_url = Url::parse(url)?;
+    bare_url.set_query(None);
+    let _ = get_allowed_redirect(tx, client_id, bare_url.as_ref())
+        .await
+        .with_context(|| {
+            format!("Requested redirect url: {0} is not found for client id: {1}", url, client_id)
+        })?;
+    Ok(())
+}
+
+pub async fn check_allowed_redirects_by_client_name<'a>(
+    tx: &mut PgTransaction<'a>,
+    client_name: &str,
+    url: &str,
+) -> Result<()> {
+    // Check the allowed redirect, but ignore query params
+    let mut bare_url = Url::parse(url)?;
+    bare_url.set_query(None);
+    let _ = get_allowed_redirect_by_client_name(tx, client_name, bare_url.as_ref())
+        .await
+        .with_context(|| {
+            format!(
+                "Requested redirect url: {0} is not found for client name: {1}",
+                url, client_name
+            )
+        })?;
+    Ok(())
+}

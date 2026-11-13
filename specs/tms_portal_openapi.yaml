@@ -1,0 +1,209 @@
+openapi: 3.1.0
+info:
+  title: TMS Portal
+  description: ''
+  license:
+    name: ''
+  version: 1.0.0
+servers:
+- url: http://localhost:3000
+  description: Local HTTP server
+paths:
+  /delegations:
+    get:
+      tags:
+      - Delegations
+      summary: List all the delegations issued by the the requesting client and tms identity
+      operationId: list_delegations
+      responses:
+        '200':
+          description: Delegations listed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Delegation'
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TmsErrorResponse'
+    post:
+      tags:
+      - Delegations
+      summary: |-
+        Create a delegation after verifying that the authenticated user recently logged in to the
+        requested resource provider.
+      operationId: add_delegation
+      requestBody:
+        description: The client and resource-provider account receiving delegated access
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddDelegationRequestBody'
+        required: true
+      responses:
+        '200':
+          description: Delegation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddDelegationResponse'
+        '401':
+          description: The client is not authorized or the resource-provider login is stale
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TmsErrorResponse'
+        '500':
+          description: The delegation could not be created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TmsErrorResponse'
+  /delegations/{client_name}:
+    get:
+      tags:
+      - Delegations
+      summary: |-
+        List all the delegations issued for a tms identity by the client identifier provided in the request.
+        Normal clients can only list their own delegations. The TMS client can list delegations for any client.
+      operationId: list_delegations_by_client_id
+      parameters:
+      - name: client_name
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Delegation created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Delegation'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TmsErrorResponse'
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TmsErrorResponse'
+  /delegations/{client_name}/{delegation_id}:
+    delete:
+      tags:
+      - Delegations
+      summary: Deletes the specified delegation for the
+      operationId: delete_delegation
+      parameters:
+      - name: delegation_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - name: client_name
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Delegation created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Delegation'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TmsErrorResponse'
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TmsErrorResponse'
+components:
+  schemas:
+    AddDelegationRequestBody:
+      type: object
+      required:
+      - client_name
+      - resource_provider_id
+      - resource_provider_account
+      properties:
+        client_name:
+          type: string
+        resource_provider_account:
+          type: string
+        resource_provider_id:
+          type: string
+    AddDelegationResponse:
+      type: object
+      required:
+      - status
+      - result
+      properties:
+        result:
+          $ref: '#/components/schemas/Delegation'
+        status:
+          type: integer
+          format: int32
+          minimum: 0
+    Delegation:
+      type: object
+      required:
+      - id
+      - client_id
+      - client_name
+      - rp_account
+      - expires_at
+      - created
+      - updated
+      - tms_identity
+      - rp_id
+      properties:
+        client_id:
+          type: string
+        client_name:
+          type: string
+        created:
+          type: string
+        expires_at:
+          type: string
+        id:
+          type: integer
+          format: int32
+        rp_account:
+          type: string
+        rp_id:
+          type: string
+        tms_identity:
+          type: string
+        updated:
+          type: string
+    TmsErrorResponse:
+      type: object
+      required:
+      - status
+      - message
+      properties:
+        message:
+          type: string
+        status:
+          type: string
+

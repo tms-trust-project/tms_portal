@@ -1,0 +1,327 @@
+use crate::obj_model::resource::{
+    Resource, ResourceAccountLink, ResourceForUser, ResourceProviderLogin, Username,
+};
+use anyhow::anyhow;
+use chrono::{DateTime, Utc};
+use sqlx::postgres::PgRow;
+use sqlx::{Error, PgPool, PgTransaction, Row, query};
+use std::collections::HashSet;
+use tms_lib::utils::service_error::ServiceError::BadRequest;
+
+impl From<&PgRow> for ResourceProviderLogin {
+    fn from(row: &PgRow) -> Self {
+        ResourceProviderLogin {
+            id: row.get("id"),
+            tms_identity: row.get("tms_identity"),
+            rp_account: row.get("rp_account"),
+            rp_id: row.get("rp_id"),
+            last_login: row.get("last_login"),
+            enabled: row.get("enabled"),
+            created: row.get("created"),
+            updated: row.get("updated"),
+            rp_token: row.get("rp_token"),
+            rp_token_refresh: row.get("rp_token_refresh"),
+        }
+    }
+}
+
+impl From<&PgRow> for Resource {
+    fn from(row: &PgRow) -> Self {
+        Resource {
+            id: row.get("id"),
+            resource_local_id: row.get("resource_local_id"),
+            name: row.get("name"),
+            url: row.get("url"),
+            description: row.get("description"),
+            rp_id: row.get("rp_id"),
+            created: row.get("created"),
+            updated: row.get("updated"),
+        }
+    }
+}
+
+impl From<&PgRow> for Username {
+    fn from(row: &PgRow) -> Self {
+        Username {
+            id: row.get("id"),
+            resource_id: row.get("resource_id"),
+            resource_provider_login_id: row.get("resource_provider_login_id"),
+            username: row.get("username"),
+            created: row.get("created"),
+            updated: row.get("updated"),
+        }
+    }
+}
+
+impl From<&PgRow> for ResourceAccountLink {
+    fn from(row: &PgRow) -> Self {
+        ResourceAccountLink {
+            id: row.get("id"),
+            tms_identity: row.get("tms_identity"),
+            rp_account: row.get("rp_account"),
+            rp_id: row.get("rp_id"),
+            rp_name: row.get("rp_name"),
+            last_login: row.get("last_login"),
+            enabled: row.get("enabled"),
+            created: row.get("created"),
+            updated: row.get("updated"),
+        }
+    }
+}
+
+pub async fn db_add_or_update_resource<'a>(
+    tx: &mut PgTransaction<'a>,
+    resource_local_id: String,
+    name: String,
+    url: String,
+    description: String,
+    rp_id: String,
+) -> anyhow::Result<Resource> {
+    match query(
+        "INSERT INTO resources
+            (resource_local_id, name, url, description, rp_id)
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (rp_id, resource_local_id)
+            DO UPDATE SET
+                name = excluded.name,
+                url = excluded.url,
+                description = excluded.description,
+                updated = now()
+            RETURNING *
+        ",
+    )
+    .bind(resource_local_id)
+    .bind(name)
+    .bind(url)
+    .bind(description)
+    .bind(rp_id)
+    .fetch_one(&mut **tx)
+    .await
+    {
+        Ok(row) => Ok(Resource::from(&row)),
+        Err(error) => Err(anyhow!(error)),
+    }
+}
+
+pub async fn db_add_or_update_username<'a>(
+    tx: &mut PgTransaction<'a>,
+    resource_id: i32,
+    resource_provider_login_id: i32,
+    username: String,
+) -> anyhow::Result<Username> {
+    match query(
+        "INSERT INTO usernames
+            (resource_id, resource_provider_login_id, username)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (resource_id, resource_provider_login_id)
+            DO UPDATE SET
+                username = excluded.username,
+                updated = now()
+            RETURNING *
+    ",
+    )
+    .bind(resource_id)
+    .bind(resource_provider_login_id)
+    .bind(username)
+    .fetch_one(&mut **tx)
+    .await
+    {
+        Ok(row) => Ok(Username::from(&row)),
+        Err(error) => Err(anyhow!(error)),
+    }
+}
+
+pub async fn db_add_or_update_resources_with_username<'a>(
+    tx: &mut PgTransaction<'a>,
+    resources: Vec<ResourceForUser>,
+    rp_id: String,
+    resource_provider_login_id: i32,
+) -> anyhow::Result<()> {
+    for resource_for_user in resources {
+        let resource = db_add_or_update_resource(
+            tx,
+            resource_for_user.resource_id,
+            resource_for_user.name,
+            resource_for_user.url,
+            resource_for_user.description,
+            rp_id.clone(),
+        )
+        .await?;
+        let _username = db_add_or_update_username(
+            tx,
+            resource.id,
+            resource_provider_login_id,
+            resource_for_user.username,
+        )
+        .await?;
+    }
+    Ok(())
+}
+
+pub async fn db_add_or_update_resource_account_login<'a>(
+    tx: &mut PgTransaction<'a>,
+    tms_identity: String,
+    rp_account: String,
+    rp_id: String,
+    last_login: DateTime<Utc>,
+    rp_token: String,
+    rp_token_refresh: String,
+) -> anyhow::Result<ResourceProviderLogin> {
+    // login - insert implies enabled, but update will not change the enabled flag
+    match query(
+        "INSERT INTO resource_provider_logins
+            (tms_identity, rp_account, rp_id,
+             last_login, enabled, rp_token, rp_token_refresh) VALUES ($1, $2, $3, $4, true, $5, $6)
+                      ON CONFLICT (tms_identity, rp_id, rp_account)
+                          DO UPDATE SET 
+                            last_login=excluded.last_login, 
+                            updated=now(),
+                            rp_token=excluded.rp_token,
+                            rp_token_refresh=excluded.rp_token_refresh
+             returning *",
+    )
+    .bind(tms_identity)
+    .bind(rp_account)
+    .bind(rp_id)
+    .bind(last_login)
+    .bind(rp_token)
+    .bind(rp_token_refresh)
+    .fetch_one(&mut **tx)
+    .await
+    {
+        Ok(row) => Ok(ResourceProviderLogin::from(&row)),
+        Err(error) => Err(anyhow!(error)),
+    }
+}
+
+pub async fn db_get_resource_provider_login<'a>(
+    db_pool: &PgPool,
+    tms_identity: &str,
+    rp_account: &str,
+    rp_id: &str,
+    last_login: DateTime<Utc>,
+    enabled: bool,
+) -> anyhow::Result<Option<ResourceProviderLogin>> {
+    let row = query("SELECT * FROM resource_provider_logins WHERE tms_identity = $1 and rp_account=$2 and rp_id=$3 and last_login >= $4 and enabled is $5")
+        .bind(tms_identity)
+        .bind(rp_account)
+        .bind(rp_id)
+        .bind(last_login)
+        .bind(enabled)
+        .fetch_optional(db_pool)
+        .await
+        .map_err( |error| anyhow::anyhow!(error))?;
+
+    match row {
+        Some(row) => Ok(Some(ResourceProviderLogin::from(&row))),
+        None => Ok(None),
+    }
+}
+
+pub async fn db_delete_resource_provider_link<'a>(
+    tx: &mut PgTransaction<'a>,
+    tms_identity: &str,
+    resource_provider_link_id: &i64,
+) -> anyhow::Result<ResourceProviderLogin> {
+    match query(
+        "delete from resource_provider_logins where
+                     tms_identity = $1 and id = $2 returning *",
+    )
+    .bind(tms_identity)
+    .bind(resource_provider_link_id)
+    .fetch_one(&mut **tx)
+    .await
+    {
+        Ok(row) => Ok(ResourceProviderLogin::from(&row)),
+        Err(Error::RowNotFound) => Err(BadRequest(format!(
+            "Resource provider link id {} not found for tms_identity {}",
+            resource_provider_link_id, tms_identity
+        ))
+        .into()),
+        Err(error) => Err(anyhow!(error)),
+    }
+}
+pub async fn db_get_resource_provider_links_for_identity<'a>(
+    tx: &mut PgTransaction<'a>,
+    tms_identity: &str,
+) -> anyhow::Result<HashSet<ResourceAccountLink>> {
+    let row_result = match query(
+        // this select needs all of the fields spelled out because of the join and naming, etc
+        "select rpal.id, rpal.tms_identity, rpal.rp_account, rpal.last_login, rpal.enabled,
+        rpal.created, rpal.updated, ip.id as rp_id, ip.name as rp_name
+        from resource_provider_logins as rpal
+        INNER JOIN identity_providers AS ip ON ip.id = rpal.rp_id
+        WHERE tms_identity=$1 AND ip.supports_resources = true",
+    )
+    .bind(tms_identity)
+    .fetch_all(&mut **tx)
+    .await
+    {
+        Ok(rows) => Ok(rows),
+        Err(error) => Err(anyhow!(error)),
+    };
+
+    let mut account_logins: Vec<ResourceAccountLink> = vec![];
+    for row in &row_result? {
+        account_logins.push(ResourceAccountLink::from(row));
+    }
+
+    Ok(HashSet::from_iter(account_logins))
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        config::init_db,
+        database_url,
+        infra::persistence::{
+            allowed_redirects_dao::get_allowed_redirect,
+            identity_provider_repository::get_login_provider_by_id,
+            resource_provider_login_repository::resource_provider_logins_dao::db_add_or_update_resource,
+        },
+    };
+
+    #[tokio::test]
+    async fn test_db_resource() -> anyhow::Result<()> {
+        let db_string = database_url()?;
+        let db_pool = init_db(&db_string).await;
+        let mut tx = db_pool.begin().await?;
+        let rsrc = db_add_or_update_resource(
+            &mut tx,
+            "local_id".to_string(),
+            "Name of Resource".to_string(),
+            "http://example.org".to_string(),
+            "Description of Resource".to_string(),
+            "implicit_mode_tacc_rp".to_string(),
+        )
+        .await?;
+        dbg!(&rsrc);
+        tx.commit().await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_redirect() -> anyhow::Result<()> {
+        let db_string = database_url()?;
+        let db_pool = init_db(&db_string).await;
+        let mut tx = db_pool.begin().await?;
+        let x = get_allowed_redirect(
+            &mut tx,
+            &"tms".to_string(),
+            &"http://localhost:8080/".to_string(),
+        )
+        .await?;
+        dbg!(x);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_provider() -> anyhow::Result<()> {
+        let db_string = database_url()?;
+        let db_pool = init_db(&db_string).await;
+        let mut tx = db_pool.begin().await?;
+        let x = get_login_provider_by_id(&mut tx, &"globus".to_string()).await?;
+        dbg!(x);
+        Ok(())
+    }
+}
