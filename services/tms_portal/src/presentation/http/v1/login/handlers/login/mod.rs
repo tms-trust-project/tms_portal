@@ -14,7 +14,7 @@ use tms_lib::utils::service_error::ServiceError::{BadRequest, Internal};
 use url::Url;
 
 use crate::AppState;
-use crate::infra::persistence::identity_provider_repository::get_login_provider_by_id;
+use crate::infra::persistence::identity_provider_repository::identity_provider_dao::get_login_provider_by_id;
 use crate::presentation::http::v1::login::requests::AuthorizeRequest;
 use crate::presentation::http::v1::utils::tms_response::TmsResponse;
 use crate::utils::app_error::AppError;

@@ -1,4 +1,4 @@
-use crate::infra::persistence::identity_provider_repository::{
+use crate::infra::persistence::identity_provider_repository::identity_provider_dao::{
     get_resource_provider_by_id, list_resource_providers,
 };
 use crate::infra::persistence::resource_provider_login_repository::resource_provider_logins_dao::{
