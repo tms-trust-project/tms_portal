@@ -2,7 +2,7 @@ use crate::infra::auth::globus_token_provider::GlobusTokenProvider;
 use crate::infra::persistence::identity_provider_repository::identity_provider_dao::{
     get_login_provider_by_id, get_login_providers,
 };
-use crate::infra::persistence::issued_token_repository::db_revoke_token;
+use crate::infra::persistence::issued_token_repository::issued_tokens_dao::db_revoke_token;
 use crate::infra::persistence::key_repository::get_key_by_id;
 use crate::infra::persistence::tms_identity_repository::db_insert_tms_identity_if_absent;
 use crate::obj_model::identity_provider::{IdentityProvider, IdentityProviderType};

@@ -7,7 +7,7 @@ use axum::body::Body;
 use tms_portal::config::{init_db, init_logging};
 use tms_portal::infra::persistence::client_repository::PostgresClientRepository;
 use tms_portal::infra::persistence::delegation_repository::PostgresDelegationRepository;
-use tms_portal::infra::persistence::issued_token_repository::db_cleanup_tokens;
+use tms_portal::infra::persistence::issued_token_repository::issued_tokens_dao::db_cleanup_tokens;
 use tms_portal::infra::persistence::resource_provider_login_repository::PostgresResourceProviderLoginRepository;
 use tms_portal::presentation::http::v1::{
     delegations::router as delegations_router, login::router as login_router,
