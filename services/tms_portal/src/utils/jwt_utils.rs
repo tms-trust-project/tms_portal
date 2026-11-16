@@ -2,7 +2,7 @@ use crate::AppState;
 use crate::infra::persistence::issued_token_repository::issued_tokens_dao::{
     db_get_token, db_insert_token,
 };
-use crate::infra::persistence::key_repository::get_key_by_id;
+use crate::infra::persistence::key_repository::keys_dao::get_key_by_id;
 use crate::obj_model::identity_provider::IdentityProviderType;
 use crate::utils::app_error::AppError;
 use crate::utils::configuration::Configuration;
