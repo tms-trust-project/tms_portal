@@ -16,15 +16,10 @@ import {
 
 import { Button } from "@/components/ui/button"
 import { useListClients } from "@/tms-hooks/useListClients"
+import { useClientState } from "@/tms-hooks"
 
 export function ClientSelect() {
-  const searchParams = new URLSearchParams(window.location.search)
-
-  const stateParam = new URLSearchParams(window.location.search).get("state")
-  const linkState = stateParam ? JSON.parse(stateParam) : null
-
-  const clientName = searchParams.get("client_name") ?? linkState?.clientName
-
+  const { clientName } = useClientState()
   const { data: clientListing } = useListClients()
 
   return (

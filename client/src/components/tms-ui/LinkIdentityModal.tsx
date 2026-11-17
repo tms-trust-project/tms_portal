@@ -11,7 +11,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 
-import { useListProviderLinks, useListProviders } from "@/tms-hooks"
+import {
+  useClientState,
+  useListProviderLinks,
+  useListProviders,
+} from "@/tms-hooks"
 
 import { Separator } from "@/components/ui/separator"
 import { UnlinkButton } from "@/components/tms-ui/UnlinkButton"
@@ -25,19 +29,8 @@ type ProviderRow = {
 export function LinkIdentityModal() {
   const { data: providerList } = useListProviders()
   const { data: providerLinkList } = useListProviderLinks()
-  const searchParams = new URLSearchParams(window.location.search)
 
-  const stateParam = new URLSearchParams(window.location.search).get("state")
-  const linkState = stateParam ? JSON.parse(stateParam) : null
-
-  const returnUri =
-    searchParams.get("client_return_uri") ?? linkState?.returnUri
-  const clientName = searchParams.get("client_name") ?? linkState?.clientName
-
-  const linkStateRawParam = searchParams.get("state")
-  const linkStateParams = linkStateRawParam
-    ? JSON.parse(linkStateRawParam)
-    : undefined
+  const { returnUri, clientName, hasLinkSuccess } = useClientState()
 
   const linkedProviderIds = new Set(
     (providerLinkList ?? []).map((link) => link.rp_id)
@@ -71,7 +64,8 @@ export function LinkIdentityModal() {
   }
 
   const [openState, setOpenState] = useState(
-    !!returnUri && linkStateParams?.result !== "success"
+    // auto-open on initial visit from gateway, NOT on successful linking.
+    !!returnUri && !hasLinkSuccess
   )
 
   return (
