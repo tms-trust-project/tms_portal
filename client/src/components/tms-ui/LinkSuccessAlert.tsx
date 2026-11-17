@@ -18,29 +18,23 @@ import {
 import { CheckCircle2Icon, InfoIcon } from "lucide-react"
 import React, { useState } from "react"
 import { useDelegateProvider } from "@/tms-hooks/useDelegate"
-import { useListDelegations, useListProviderLinks } from "@/tms-hooks"
+import {
+  useClientState,
+  useListDelegations,
+  useListProviderLinks,
+} from "@/tms-hooks"
 import { Spinner } from "@/components/ui/spinner"
 import { DelegationCard } from "./DelegationsListing"
-
-type LinkState = {
-  result?: string
-  returnUri?: string
-  clientName?: string
-  providerName?: string
-  providerId?: string
-}
 
 export function LinkSuccessAlert({
   trigger,
 }: {
   trigger?: React.ReactElement
 }) {
-  const stateParam = new URLSearchParams(window.location.search).get("state")
-  const linkState = stateParam ? (JSON.parse(stateParam) as LinkState) : null
-  const { clientName, providerId, providerName, returnUri } = linkState ?? {}
-  const [isOpen, setIsOpen] = useState(
-    !trigger && linkState?.result === "success"
-  )
+  const { clientName, returnUri, providerId, providerName, hasLinkSuccess } =
+    useClientState()
+
+  const [isOpen, setIsOpen] = useState(!trigger && hasLinkSuccess)
 
   const { data: delegations } = useListDelegations()
   const { data: linkedProviders } = useListProviderLinks()
