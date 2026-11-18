@@ -33,14 +33,14 @@ impl DelegationRepository for PostgresDelegationRepository {
             "INSERT INTO delegations (client_id, rp_account, expires_at,
                              tms_identity, rp_id) VALUES ($1, $2, $3, $4, $5) RETURNING id",
         )
-        .bind(client_id)
-        .bind(rp_account)
-        .bind(expires_at)
-        .bind(tms_identity)
-        .bind(rp_id)
-        .fetch_one(&self.db_pool)
-        .await?
-        .get("id");
+            .bind(client_id)
+            .bind(rp_account)
+            .bind(expires_at)
+            .bind(tms_identity)
+            .bind(rp_id)
+            .fetch_one(&self.db_pool)
+            .await?
+            .get("id");
 
         let row = query("SELECT dlgs.*, cl.name FROM delegations dlgs LEFT JOIN clients cl ON dlgs.client_id = cl.client_id WHERE dlgs.id = $1")
             .bind(delegation_id)

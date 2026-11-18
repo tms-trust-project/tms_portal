@@ -1,5 +1,5 @@
 use crate::AppState;
-use crate::presentation::http::v1::clients::responses::Client;
+use crate::presentation::http::v1::clients::responses::ClientDetails;
 use crate::presentation::http::v1::utils::tms_response::TmsResponse;
 use crate::utils::app_error::AppError;
 use crate::utils::jwt_utils::JwtValidator;
@@ -19,7 +19,7 @@ use tms_lib::http::requests::TmsErrorResponse;
         (
             status = 200,
             description = "Client found",
-            body = Client
+            body = ClientDetails
         ),
         (
             status = 404,
@@ -38,8 +38,8 @@ pub async fn get_client_by_id(
     State(AppState { client_service, .. }): State<AppState>,
     Path(client_id): Path<String>,
     JwtValidator(_security_context): JwtValidator,
-) -> anyhow::Result<TmsResponse<Client>, AppError> {
-    let client = client_service.find_client(&client_id).await?.into();
+) -> anyhow::Result<TmsResponse<ClientDetails>, AppError> {
+    let details = client_service.find_client_by_id(&client_id).await?.into();
 
-    Ok(TmsResponse::builder(StatusCode::OK).entity(client).build())
+    Ok(TmsResponse::builder(StatusCode::OK).entity(details).build())
 }

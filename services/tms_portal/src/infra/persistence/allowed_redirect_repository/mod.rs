@@ -29,6 +29,23 @@ impl From<&PgRow> for AllowedRedirect {
 
 #[async_trait::async_trait]
 impl AllowedRedirectRepository for PostgresAllowedRedirectRepository {
+    async fn list_by_client_id(
+        &self,
+        client_id: &str
+    ) -> anyhow::Result<Vec<AllowedRedirect>> {
+        let rows = query(
+            "SELECT uri, client_id, created, updated FROM allowed_redirects WHERE client_id = $1",
+        )
+        .bind(client_id)
+        .fetch_all(&self.db_pool)
+        .await?;
+    
+        Ok(rows
+            .iter()
+            .map(AllowedRedirect::from)
+            .collect())
+    }
+    
     async fn get_by_client_id_and_uri(
         &self,
         client_id: &str,

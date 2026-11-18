@@ -6,14 +6,17 @@ use anyhow::Context;
 use axum::body::Body;
 use tms_portal::config::{init_db, init_logging};
 use tms_portal::infra::auth::authorization_code_gateway::ReqwestAuthorizationCodeExchangeGateway;
-use tms_portal::infra::persistence::client_repository::PostgresClientRepository;
-use tms_portal::infra::persistence::delegation_repository::PostgresDelegationRepository;
-use tms_portal::infra::persistence::identity_provider_repository::PostgresIdentityProviderRepository;
-use tms_portal::infra::persistence::issued_token_repository::PostgresIssuedTokenRepository;
-use tms_portal::infra::persistence::issued_token_repository::issued_tokens_dao::db_cleanup_tokens;
-use tms_portal::infra::persistence::key_repository::{self, PostgresKeyRepository};
-use tms_portal::infra::persistence::resource_provider_login_repository::PostgresResourceProviderLoginRepository;
-use tms_portal::infra::persistence::tms_identity_repository::PostgresTmsIdentityRepository;
+use tms_portal::infra::persistence::{
+    allowed_redirect_repository::PostgresAllowedRedirectRepository,
+    client_repository::PostgresClientRepository,
+    delegation_repository::PostgresDelegationRepository,
+    identity_provider_repository::PostgresIdentityProviderRepository,
+    issued_token_repository::PostgresIssuedTokenRepository,
+    issued_token_repository::issued_tokens_dao,
+    key_repository::PostgresKeyRepository,
+    resource_provider_login_repository::PostgresResourceProviderLoginRepository,
+    tms_identity_repository::PostgresTmsIdentityRepository,
+};
 use tms_portal::presentation::http::v1::{
     delegations::router as delegations_router, login::router as login_router,
     oauth2::router as oauth_router, openapi::ApiDoc, resources::router as resources_router,
@@ -55,6 +58,7 @@ async fn main() -> anyhow::Result<()> {
     let issued_token_repo = PostgresIssuedTokenRepository::new(db_pool.clone());
     let tms_identity_repo = PostgresTmsIdentityRepository::new(db_pool.clone());
     let key_repo = PostgresKeyRepository::new(db_pool.clone());
+    let allowed_redirect_repo = PostgresAllowedRedirectRepository::new(db_pool.clone());
     let authorization_code_exchange_gateway = ReqwestAuthorizationCodeExchangeGateway::new();
 
     // Initialize delegation service
@@ -65,7 +69,10 @@ async fn main() -> anyhow::Result<()> {
         Arc::new(resource_provider_login_repo),
     );
 
-    let client_service = ClientService::new(client_repo);
+    let client_service = ClientService::new(
+        client_repo,
+        Arc::new(allowed_redirect_repo),
+    );
 
     // Initialize Login Service
     let login_service = LoginService::new(
@@ -107,7 +114,7 @@ async fn main() -> anyhow::Result<()> {
                     Ok(mut tx) => {
                         // expired an hour ago
                         let expires_before = Utc::now() - TimeDelta::hours(1);
-                        match db_cleanup_tokens(&mut tx, &expires_before).await {
+                        match issued_tokens_dao::db_cleanup_tokens(&mut tx, &expires_before).await {
                             Ok(_) => tx
                                 .commit()
                                 .await

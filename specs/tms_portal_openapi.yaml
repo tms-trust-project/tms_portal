@@ -49,7 +49,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Client'
+                $ref: '#/components/schemas/ClientDetails'
         '404':
           description: Client not found
           content:
@@ -227,6 +227,34 @@ components:
       - created
       - updated
       properties:
+        client_id:
+          type: string
+        created:
+          type: string
+        enabled:
+          type: boolean
+        id:
+          type: integer
+          format: int32
+        name:
+          type: string
+        updated:
+          type: string
+    ClientDetails:
+      type: object
+      required:
+      - id
+      - client_id
+      - name
+      - enabled
+      - created
+      - updated
+      - allowed_redirects
+      properties:
+        allowed_redirects:
+          type: array
+          items:
+            type: string
         client_id:
           type: string
         created:
