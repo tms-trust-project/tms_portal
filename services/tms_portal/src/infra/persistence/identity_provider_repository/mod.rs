@@ -13,9 +13,15 @@ pub struct PostgresIdentityProviderRepository {
     db_pool: PgPool
 }
 
+impl PostgresIdentityProviderRepository {
+    pub fn new(db_pool: PgPool) -> Self {
+        Self { db_pool }
+    }
+}
+
 #[async_trait::async_trait]
 impl IdentityProviderRepository for PostgresIdentityProviderRepository {
-    async fn get_login_providers(&self) -> Result<HashSet<IdentityProvider>> {
+    async fn list_login_providers(&self) -> Result<HashSet<IdentityProvider>> {
         let idp_query_result = query(
             "select id, name, client_id, client_secret, identity_redirect_url,
                          oauth2_token_url, oauth2_jwks_url, oidc_user_info_url,

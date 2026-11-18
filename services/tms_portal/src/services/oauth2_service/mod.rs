@@ -1,3 +1,4 @@
+use crate::constants::TMS_ISSUER;
 use crate::infra::persistence::auth_code_data_repository::auth_code_data_dao::{
     delete_auth_code_data, insert_auth_code_data,
 };
@@ -90,7 +91,7 @@ pub async fn generate_code_and_redirect(
 
     let mut claims: JwtClaims = decode_access_token(identity_provider, provider_token).await?;
     // TODO: get iss from config
-    claims.insert("iss".to_string(), Value::from("https://tms.tacc.edu/"));
+    claims.insert("iss".to_string(), Value::from(TMS_ISSUER));
     let tms_token_claims = get_tms_token_claims(
         configuration,
         &state.client_id,

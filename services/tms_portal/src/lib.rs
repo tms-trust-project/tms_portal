@@ -5,7 +5,9 @@ pub mod ports;
 pub mod presentation;
 pub mod services;
 pub mod utils;
+pub mod constants;
 
+use services::login_service::LoginService;
 use sqlx::PgPool;
 use url::Url;
 
@@ -17,6 +19,7 @@ pub struct AppState {
     pub db_pool: PgPool,
     pub config: Configuration,
     pub delegation_service: DelegationService,
+    pub login_service: LoginService,
 }
 
 pub fn database_url() -> anyhow::Result<String> {
@@ -37,7 +40,8 @@ pub fn database_url() -> anyhow::Result<String> {
     let _database_url = Url::parse(database_url_string.as_str()).map_err(|e| {
         anyhow::anyhow!(format!(
             "The database url {0} is not valid (error: {1})",
-            &database_url_string, e
+            &database_url_string,
+            e
         ))
     })?;
 

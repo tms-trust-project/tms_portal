@@ -6,7 +6,7 @@ use tms_lib::utils::service_error::ServiceError::NotFound;
 
 pub async fn db_get_token<'a>(
     tx: &mut PgTransaction<'a>,
-    token: &String,
+    token: &str,
 ) -> anyhow::Result<IssuedToken> {
     let row = query("select * from issued_tokens where access_token = $1")
         .bind(token)
@@ -22,7 +22,7 @@ pub async fn db_get_token<'a>(
 #[allow(dead_code)]
 pub async fn db_delete_token<'a>(
     tx: &mut PgTransaction<'a>,
-    token: &String,
+    token: &str,
 ) -> anyhow::Result<IssuedToken> {
     let row = query("delete from issued_tokens where access_token = $1")
         .bind(token)
@@ -37,7 +37,7 @@ pub async fn db_delete_token<'a>(
 
 pub async fn db_revoke_token<'a>(
     tx: &mut PgTransaction<'a>,
-    token: &String,
+    token: &str,
 ) -> anyhow::Result<IssuedToken> {
     let row = query("update issued_tokens set revoked = true where access_token = $1 returning *")
         .bind(token)
@@ -52,7 +52,7 @@ pub async fn db_revoke_token<'a>(
 
 pub async fn db_insert_token<'a>(
     tx: &mut PgTransaction<'a>,
-    token: &String,
+    token: &str,
     expiration: &DateTime<Utc>,
 ) -> anyhow::Result<IssuedToken> {
     let row = query("insert into issued_tokens (access_token, expiration, revoked) values ($1, $2, false) returning *")

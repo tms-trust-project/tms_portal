@@ -31,7 +31,7 @@ impl From<&PgRow> for IssuedToken {
 }
 #[async_trait::async_trait]
 impl IssuedTokenRepository for PostgresIssuedTokenRepository {
-    async fn get(&self, token: &String) -> anyhow::Result<IssuedToken> {
+    async fn get(&self, token: &str) -> anyhow::Result<IssuedToken> {
         let row = query("select * from issued_tokens where access_token = $1")
             .bind(token)
             .fetch_one(&self.db_pool)
@@ -43,7 +43,7 @@ impl IssuedTokenRepository for PostgresIssuedTokenRepository {
         Ok(IssuedToken::from(&row))
     }
 
-    async fn delete(&self, token: &String) -> anyhow::Result<IssuedToken> {
+    async fn delete(&self, token: &str) -> anyhow::Result<IssuedToken> {
         let row = query("delete from issued_tokens where access_token = $1")
             .bind(token)
             .fetch_one(&self.db_pool)
@@ -55,7 +55,7 @@ impl IssuedTokenRepository for PostgresIssuedTokenRepository {
         Ok(IssuedToken::from(&row))
     }
 
-    async fn revoke(&self, token: &String) -> anyhow::Result<IssuedToken> {
+    async fn revoke(&self, token: &str) -> anyhow::Result<IssuedToken> {
         let row =
             query("update issued_tokens set revoked = true where access_token = $1 returning *")
                 .bind(token)
@@ -70,7 +70,7 @@ impl IssuedTokenRepository for PostgresIssuedTokenRepository {
 
     async fn insert(
         &self,
-        token: &String,
+        token: &str,
         expiration: &DateTime<Utc>,
     ) -> anyhow::Result<IssuedToken> {
         let row = query("insert into issued_tokens (access_token, expiration, revoked) values ($1, $2, false) returning *")

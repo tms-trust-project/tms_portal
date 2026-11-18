@@ -49,10 +49,10 @@ async fn adds_a_delegation_and_maps_it_to_the_api_response() {
         .build();
 
     let delegation_service = DelegationService::new(
+        delegation_policy.clone(),
         Arc::new(MockClientRepo::new(vec![client])),
         Arc::new(MockDelegationRepo::new(vec![])),
         Arc::new(MockResourceProviderLoginRepo::new(vec![recent_login])),
-        delegation_policy.clone(),
     );
 
     let app_state = AppState {

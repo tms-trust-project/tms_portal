@@ -41,8 +41,8 @@ that it is deserialized into.
  */
 pub async fn get_token_for_provider<R>(
     idp: &IdentityProvider,
-    callback_url: &String,
-    code: &String,
+    callback_url: &str,
+    code: &str,
 ) -> Result<R>
 where
     R: DeserializeOwned,
@@ -50,7 +50,7 @@ where
     debug!("exchange_code_for_token called");
     let form_params = [
         ("grant_type", &"authorization_code".to_string()),
-        ("redirect_uri", callback_url),
+        ("redirect_uri", &String::from(callback_url)),
         ("code", &code.to_owned()),
     ];
     debug!("Form params: {:?}", form_params);
@@ -74,7 +74,7 @@ where
 
 pub async fn decode_access_token<T>(
     idp: &obj_model::identity_provider::IdentityProvider,
-    id_token: &String,
+    id_token: &str,
 ) -> Result<T>
 where
     T: for<'a> Deserialize<'a>,

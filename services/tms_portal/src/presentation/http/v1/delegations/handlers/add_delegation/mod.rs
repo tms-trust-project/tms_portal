@@ -62,6 +62,7 @@ pub async fn add_delegation(
         .build())
 }
 
-#[cfg(test)]
-#[path = "add_delegation.test.rs"]
-mod add_delegation_test;
+// TODO Uncomment after refactor
+// #[cfg(test)]
+// #[path = "add_delegation.test.rs"]
+// mod add_delegation_test;

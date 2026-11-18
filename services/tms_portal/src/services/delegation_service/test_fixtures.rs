@@ -92,10 +92,10 @@ impl TestDelegationServiceBuilder {
             .unwrap_or(DelegationPolicyConfig::default());
 
         DelegationService::new(
+            delegation_policy,
             client_repo,
             delegation_repo,
             resource_provider_login_repo,
-            delegation_policy,
         )
     }
 }

@@ -12,18 +12,18 @@ use tms_lib::utils::service_error::ServiceError::{BadRequest, Unauthorized};
 
 #[derive(Clone)]
 pub struct DelegationService {
+    delegation_policy: DelegationPolicyConfig,
     client_repo: Arc<dyn ClientRepository>,
     delegation_repo: Arc<dyn DelegationRepository>,
     resource_provider_login_repo: Arc<dyn ResourceProviderLoginRepository>,
-    delegation_policy: DelegationPolicyConfig,
 }
 
 impl DelegationService {
     pub fn new(
+        delegation_policy: DelegationPolicyConfig,
         client_repo: Arc<dyn ClientRepository>,
         delegation_repo: Arc<dyn DelegationRepository>,
         resource_provider_login_repo: Arc<dyn ResourceProviderLoginRepository>,
-        delegation_policy: DelegationPolicyConfig,
     ) -> Self {
         Self { client_repo, delegation_repo, resource_provider_login_repo, delegation_policy }
     }

@@ -8,3 +8,5 @@ pub mod key;
 pub mod resource_provider_login;
 pub mod tms_identity;
 pub mod token_provider;
+pub mod authorization_code_gateway;
+pub mod jwks_gateway;

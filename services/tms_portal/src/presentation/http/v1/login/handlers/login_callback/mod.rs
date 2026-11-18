@@ -11,7 +11,6 @@ use tms_lib::utils::service_error::ServiceError::Unauthorized;
 
 use crate::AppState;
 use crate::presentation::http::v1::utils::tms_response::TmsResponse;
-use crate::services::login_service::handle_callback;
 use crate::utils::app_error::AppError;
 use crate::utils::oauth2_authorization_code_utils::{
     AuthCodeQueryParams, OAuth2State, ROOT_COOKIE_PATH, STATE_COOKIE_NAME, TOKEN_COOKIE_NAME,
@@ -35,16 +34,13 @@ pub async fn login_callback(
     };
 
     // exchange code for token (state validated in handle_callback)
-    let (token, expires_in) = handle_callback(
+    let (token, expires_in) = app_state.login_service.handle_callback(
         &app_state.config,
-        &app_state.db_pool,
         &query_params.state,
         &query_params.code,
         &state_cookie.value().to_owned(),
     )
     .await?;
-
-    let expiration_time = Utc::now() + TimeDelta::seconds(expires_in);
 
     // redirect browser back to the post-login page (taken from state - validated in login step).
     let decoded_state: OAuth2State =
@@ -57,7 +53,7 @@ pub async fn login_callback(
         .path(ROOT_COOKIE_PATH)
         .http_only(false)
         .secure(true)
-        .expires(OffsetDateTime::from_unix_timestamp(expiration_time.timestamp())?)
+        .expires(OffsetDateTime::from_unix_timestamp((Utc::now() + TimeDelta::seconds(expires_in)).timestamp())?)
         .build();
 
     // Build a 'removal cookie' to remove the state

@@ -42,7 +42,7 @@ impl JwtDecoderBuilder {
         self
     }
 
-    pub async fn decode<T>(&self, token: &String) -> anyhow::Result<T>
+    pub async fn decode<T>(&self, token: &str) -> anyhow::Result<T>
     where
         T: for<'a> Deserialize<'a>,
     {
@@ -88,6 +88,7 @@ impl JwtDecoderBuilder {
         Ok(decoded.claims)
     }
 }
+
 async fn get_public_key(pub_key_url: &str) -> anyhow::Result<JwkSet> {
     let client = reqwest::Client::new();
     let response = client.get(pub_key_url).send().await?;

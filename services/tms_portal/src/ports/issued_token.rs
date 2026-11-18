@@ -3,15 +3,15 @@ use chrono::{DateTime, Utc};
 
 #[async_trait::async_trait]
 pub trait IssuedTokenRepository: Send + Sync {
-    async fn get(&self, token: &String) -> anyhow::Result<IssuedToken>;
+    async fn get(&self, token: &str) -> anyhow::Result<IssuedToken>;
 
-    async fn delete(&self, token: &String) -> anyhow::Result<IssuedToken>;
+    async fn delete(&self, token: &str) -> anyhow::Result<IssuedToken>;
 
-    async fn revoke(&self, token: &String) -> anyhow::Result<IssuedToken>;
+    async fn revoke(&self, token: &str) -> anyhow::Result<IssuedToken>;
 
     async fn insert(
         &self,
-        token: &String,
+        token: &str,
         expiration: &DateTime<Utc>,
     ) -> anyhow::Result<IssuedToken>;
 

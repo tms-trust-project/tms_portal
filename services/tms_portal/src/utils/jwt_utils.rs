@@ -35,6 +35,7 @@ const CLAIM_NAME: &str = "name";
 const CLAIM_IDP_DISPLAY_NAME: &str = "identity_provider_display_name";
 const CLAIM_ORGANIZATION: &str = "organization";
 const TMS_TOKEN_COOKIE_NAME: &str = "tmstoken";
+
 pub trait Claims {
     fn get_string_claim(&self, name: &str) -> Result<String>;
 }
@@ -63,7 +64,7 @@ impl SecurityContext {
 }
 
 pub struct JwtValidator(pub SecurityContext);
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TmsTokenClaims {
     pub jti: Value,
     pub iss: Value,
@@ -236,14 +237,15 @@ pub async fn make_auth_token(
         DEFAULT_ALGORITHM,
         kid,
     )
-    .encode()
-    .await?;
+        .encode()
+        .await?;
 
     let mut tx = db_pool.begin().await?;
     db_insert_token(&mut tx, &tms_token_string, &tms_token_claims.get_expires_at_dt()?).await?;
     tx.commit().await?;
     Ok(tms_token_string)
 }
+
 pub async fn get_tms_token_claims(
     configuration: &Configuration,
     client_id: &str,

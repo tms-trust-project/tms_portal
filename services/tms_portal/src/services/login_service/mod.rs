@@ -1,31 +1,189 @@
 use crate::infra::auth::globus_token_provider::GlobusTokenProvider;
-use crate::infra::persistence::identity_provider_repository::identity_provider_dao::{
-    get_login_provider_by_id, get_login_providers,
-};
-use crate::infra::persistence::issued_token_repository::issued_tokens_dao::db_revoke_token;
-use crate::infra::persistence::key_repository::keys_dao::get_key_by_id;
-use crate::infra::persistence::tms_identity_repository::tms_identities_dao::db_insert_tms_identity_if_absent;
+use crate::obj_model::configuration::{HttpConfig, StateKey};
 use crate::obj_model::identity_provider::{IdentityProvider, IdentityProviderType};
 use crate::obj_model::login::WhoAmIResponse;
+use crate::ports::authorization_code_gateway::{AuthorizationCodeExchangeGateway, ExchangeInput};
+use crate::ports::identity_porvider::IdentityProviderRepository;
+use crate::ports::issued_token::IssuedTokenRepository;
+use crate::ports::key::KeyRepository;
+use crate::ports::tms_identity::TmsIdentityRepository;
 use crate::ports::token_provider::TokenProvider;
 use crate::utils::app_error::AppError;
 use crate::utils::configuration::Configuration;
-use crate::utils::jwt_utils::{TmsTokenClaims, get_tms_token_claims, make_auth_token};
+use crate::utils::jwt_utils::{SecurityContext, TmsTokenClaims, get_tms_token_claims};
 use crate::utils::oauth2_authorization_code_utils::{
     OAuth2State, decode_access_token, get_token_for_provider,
 };
-use crate::utils::state_utils::decode_state;
+use crate::constants::{DEFAULT_ALGORITHM, TMS_ISSUER};
 use anyhow::{Context, Result};
 use jsonwebtoken::decode_header;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::PgPool;
+use tms_lib::utils::jwt_encoder::JwtEncoderBuilder;
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 use tms_lib::utils::jwt_decoder::JwtDecoderBuilder;
 use tms_lib::utils::service_error::{
     ServiceError,
     ServiceError::{BadRequest, Unauthorized},
 };
+
+#[derive(Clone)]
+pub struct LoginService {
+    state_key: StateKey,
+    http_config: HttpConfig,
+    identity_provider_repo: Arc<dyn IdentityProviderRepository>,
+    issued_token_repo: Arc<dyn IssuedTokenRepository>,
+    tms_identity_repo: Arc<dyn TmsIdentityRepository>,
+    key_repo: Arc<dyn KeyRepository>,
+    authorization_code_exchange_gateway: Arc<dyn AuthorizationCodeExchangeGateway>,
+}
+
+impl LoginService {
+    pub fn new(
+        state_key: StateKey,
+        http_config: HttpConfig,
+        identity_provider_repo: Arc<dyn IdentityProviderRepository>,
+        issued_token_repo: Arc<dyn IssuedTokenRepository>,
+        tms_identity_repo: Arc<dyn TmsIdentityRepository>,
+        key_repo: Arc<dyn KeyRepository>,
+        authorization_code_exchange_gateway: Arc<dyn AuthorizationCodeExchangeGateway>,
+    ) -> Self {
+        Self {
+            state_key,
+            http_config,
+            identity_provider_repo,
+            issued_token_repo,
+            tms_identity_repo,
+            key_repo,
+            authorization_code_exchange_gateway,
+        }
+    }
+
+    pub async fn list_identity_providers(&self) -> Result<HashSet<IdentityProvider>> {
+        self.identity_provider_repo.list_login_providers().await
+    }
+
+    pub async fn whoami(&self, ctx: &SecurityContext) -> anyhow::Result<WhoAmIResponse, AppError> {
+        let token_header = decode_header(&ctx.token)?;
+        
+        let key = match token_header.kid {
+            Some(kid) => self.key_repo.get_by_id(&kid).await,
+            None => return Err(BadRequest(String::from("Unable to find key for jwt")).into()),
+        }?;
+    
+        let tms_token_claims: TmsTokenClaims = JwtDecoderBuilder::builder()
+            .public_key(key.jwt_public_key.as_bytes())
+            .decode(&ctx.token)
+            .await
+            .context("Error decoding JWT")?;
+    
+        let idp_provider = &tms_token_claims.tms_idp_provider;
+        let token_provider = match idp_provider {
+            IdentityProviderType::Globus => GlobusTokenProvider {},
+            _ => {
+                return Err(ServiceError::Internal(format!(
+                    "Unsupported provider type {0}",
+                    idp_provider
+                ))
+                .into());
+            }
+        };
+    
+        token_provider.whoami(&tms_token_claims)
+    }
+
+    // Logout and return the redirct url
+    pub async fn logout(&self, ctx: &SecurityContext) -> Result<RedirectUrl> {
+        self.issued_token_repo.revoke(&ctx.token).await?;
+        Ok(RedirectUrl(self.http_config.base_url.clone()))
+    }
+
+    pub async fn handle_callback(
+        &self,
+        configuration: &Configuration,
+        state: &str,
+        code: &str,
+        cookie_state: &str,
+    ) -> Result<(String, i64)> {
+        if !cookie_state.eq(state) {
+            return Err(Unauthorized("State cookies do not match".to_string()).into());
+        }
+
+        let keys = &self.state_key.key;
+        // let decoding_key = Some(DecodingKey::from_rsa_pem(&keys.jwt_public_key.as_bytes())?);
+
+        let decoded_state = JwtDecoderBuilder::builder()
+            .public_key(keys.jwt_public_key.as_bytes())
+            .validate_aud(false)
+            .decode::<OAuth2State>(state.into())
+            .await?;
+        
+        let idp = self.identity_provider_repo
+            .get_login_provider_by_id(&decoded_state.idp_id)
+            .await?;
+        
+        let oauth_token_set = self.authorization_code_exchange_gateway
+            .exchange(
+                &idp,
+                ExchangeInput {
+                    code: code.into(),
+                    callback_url: self.http_config
+                        .get_identity_provider_callback_url().clone(),
+                }
+            )
+            .await?;
+    
+        let mut claims: HashMap<String, Value> = decode_access_token(&idp, &oauth_token_set.id_token).await?;
+
+        // TODO: get iss from config
+        claims.insert("iss".to_string(), Value::from(TMS_ISSUER));
+    
+        let tms_token_claims = get_tms_token_claims(
+            configuration,
+            &decoded_state.client_id,
+            &idp.id,
+            &idp.identity_provider_type,
+            &claims,
+        )
+        .await?;
+    
+        // make sure the tms_identity is stored in the db
+        let sub = tms_token_claims.get_sub()?;
+        let _tms_identity = self.tms_identity_repo.insert_if_absent(&sub).await?;
+
+        // let http_config = db_get_http_config(&mut tx).await?;
+        let jwt_config = &configuration.jwt_config;
+        let kid = &jwt_config.signing_key_kid;
+        let keys = &jwt_config.key;
+        // let tms_token_claims = get_tms_token_claims(&http_config,
+        //         &jwt_config, &client_id, &idp_id, &idp_type, &claims).await?;
+
+        // TODO: add kid, alg, and jti in header ... maybe other stuff?
+        let tms_token_string = JwtEncoderBuilder::builder(
+            tms_token_claims.clone(),
+            keys.jwt_private_key.as_bytes(),
+            DEFAULT_ALGORITHM,
+            kid,
+        )
+            .encode()
+            .await?;
+
+        let _issued_token = self.issued_token_repo
+            .insert(&tms_token_string, &tms_token_claims.get_expires_at_dt()?)
+            .await?;
+
+        Ok((tms_token_string, tms_token_claims.get_expires_in()?))
+    }
+}
+
+pub struct RedirectUrl(String);
+
+impl RedirectUrl {
+    pub fn into_inner(self) -> String {
+        self.0
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AuthorizationCodeResponse {
@@ -35,104 +193,4 @@ pub struct AuthorizationCodeResponse {
     pub token_type: String,
     pub expires_in: u64,
     //    pub refresh_token_iat: u64,
-}
-pub async fn get_identity_providers(pool: &PgPool) -> Result<HashSet<IdentityProvider>> {
-    let mut tx = pool.begin().await?;
-    let idps = get_login_providers(&mut tx).await?;
-    tx.commit().await?;
-
-    let mut idp_result = HashSet::new();
-    idps.iter().for_each(|idp| {
-        idp_result.insert(idp.clone());
-    });
-    Ok(idp_result)
-}
-
-pub async fn handle_callback(
-    configuration: &Configuration,
-    db_pool: &PgPool,
-    state: &String,
-    code: &String,
-    cookie_state: &String,
-) -> Result<(String, i64)> {
-    if !cookie_state.eq(state) {
-        return Err(Unauthorized("State cookies do not match".to_string()).into());
-    }
-
-    let decoded_state: OAuth2State = decode_state(&configuration.state_key, state)
-        .await
-        .context("Unable to decode state query param")?;
-
-    let mut tx = db_pool.begin().await?;
-    let idp = get_login_provider_by_id(&mut tx, &decoded_state.idp_id)
-        .await
-        .context("Unable to get idp for database")?;
-    tx.commit().await?;
-
-    let token: AuthorizationCodeResponse = get_token_for_provider(
-        &idp,
-        &configuration
-            .http_config
-            .get_identity_provider_callback_url(),
-        code,
-    )
-    .await?;
-
-    let mut claims: HashMap<String, Value> = decode_access_token(&idp, &token.id_token).await?;
-    // TODO: get iss from config
-    claims.insert("iss".to_string(), Value::from("https://tms.tacc.edu/"));
-
-    let tms_token_claims = get_tms_token_claims(
-        configuration,
-        &decoded_state.client_id,
-        &idp.id,
-        &idp.identity_provider_type,
-        &claims,
-    )
-    .await?;
-
-    // make sure the tms_identity is stored in the db
-    let mut tx = db_pool.begin().await?;
-    let tms_identity = tms_token_claims.get_sub()?;
-    db_insert_tms_identity_if_absent(&mut tx, &tms_identity).await?;
-    tx.commit().await?;
-    let tms_token = make_auth_token(configuration, db_pool, &tms_token_claims).await?;
-    Ok((tms_token, tms_token_claims.get_expires_in()?))
-}
-
-pub async fn logout(db_pool: &PgPool, token: &String) -> Result<()> {
-    let mut tx = db_pool.begin().await?;
-    db_revoke_token(&mut tx, token).await?;
-    tx.commit().await?;
-    Ok(())
-}
-
-pub async fn whoami(db_pool: &PgPool, token: &String) -> anyhow::Result<WhoAmIResponse, AppError> {
-    let token_header = decode_header(token)?;
-    let mut tx = db_pool.begin().await?;
-    let key = match token_header.kid {
-        Some(kid) => get_key_by_id(&mut tx, &kid).await,
-        None => return Err(BadRequest(String::from("Unable to find key for jwt")).into()),
-    }?;
-    tx.commit().await?;
-
-    let tms_token_claims: TmsTokenClaims = JwtDecoderBuilder::builder()
-        .public_key(key.jwt_public_key.as_bytes())
-        .decode(token)
-        .await
-        .context("Error decoding JWT")?;
-
-    let idp_provider = &tms_token_claims.tms_idp_provider;
-    let token_provider = match idp_provider {
-        IdentityProviderType::Globus => GlobusTokenProvider {},
-        _ => {
-            return Err(ServiceError::Internal(format!(
-                "Unsupported provider type {0}",
-                idp_provider
-            ))
-            .into());
-        }
-    };
-
-    token_provider.whoami(&tms_token_claims)
 }

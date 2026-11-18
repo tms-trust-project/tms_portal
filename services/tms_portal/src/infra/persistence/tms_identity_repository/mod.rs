@@ -28,7 +28,7 @@ impl From<&PgRow> for TmsIdentity {
 
 #[async_trait::async_trait]
 impl TmsIdentityRepository for PostgresTmsIdentityRepository {
-    async fn get(&self, tms_identity: &String) -> anyhow::Result<TmsIdentity> {
+    async fn get(&self, tms_identity: &str) -> anyhow::Result<TmsIdentity> {
         let row = query("select * from tms_identity where tms_identity = $1")
             .bind(tms_identity)
             .fetch_one(&self.db_pool)
@@ -42,7 +42,7 @@ impl TmsIdentityRepository for PostgresTmsIdentityRepository {
         Ok(TmsIdentity::from(&row))
     }
 
-    async fn insert_if_absent(&self, tms_identity: &String) -> anyhow::Result<TmsIdentity> {
+    async fn insert_if_absent(&self, tms_identity: &str) -> anyhow::Result<TmsIdentity> {
         // on conflict do update ... really does nothing, but it ensures that a record is returned
         let row = query("insert into tms_identities (tms_identity) values ($1) on conflict(tms_identity) do update set tms_identity = EXCLUDED.tms_identity returning *")
             .bind(tms_identity)

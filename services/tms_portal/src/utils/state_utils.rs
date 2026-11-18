@@ -22,7 +22,7 @@ where
     .await
 }
 
-pub async fn decode_state<T>(state_key: &StateKey, state_string: &String) -> anyhow::Result<T>
+pub async fn decode_state<T>(state_key: &StateKey, state_string: &str) -> anyhow::Result<T>
 where
     T: DeserializeOwned,
 {
