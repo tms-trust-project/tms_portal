@@ -4,7 +4,7 @@ use crate::obj_model::identity_provider::{IdentityProvider, IdentityProviderType
 use crate::ports::identity_porvider::IdentityProviderRepository;
 use anyhow::{Result, anyhow};
 use sqlx::postgres::PgRow;
-use sqlx::{Error, PgPool, PgTransaction, Row, query};
+use sqlx::{Error, PgPool, Row, query};
 use std::collections::HashSet;
 use std::str::FromStr;
 use tms_lib::utils::service_error::{ServiceError::BadRequest, ServiceError::NotFound};
