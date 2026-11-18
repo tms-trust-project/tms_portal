@@ -7,6 +7,7 @@ pub mod services;
 pub mod utils;
 pub mod constants;
 
+use services::client_service::ClientService;
 use services::login_service::LoginService;
 use sqlx::PgPool;
 use url::Url;
@@ -18,6 +19,7 @@ use crate::utils::configuration::Configuration;
 pub struct AppState {
     pub db_pool: PgPool,
     pub config: Configuration,
+    pub client_service: ClientService,
     pub delegation_service: DelegationService,
     pub login_service: LoginService,
 }

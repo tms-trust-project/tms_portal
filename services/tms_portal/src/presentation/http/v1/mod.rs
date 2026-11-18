@@ -5,3 +5,4 @@ pub mod openapi;
 pub mod resources;
 pub mod utils;
 pub mod well_known;
+pub mod clients;

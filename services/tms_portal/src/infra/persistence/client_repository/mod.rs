@@ -19,6 +19,14 @@ impl PostgresClientRepository {
 
 #[async_trait::async_trait]
 impl ClientRepository for PostgresClientRepository {
+    async fn list(&self) -> anyhow::Result<Vec<Client>> {
+        let rows = query("select * from clients")
+            .fetch_all(&self.db_pool)
+            .await?;
+
+        Ok(rows.iter().map(Client::from).collect())
+    }
+
     async fn get_by_id(&self, client_id: &str) -> anyhow::Result<Client> {
         let row = query("select * from clients where client_id = $1")
             .bind(client_id)

@@ -19,6 +19,7 @@ use tms_portal::presentation::http::v1::{
     oauth2::router as oauth_router, openapi::ApiDoc, resources::router as resources_router,
     well_known::router as well_known_router,
 };
+use tms_portal::services::client_service::ClientService;
 use tms_portal::services::delegation_service::DelegationService;
 use tms_portal::services::login_service::LoginService;
 use tms_portal::utils::app_error::AppError;
@@ -47,7 +48,7 @@ async fn main() -> anyhow::Result<()> {
     dbg!(&database_url_string);
     let db_pool = init_db(&database_url_string).await;
     let config = Configuration::from_env()?;
-    let client_repo = PostgresClientRepository::new(db_pool.clone());
+    let client_repo = Arc::new(PostgresClientRepository::new(db_pool.clone()));
     let delegation_repo = PostgresDelegationRepository::new(db_pool.clone());
     let resource_provider_login_repo = PostgresResourceProviderLoginRepository::new(db_pool.clone());
     let identity_provider_repo = PostgresIdentityProviderRepository::new(db_pool.clone());
@@ -59,10 +60,12 @@ async fn main() -> anyhow::Result<()> {
     // Initialize delegation service
     let delegation_service = DelegationService::new(
         config.delegation_policy_config.clone(),
-        Arc::new(client_repo),
+        client_repo.clone(),
         Arc::new(delegation_repo),
         Arc::new(resource_provider_login_repo),
     );
+
+    let client_service = ClientService::new(client_repo);
 
     // Initialize Login Service
     let login_service = LoginService::new(
@@ -81,6 +84,7 @@ async fn main() -> anyhow::Result<()> {
         // // TODO:  You probably don't wanna generate a new one each time the app starts though
         // key: Key::generate(),
         db_pool: db_pool.clone(),
+        client_service,
         delegation_service,
         login_service,
         config,

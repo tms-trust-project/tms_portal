@@ -24,6 +24,14 @@ impl MockClientRepo {
 
 #[async_trait::async_trait]
 impl ClientRepository for MockClientRepo {
+    async fn list(&self) -> anyhow::Result<Vec<Client>> {
+        if let Some(error) = self.configured_error() {
+            return Err(error);
+        }
+
+        Ok(self.clients.clone())
+    }
+
     async fn get_by_id(&self, client_id: &str) -> anyhow::Result<Client> {
         if let Some(error) = self.configured_error() {
             return Err(error);
