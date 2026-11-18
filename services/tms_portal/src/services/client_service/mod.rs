@@ -38,6 +38,12 @@ impl ClientService {
             allowed_redirects: redirects,
         })
     }
+
+    pub async fn list_allowed_redirects_for_client(&self, client_id: &str) -> anyhow::Result<Vec<AllowedRedirect>> {
+        Ok(self.allowed_redirect_repo
+            .list_by_client_id(&client_id)
+            .await?)
+    }
 }
 
 pub struct ClientDetail {

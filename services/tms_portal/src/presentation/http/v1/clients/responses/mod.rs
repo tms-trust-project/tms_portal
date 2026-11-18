@@ -53,3 +53,22 @@ impl From<ClientDetailOutput> for ClientDetails {
         }
     }
 }
+
+#[derive(Debug, Hash, Serialize, ToSchema, Clone, PartialEq, Eq)]
+pub struct AllowedRedirect {
+    pub uri: String,
+    pub client_id: String,
+    pub created: String,
+    pub updated: String,
+}
+
+impl From<obj_model::allowed_redirect::AllowedRedirect> for AllowedRedirect {
+    fn from(value: obj_model::allowed_redirect::AllowedRedirect) -> Self {
+        AllowedRedirect {
+            uri: value.uri,
+            client_id: value.client_id,
+            created: value.created.to_rfc3339(),
+            updated: value.updated.to_rfc3339(),
+        }
+    }
+}

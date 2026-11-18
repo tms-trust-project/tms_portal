@@ -5,10 +5,10 @@ use super::delegations::handlers::{
     list_delegations::__path_list_delegations,
     list_delegations_by_client_id::__path_list_delegations_by_client_id,
 };
-
 use super::clients::handlers::{
     get_client_by_id::__path_get_client_by_id,
     list_clients::__path_list_clients,
+    list_allowed_redirects_for_client::__path_list_allowed_redirects_for_client,
 };
 
 #[derive(OpenApi)]
@@ -23,6 +23,7 @@ use super::clients::handlers::{
         delete_delegation,
         get_client_by_id,
         list_clients,
+        list_allowed_redirects_for_client
     ),
     components(schemas()),
     info(title = "TMS Portal", version="1.0.0")

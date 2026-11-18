@@ -62,6 +62,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TmsErrorResponse'
+  /clients/{client_id}/allowed-redirects:
+    get:
+      tags:
+      - Clients
+      summary: List all redirect URIs for a client
+      operationId: list_allowed_redirects_for_client
+      responses:
+        '200':
+          description: Allowed Redirects listed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AllowedRedirect'
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TmsErrorResponse'
   /delegations:
     get:
       tags:
@@ -217,6 +238,22 @@ components:
           type: integer
           format: int32
           minimum: 0
+    AllowedRedirect:
+      type: object
+      required:
+      - uri
+      - client_id
+      - created
+      - updated
+      properties:
+        client_id:
+          type: string
+        created:
+          type: string
+        updated:
+          type: string
+        uri:
+          type: string
     Client:
       type: object
       required:
