@@ -5,8 +5,7 @@ use utoipa::ToSchema;
 
 #[derive(Debug, Hash, Serialize, ToSchema, Clone, PartialEq, Eq)]
 pub struct Client {
-    pub id: i32,
-    pub client_id: String,
+    pub id: String,
     pub name: String,
     pub enabled: bool,
     pub created: String,
@@ -16,8 +15,7 @@ pub struct Client {
 impl From<obj_model::client::Client> for Client {
     fn from(value: obj_model::client::Client) -> Self {
         Client {
-            id: value.id,
-            client_id: value.client_id,
+            id: value.client_id,
             name: value.name,
             enabled: value.enabled,
             created: value.created.to_rfc3339(),
@@ -28,8 +26,7 @@ impl From<obj_model::client::Client> for Client {
 
 #[derive(Debug, Hash, Serialize, ToSchema, Clone, PartialEq, Eq)]
 pub struct ClientDetails {
-    pub id: i32,
-    pub client_id: String,
+    pub id: String,
     pub name: String,
     pub enabled: bool,
     pub created: String,
@@ -40,8 +37,7 @@ pub struct ClientDetails {
 impl From<ClientDetailOutput> for ClientDetails {
     fn from(value: ClientDetailOutput) -> Self {
         ClientDetails {
-            id: value.client.id,
-            client_id: value.client.client_id,
+            id: value.client.client_id,
             name: value.client.name,
             enabled: value.client.enabled,
             created: value.client.created.to_rfc3339(),

@@ -258,21 +258,17 @@ components:
       type: object
       required:
       - id
-      - client_id
       - name
       - enabled
       - created
       - updated
       properties:
-        client_id:
-          type: string
         created:
           type: string
         enabled:
           type: boolean
         id:
-          type: integer
-          format: int32
+          type: string
         name:
           type: string
         updated:
@@ -281,7 +277,6 @@ components:
       type: object
       required:
       - id
-      - client_id
       - name
       - enabled
       - created
@@ -292,15 +287,12 @@ components:
           type: array
           items:
             type: string
-        client_id:
-          type: string
         created:
           type: string
         enabled:
           type: boolean
         id:
-          type: integer
-          format: int32
+          type: string
         name:
           type: string
         updated:
