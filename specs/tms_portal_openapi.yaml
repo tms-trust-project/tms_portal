@@ -7,8 +7,61 @@ info:
   version: 1.0.0
 servers:
 - url: http://localhost:3000
-  description: Local HTTP server
+  description: Local TMS Portal HTTP server
 paths:
+  /clients:
+    get:
+      tags:
+      - Clients
+      summary: List all clients
+      operationId: list_clients
+      responses:
+        '200':
+          description: Clients listed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Client'
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TmsErrorResponse'
+  /clients/{client_id}:
+    get:
+      tags:
+      - Clients
+      summary: Find a client by its client identifier.
+      operationId: get_client_by_id
+      parameters:
+      - name: client_id
+        in: path
+        description: Client identifier
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Client found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '404':
+          description: Client not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TmsErrorResponse'
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TmsErrorResponse'
   /delegations:
     get:
       tags:
@@ -164,6 +217,29 @@ components:
           type: integer
           format: int32
           minimum: 0
+    Client:
+      type: object
+      required:
+      - id
+      - client_id
+      - name
+      - enabled
+      - created
+      - updated
+      properties:
+        client_id:
+          type: string
+        created:
+          type: string
+        enabled:
+          type: boolean
+        id:
+          type: integer
+          format: int32
+        name:
+          type: string
+        updated:
+          type: string
     Delegation:
       type: object
       required:
