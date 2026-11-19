@@ -21,11 +21,12 @@ jobs:
         run: |
           image_tag="$GITHUB_REF_NAME"
 
-          echo "${image_tag}"
-
           if [[ "$GITHUB_REF_TYPE" == "tag" && "$image_tag" == v* ]]; then
             image_tag="${image_tag#v}"
           fi
+
+          # Replaces / in the ref name with -
+          image_tag=$(echo $image_tag | sed -e "s|/|-|g")
 
           echo "image_tag=$image_tag" >> "$GITHUB_OUTPUT"
 
