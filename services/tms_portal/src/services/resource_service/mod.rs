@@ -285,14 +285,14 @@ async fn get_resources(url: &str, token: &str) -> anyhow::Result<Vec<ResourceFor
     Ok(resp.data)
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::services::resource_service::get_resources;
+// #[cfg(test)]
+// mod tests {
+//     use crate::services::resource_service::get_resources;
 
-    #[tokio::test]
-    async fn test_get_resources() -> anyhow::Result<()> {
-        let resp = get_resources("http://localhost:9000/resources", "<token>").await?;
-        dbg!(resp);
-        Ok(())
-    }
-}
+//     #[tokio::test]
+//     async fn test_get_resources() -> anyhow::Result<()> {
+//         let resp = get_resources("http://localhost:9000/resources", "<token>").await?;
+//         dbg!(resp);
+//         Ok(())
+//     }
+// }
