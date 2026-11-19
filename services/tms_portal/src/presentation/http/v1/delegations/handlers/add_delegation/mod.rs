@@ -2,6 +2,7 @@ use crate::AppState;
 use crate::presentation::http::v1::delegations::requests::AddDelegationRequestBody;
 use crate::presentation::http::v1::delegations::responses::{AddDelegationResponse, Delegation};
 use crate::presentation::http::v1::utils::tms_response::TmsResponse;
+use crate::services::delegation_service::DelegationService;
 
 use crate::utils::app_error::AppError;
 use crate::utils::jwt_utils::JwtValidator;
@@ -41,14 +42,13 @@ use http::StatusCode;
         )
     )
 )]
-#[axum::debug_handler]
+#[axum::debug_handler(state = AppState)]
 pub async fn add_delegation(
-    State(app_state): State<AppState>,
+    State(delegation_service): State<DelegationService>,
     JwtValidator(security_context): JwtValidator,
     Json(body): Json<AddDelegationRequestBody>,
 ) -> anyhow::Result<TmsResponse<Delegation>, AppError> {
-    let delegation = app_state
-        .delegation_service
+    let delegation = delegation_service
         .add_delegation(
             &security_context,
             &body.client_name,
@@ -62,7 +62,6 @@ pub async fn add_delegation(
         .build())
 }
 
-// TODO Uncomment after refactor
-// #[cfg(test)]
-// #[path = "add_delegation.test.rs"]
-// mod add_delegation_test;
+#[cfg(test)]
+#[path = "add_delegation.test.rs"]
+mod add_delegation_test;

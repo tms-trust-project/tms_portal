@@ -2,28 +2,19 @@ use std::sync::Arc;
 
 use axum::{Json, extract::State};
 use http::StatusCode;
-use sqlx::postgres::PgPoolOptions;
 
 use crate::{
-    AppState,
     infra::persistence::{
         client_repository::test_fixtures::MockClientRepo,
         delegation_repository::test_fixtures::MockDelegationRepo,
         resource_provider_login_repository::test_fixtures::MockResourceProviderLoginRepo,
     },
     obj_model::{
-        client::test_fixtures::ClientBuilder,
-        configuration::{
-            DelegationPolicyConfig, HttpConfig, JwtConfig, OAuthConfig, RuntimeConfig, StateKey,
-        },
-        key::Key,
+        client::test_fixtures::ClientBuilder, configuration::DelegationPolicyConfig,
         resource::test_fixtures::ResourceProviderLoginBuilder,
     },
     services::delegation_service::DelegationService,
-    utils::{
-        configuration::Configuration,
-        jwt_utils::{JwtValidator, SecurityContext},
-    },
+    utils::jwt_utils::{JwtValidator, SecurityContext},
 };
 
 use super::{AddDelegationRequestBody, add_delegation};
@@ -55,15 +46,6 @@ async fn adds_a_delegation_and_maps_it_to_the_api_response() {
         Arc::new(MockResourceProviderLoginRepo::new(vec![recent_login])),
     );
 
-    let app_state = AppState {
-        // This handler only uses delegation_service. A lazy pool keeps this a unit test.
-        db_pool: PgPoolOptions::new()
-            .connect_lazy("postgres://unused:unused@localhost/unused")
-            .expect("the test database URL should be valid"),
-        config: test_configuration(delegation_policy),
-        delegation_service,
-    };
-
     let security_context = SecurityContext {
         tms_identity: tms_identity.into(),
         token: "test-token".into(),
@@ -78,7 +60,8 @@ async fn adds_a_delegation_and_maps_it_to_the_api_response() {
     };
 
     let response_result =
-        add_delegation(State(app_state), JwtValidator(security_context), Json(request)).await;
+        add_delegation(State(delegation_service), JwtValidator(security_context), Json(request))
+            .await;
 
     let response = match response_result {
         Ok(response) => response,
@@ -95,15 +78,4 @@ async fn adds_a_delegation_and_maps_it_to_the_api_response() {
     assert_eq!(delegation.tms_identity, tms_identity);
     assert_eq!(delegation.rp_id, resource_provider_id);
     assert_eq!(delegation.rp_account, resource_provider_account);
-}
-
-fn test_configuration(delegation_policy_config: DelegationPolicyConfig) -> Configuration {
-    Configuration {
-        http_config: HttpConfig::default(),
-        oauth_config: OAuthConfig { login_oauth_provider: "test-oauth-provider".into() },
-        jwt_config: JwtConfig::default(),
-        runtime_config: RuntimeConfig::default(),
-        delegation_policy_config,
-        state_key: StateKey { kid: "test-state-key".into(), key: Key::default() },
-    }
 }

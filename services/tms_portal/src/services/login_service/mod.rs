@@ -12,7 +12,7 @@ use crate::utils::app_error::AppError;
 use crate::utils::configuration::Configuration;
 use crate::utils::jwt_utils::{SecurityContext, TmsTokenClaims, get_tms_token_claims};
 use crate::utils::oauth2_authorization_code_utils::{
-    OAuth2State, decode_access_token, get_token_for_provider,
+    OAuth2State, decode_access_token,
 };
 use crate::constants::{DEFAULT_ALGORITHM, TMS_ISSUER};
 use anyhow::{Context, Result};

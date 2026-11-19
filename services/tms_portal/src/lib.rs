@@ -7,6 +7,7 @@ pub mod services;
 pub mod utils;
 pub mod constants;
 
+use axum::extract::FromRef;
 use services::client_service::ClientService;
 use services::login_service::LoginService;
 use sqlx::PgPool;
@@ -22,6 +23,12 @@ pub struct AppState {
     pub client_service: ClientService,
     pub delegation_service: DelegationService,
     pub login_service: LoginService,
+}
+
+impl FromRef<AppState> for DelegationService {
+    fn from_ref(app_state: &AppState) -> Self {
+        app_state.delegation_service.clone()
+    }
 }
 
 pub fn database_url() -> anyhow::Result<String> {
