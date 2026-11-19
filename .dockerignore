@@ -1,2 +1,4 @@
 client/node_modules/
 client/.pnpm_store/
+target/
+**/target/
