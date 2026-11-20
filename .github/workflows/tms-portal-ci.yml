@@ -11,7 +11,18 @@ on:
         type: string
 
 jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Run Tests
+        run: cargo test -p services/tms_portal
+
   build-push-api-image:
+    needs:
+      - tests
     runs-on: ubuntu-latest
     steps:
       - name: Docker Login
