@@ -18,7 +18,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
       - name: Run Tests
-        run: cargo test -p services/tms_portal
+        run: cargo test -p tms_portal
 
   build-push-api-image:
     needs:
