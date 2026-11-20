@@ -9,3 +9,4 @@ pub mod login;
 pub(crate) mod oauth;
 pub mod resource;
 pub mod tms_identity;
+pub mod institutions;

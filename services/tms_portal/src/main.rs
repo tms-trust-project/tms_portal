@@ -13,17 +13,20 @@ use tms_portal::infra::persistence::{
     identity_provider_repository::PostgresIdentityProviderRepository,
     issued_token_repository::PostgresIssuedTokenRepository,
     issued_token_repository::issued_tokens_dao,
+    institution_repository::PostgresInstitutionRepository,
     key_repository::PostgresKeyRepository,
     resource_provider_login_repository::PostgresResourceProviderLoginRepository,
     tms_identity_repository::PostgresTmsIdentityRepository,
 };
 use tms_portal::presentation::http::v1::{
     delegations::router as delegations_router, login::router as login_router,
+    institutions::router as institutions_router,
     oauth2::router as oauth_router, openapi::ApiDoc, resources::router as resources_router,
     well_known::router as well_known_router,
 };
 use tms_portal::services::client_service::ClientService;
 use tms_portal::services::delegation_service::DelegationService;
+use tms_portal::services::institution_service::InstitutionService;
 use tms_portal::services::login_service::LoginService;
 use tms_portal::utils::app_error::AppError;
 use tms_portal::utils::configuration::Configuration;
@@ -56,6 +59,7 @@ async fn main() -> anyhow::Result<()> {
     let resource_provider_login_repo = PostgresResourceProviderLoginRepository::new(db_pool.clone());
     let identity_provider_repo = PostgresIdentityProviderRepository::new(db_pool.clone());
     let issued_token_repo = PostgresIssuedTokenRepository::new(db_pool.clone());
+    let institution_repo = PostgresInstitutionRepository::new(db_pool.clone());
     let tms_identity_repo = PostgresTmsIdentityRepository::new(db_pool.clone());
     let key_repo = PostgresKeyRepository::new(db_pool.clone());
     let allowed_redirect_repo = PostgresAllowedRedirectRepository::new(db_pool.clone());
@@ -73,6 +77,8 @@ async fn main() -> anyhow::Result<()> {
         client_repo,
         Arc::new(allowed_redirect_repo),
     );
+
+    let institution_service = InstitutionService::new(Arc::new(institution_repo));
 
     // Initialize Login Service
     let login_service = LoginService::new(
@@ -93,6 +99,7 @@ async fn main() -> anyhow::Result<()> {
         db_pool: db_pool.clone(),
         client_service,
         delegation_service,
+        institution_service,
         login_service,
         config,
     };
@@ -147,6 +154,7 @@ async fn main() -> anyhow::Result<()> {
         //        .merge(auth::router().await)
         .merge(well_known_router().await)
         .merge(login_router().await)
+        .merge(institutions_router().await)
         .merge(resources_router().await)
         .merge(oauth_router().await)
         .merge(delegations_router)

@@ -9,6 +9,7 @@ pub mod constants;
 
 use axum::extract::FromRef;
 use services::client_service::ClientService;
+use services::institution_service::InstitutionService;
 use services::login_service::LoginService;
 use sqlx::PgPool;
 use url::Url;
@@ -22,6 +23,7 @@ pub struct AppState {
     pub config: Configuration,
     pub client_service: ClientService,
     pub delegation_service: DelegationService,
+    pub institution_service: InstitutionService,
     pub login_service: LoginService,
 }
 
