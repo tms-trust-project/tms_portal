@@ -1,0 +1,17 @@
+#[cfg(test)]
+pub mod test_fixtures;
+
+use chrono::{DateTime, Utc};
+
+#[derive(Debug, Clone)]
+pub struct Delegation {
+    pub id: i32,
+    pub client_id: String,
+    pub client_name: String,
+    pub expires_at: DateTime<Utc>,
+    pub created: DateTime<Utc>,
+    pub updated: DateTime<Utc>,
+    pub tms_identity: String,
+    pub rp_account: String,
+    pub rp_id: String,
+}

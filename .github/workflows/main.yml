@@ -1,0 +1,41 @@
+name: TMS Portal CI
+
+on:
+  push:
+    branches: [ dev, staging, main ]
+    tags:
+      - 'v*.*.*'
+      - 'v*'
+  pull_request:
+    branches: [ dev, staging, main ]
+
+jobs:
+  resolve-image-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.resolve.outputs.image_tag }}
+    steps:
+      - id: resolve
+        name: Set_image
+        shell: bash
+        run: |
+          image_tag="$GITHUB_REF_NAME"
+
+          if [[ "$GITHUB_REF_TYPE" == "tag" && "$image_tag" == v* ]]; then
+            image_tag="${image_tag#v}"
+          fi
+
+          # Replaces "/" in the ref name with "-""
+          image_tag=$(echo $image_tag | sed -e "s|/|-|g")
+
+          echo "image_tag=$image_tag" >> "$GITHUB_OUTPUT"
+
+  tms-portal:
+    needs:
+      - resolve-image-tag
+    #   - tests
+    secrets: inherit
+    uses: ./.github/workflows/tms-portal-ci.yml
+    with:
+      image_name: tapis/tms-portal
+      image_tag: ${{ needs.resolve-image-tag.outputs.image_tag }}

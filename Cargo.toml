@@ -1,9 +1,12 @@
 [workspace]
-build = "build.rs"
 resolver = "3"
 members = [
-    "application",
-    "libraries/tms_lib",
-    "libraries/tms_proc_macros"
+    "services/tms_portal",
+    "libs/tms_lib",
+    "libs/tms_proc_macros"
 ]
 
+[workspace.dependencies]
+serde = { version = "1.0.217", features = ["derive"] }
+serde_json = "1.0.135"
+utoipa = { version = "6.0.0", features = ["axum_extras", "yaml"] }
