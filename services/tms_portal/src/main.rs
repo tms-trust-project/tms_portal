@@ -174,7 +174,8 @@ async fn main() -> anyhow::Result<()> {
         )
         .nest_service("/debug", ServeFile::new("dist/debug.html"))
         .nest_service("/assets", ServeDir::new("dist/assets"))
-        .fallback_service(ServeDir::new("dist/").not_found_service(not_found.into_service()))
+        .fallback_service(ServeDir::new("dist/")
+        .not_found_service(not_found.into_service()))
         .method_not_allowed_fallback(method_not_allowed);
 
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", &port))

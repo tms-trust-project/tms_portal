@@ -39,7 +39,6 @@ paths:
       parameters:
       - name: client_id
         in: path
-        description: Client identifier
         required: true
         schema:
           type: string
@@ -68,6 +67,12 @@ paths:
       - Clients
       summary: List all redirect URIs for a client
       operationId: list_allowed_redirects_for_client
+      parameters:
+      - name: client_id
+        in: path
+        required: true
+        schema:
+          type: string
       responses:
         '200':
           description: Allowed Redirects listed
@@ -211,6 +216,59 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TmsErrorResponse'
+  /institutions:
+    get:
+      tags:
+      - Institutions
+      summary: List all institutions.
+      operationId: list_institutions
+      responses:
+        '200':
+          description: Institutions listed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Institution'
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TmsErrorResponse'
+  /institutions/{institution_id}:
+    get:
+      tags:
+      - Institutions
+      summary: Find an institution by its institution identifier.
+      operationId: get_institution_by_id
+      parameters:
+      - name: institution_id
+        in: path
+        description: Institution identifier
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Institution found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Institution'
+        '404':
+          description: Institution not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TmsErrorResponse'
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TmsErrorResponse'
 components:
   schemas:
     AddDelegationRequestBody:
@@ -328,6 +386,39 @@ components:
         tms_identity:
           type: string
         updated:
+          type: string
+    FederatedIdentityConfig:
+      type: object
+      properties:
+        globus:
+          oneOf:
+          - $ref: '#/components/schemas/GlobusConfiguration'
+          - type: 'null'
+    GlobusConfiguration:
+      type: object
+      required:
+      - redirect_idp_domain
+      - idp_logout_url
+      properties:
+        idp_logout_url:
+          type: string
+        redirect_idp_domain:
+          type: string
+    Institution:
+      type: object
+      required:
+      - id
+      - name
+      - enabled
+      - federated_identity_config
+      properties:
+        enabled:
+          type: boolean
+        federated_identity_config:
+          $ref: '#/components/schemas/FederatedIdentityConfig'
+        id:
+          type: string
+        name:
           type: string
     TmsErrorResponse:
       type: object
