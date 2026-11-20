@@ -1,6 +1,6 @@
 -- Add the globus identity provider (as login identity provider)
 INSERT INTO identity_providers 
-        (id, name, client_id, client_secret, identity_redirect_url, 
+        (id, name, oauth2_client_id, oauth2_client_secret, identity_redirect_url, 
                 oauth2_token_url, oauth2_jwks_url, oidc_user_info_url, 
                 scope, provider_type, supports_login, 
                 supports_resources)
@@ -13,7 +13,7 @@ VALUES
                 'openid profile email', 'globus', true, false);
 
 -- Add the tacc identity provider (as resource provider)
-INSERT INTO identity_providers (id, name, client_id, client_secret, identity_redirect_url, 
+INSERT INTO identity_providers (id, name, oauth2_client_id, oauth2_client_secret, identity_redirect_url, 
 oauth2_token_url, oauth2_jwks_url, oidc_user_info_url, scope, provider_type, supports_login, 
 supports_resources, resources_services_url) 
 VALUES ('tacc', 'TACC Resource Provider', '${TACC_RP_CLIENT_ID}',
