@@ -9,6 +9,7 @@ import { useAuth } from "./tms-hooks/useAuth"
 import { LinkSuccessAlert } from "./components/tms-ui/LinkSuccessAlert"
 import { DelegationsListing } from "./components/tms-ui/DelegationsListing"
 import { LinkIdentityModal } from "./components/tms-ui/LinkIdentityModal"
+import { ClientSelect } from "./components/tms-ui/ClientSelect"
 //import { ProviderWizard } from "./components/tms-ui/ProviderWizard"
 
 function ProviderCardList() {
@@ -64,6 +65,7 @@ function App() {
         )}
         {!!isAuthenticated && (
           <>
+            <ClientSelect />
             <h2 className="flex items-center gap-2 text-lg font-semibold">
               Linked Providers <LinkIdentityModal />
             </h2>
