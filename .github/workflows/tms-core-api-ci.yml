@@ -1,4 +1,4 @@
-name: TMS Portal API
+name: TMS Core API
 
 on:
   workflow_call:
