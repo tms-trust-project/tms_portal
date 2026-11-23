@@ -21,8 +21,6 @@ use axum::routing::{delete, get};
 use axum::{Router, debug_handler};
 use axum_extra::extract::CookieJar;
 use axum_extra::extract::cookie::Cookie;
-use base64::Engine;
-use base64::prelude::BASE64_STANDARD;
 use reqwest::StatusCode;
 use std::collections::{HashMap, HashSet};
 use std::string::ToString;
@@ -85,17 +83,13 @@ pub async fn authorize_handler(
         .http_only(true),
     );
 
-    let creds = format!(
-        "{}:{}",
-        authorize_info.client_id, authorize_info.client_secret
-    );
-    let authorization = format!("Basic {}", BASE64_STANDARD.encode(&creds));
+    // This response goes to the browser, so it must not carry the provider's client secret.
+    // The secret is only sent server to server, when the code is exchanged for a token.
     let mut headers = HashMap::new();
     headers.insert(
         "location".to_string(),
         authorize_info.identity_redirect_url.to_string(),
     );
-    headers.insert("Authorization".to_string(), authorization);
 
     Ok((
         updated_jar,

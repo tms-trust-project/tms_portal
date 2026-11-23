@@ -15,6 +15,8 @@ impl From<&PgRow> for Key {
     }
 }
 
+// unused since signing keys moved from the keys table to the configuration (TMS_PORTAL_SIGNING_KEY_*)
+#[allow(dead_code)]
 pub async fn db_get_key_by_id<'a>(tx: &mut PgTransaction<'a>, kid: &String) -> anyhow::Result<Key> {
     let row = query("select * from keys where kid = $1")
         .bind(kid)

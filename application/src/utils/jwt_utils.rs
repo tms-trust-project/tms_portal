@@ -1,7 +1,7 @@
 use crate::AppState;
 use crate::db::issued_tokens_dao::{db_get_token, db_insert_token};
-use crate::db::keys_dao::db_get_key_by_id;
 use crate::obj_model::identity_provider::IdentityProviderType;
+use crate::obj_model::keys::Key;
 use crate::utils::app_error::AppError;
 use crate::utils::configuration::Configuration;
 use crate::utils::oauth2_authorization_code_utils::CLIENT_ID_TMS;
@@ -109,7 +109,29 @@ impl TmsTokenClaims {
     }
 }
 
-async fn get_token_claims(db_pool: &PgPool, token: &String) -> Result<TmsTokenClaims> {
+/*
+The key a TMS token was signed with, found by the kid in its header.  Tokens are signed with
+the configured signing key (TMS_PORTAL_SIGNING_KEY_*), so that is the only key they can be
+verified with; the keys table is no longer filled since the configuration moved out of the db.
+ */
+pub fn get_signing_key<'a>(
+    configuration: &'a Configuration,
+    kid: &Option<String>,
+) -> Result<&'a Key> {
+    match kid {
+        Some(kid) if *kid == configuration.jwt_config.signing_key_kid => {
+            Ok(&configuration.jwt_config.key)
+        }
+        Some(kid) => Err(Unauthorized(format!("Unknown signing key {kid}")).into()),
+        None => Err(BadRequest(String::from("Unable to find key for jwt")).into()),
+    }
+}
+
+async fn get_token_claims(
+    configuration: &Configuration,
+    db_pool: &PgPool,
+    token: &String,
+) -> Result<TmsTokenClaims> {
     let token_header = match decode_header(token) {
         Ok(header) => header,
         Err(e) => return Err(Unauthorized(e.to_string()).into()),
@@ -120,11 +142,8 @@ async fn get_token_claims(db_pool: &PgPool, token: &String) -> Result<TmsTokenCl
     if issued_token.is_revoked() || issued_token.is_expired() {
         return Err(Unauthorized("Token is expired or revoked".to_string()).into());
     }
-    let key = match token_header.kid {
-        Some(kid) => db_get_key_by_id(&mut tx, &kid).await,
-        None => return Err(BadRequest(String::from("Unable to find key for jwt")).into()),
-    }?;
     tx.commit().await?;
+    let key = get_signing_key(configuration, &token_header.kid)?;
 
     let tms_token_claims: TmsTokenClaims = match JwtDecoderBuilder::builder()
         .public_key(key.jwt_public_key.as_bytes())
@@ -166,7 +185,8 @@ impl FromRequestParts<AppState> for JwtValidator {
         if bearer.is_empty() {
             Err(Unauthorized(String::from("Unable to find TMS token")).into())
         } else {
-            let jwt_claims = get_token_claims(&app_state.db_pool, &bearer).await?;
+            let jwt_claims =
+                get_token_claims(&app_state.config, &app_state.db_pool, &bearer).await?;
             let tms_identity = jwt_claims.get_sub()?;
             info!(
                 "Request uri: {} TMS Identity: {}",
@@ -304,5 +324,56 @@ pub fn token_matches_client(security_context: &SecurityContext, client_id: &Stri
         true
     } else {
         security_context.client_id == *client_id
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::obj_model::configuration::{
+        DelegationPolicyConfig, HttpConfig, JwtConfig, OAuthConfig, RuntimeConfig, StateKey,
+    };
+    use crate::obj_model::keys::Key;
+    use crate::utils::configuration::Configuration;
+    use crate::utils::jwt_utils::get_signing_key;
+
+    fn configuration() -> Configuration {
+        Configuration {
+            http_config: HttpConfig::default(),
+            oauth_config: OAuthConfig {
+                login_oauth_provider: "globus".to_string(),
+            },
+            jwt_config: JwtConfig {
+                signing_key_kid: "tms-token-key-1".to_string(),
+                key: Key {
+                    kid: "tms-token-key-1".to_string(),
+                    jwt_public_key: "public".to_string(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            runtime_config: RuntimeConfig::default(),
+            delegation_policy_config: DelegationPolicyConfig::default(),
+            state_key: StateKey {
+                kid: "tms-state-key-1".to_string(),
+                key: Key::default(),
+            },
+        }
+    }
+
+    #[test]
+    fn test_signing_key_is_the_configured_key() -> anyhow::Result<()> {
+        let configuration = configuration();
+        let key = get_signing_key(&configuration, &Some("tms-token-key-1".to_string()))?;
+        assert_eq!(key.jwt_public_key, "public");
+        Ok(())
+    }
+
+    #[test]
+    fn test_unknown_or_missing_kid_is_rejected() {
+        let configuration = configuration();
+        assert!(get_signing_key(&configuration, &Some("other-key".to_string())).is_err());
+        // the state key signs state, not tokens
+        assert!(get_signing_key(&configuration, &Some("tms-state-key-1".to_string())).is_err());
+        assert!(get_signing_key(&configuration, &None).is_err());
     }
 }
