@@ -8,8 +8,6 @@ export type Whoami = {
   user_name: string
   idpDisplayName: string
   organization: string
-  // sign-out page to open in a new tab (Tapis), since it can't redirect back
-  logoutUrl?: string
 }
 
 const fetchWhoami = async () => {
