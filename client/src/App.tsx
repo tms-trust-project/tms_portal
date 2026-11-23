@@ -9,6 +9,7 @@ import { useAuth } from "./tms-hooks/useAuth"
 import { LinkSuccessAlert } from "./components/tms-ui/LinkSuccessAlert"
 import { DelegationsListing } from "./components/tms-ui/DelegationsListing"
 import { LinkIdentityModal } from "./components/tms-ui/LinkIdentityModal"
+import { LoginLanding } from "./components/tms-ui/LoginLanding"
 //import { ProviderWizard } from "./components/tms-ui/ProviderWizard"
 
 function ProviderCardList() {
@@ -42,7 +43,9 @@ function App() {
       <header className="border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
         <div className="mx-auto flex max-w-5xl flex-row items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <h1 className="text-2xl font-semibold tracking-tight">
-            Trust Manager System
+            <a href="/" className="hover:text-highlight">
+              Trust Manager System
+            </a>
           </h1>
 
           <UserMenu />
@@ -50,18 +53,8 @@ function App() {
       </header>
 
       <main className="mx-auto max-w-5xl space-y-2 px-4 py-6 sm:px-6 lg:px-8">
-        {!isAuthenticated && (
-          <div>
-            Please{" "}
-            <a
-              href={`/login?idp_id=globus_idp&redirect_uri=${__REDIRECT_URI__}`}
-              className="text-primary underline-offset-4 hover:underline"
-            >
-              log in
-            </a>{" "}
-            to manage resources.
-          </div>
-        )}
+        {/* the server has no /signin route, so the home page is the sign in page */}
+        {!isAuthenticated && <LoginLanding />}
         {!!isAuthenticated && (
           <>
             <h2 className="flex items-center gap-2 text-lg font-semibold">
