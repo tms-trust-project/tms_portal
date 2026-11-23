@@ -59,6 +59,15 @@ paths:
             type: string
           in: query
           required: false
+        - name: institution
+          description: >-
+            Id of an approved institution (from GET /login/institutions) to log in through. Required: a login
+            without one, or with an unknown or unapproved one, goes to the sign in page with
+            error=unapproved_institution; when tms_server's list can't be read it gets error=login_unavailable.
+          schema:
+            type: string
+          in: query
+          required: true
       responses:
         "307":
           description: Temporary redirect
@@ -80,12 +89,15 @@ paths:
       summary: Logout
       description: Log out of TMS Portal
       responses:
-        "200":
-          description: Success
-          content:
-            application/json:
+        "303":
+          description: >-
+            See other: the browser goes to the login provider's sign-out page (for Globus, with a link on to the
+            institution's sign-out page), or to the sign in page when the provider can't be told from the token.
+          headers:
+            location:
               schema:
-                $ref: '#/components/schemas/TmsLogoutResponse'
+                type: string
+              description: redirect url
 
   "/login/whoami":
     get:
@@ -128,7 +140,10 @@ paths:
       tags:
         - Login
       summary: callback
-      description: Called by identity provider with code that can be exchanged for a token.
+      description: >-
+        Called by identity provider with code that can be exchanged for a token, or with error (and
+        error_description) when the login failed or was cancelled. The state must match the state cookie and still
+        be valid (5 minutes).
       parameters:
         - name: code
           schema:
@@ -138,13 +153,24 @@ paths:
           in: query
           schema:
             type: string
+        - name: error
+          in: query
+          schema:
+            type: string
+        - name: error_description
+          in: query
+          schema:
+            type: string
       responses:
-        "200":
-          description: Success
-          content:
-            application/json:
+        "307":
+          description: >-
+            Temporary redirect: to the post-login page with the tmstoken cookie set, or to the sign in page with
+            error=unapproved_institution, stale_authentication, login_cancelled, login_failed or login_expired.
+          headers:
+            location:
               schema:
-                $ref: '#/components/schemas/TmsCallbackResponse'
+                type: string
+              description: redirect url
 
   "/resources/{provider_id}/{provider_account_id}":
     get:
@@ -318,6 +344,25 @@ paths:
         - name: state
           description: App supplied state variable.  This will be sent to the callback url unchanged.
           required: false
+          schema:
+            type: string
+          in: query
+        - name: institution
+          description: >-
+            Id of an approved institution (from tms_server's /v1/tms/institutions list) to log in through.
+            Logging in through an approved institution is mandatory. Once redirect_uri is validated for the client
+            (an invalid one is rejected in place), a missing, unknown or unapproved id sends the browser to
+            redirect_uri with error=invalid_request, and an unavailable institution list (tms_server) with
+            error=temporarily_unavailable, plus state if one was sent. A Globus
+            institution with a redirect_idp_domain sends users not yet signed in to Globus straight to that
+            institution's IdP; a tacc_tapis institution logs in through Tapis. When the user comes back, the
+            institution must still be approved, and a Globus identity must be from an approved institution;
+            otherwise no code is issued and the callback url gets error=access_denied (and state, if one was sent).
+            Globus logins always ask Globus to authenticate the user again (prompt=login, and
+            session_required_single_domain for an institution with a domain); if the id token's
+            last_authentication is older than the start of the login, the callback url also gets
+            error=access_denied. Globus cannot make the institution's own IdP ask for a password again.
+          required: true
           schema:
             type: string
           in: query
@@ -510,6 +555,7 @@ components:
         - redirect_uri
         - client_return_uri
         - client_name
+        - institution
       type: object
       properties:
         redirect_uri:
@@ -518,6 +564,12 @@ components:
           type: string
         client_name:
           type: string
+        institution:
+          type: string
+          description: >-
+            Id of an approved institution (from GET /login/institutions) to log in through. Required: a login
+            without one, or with an unknown or unapproved one, goes to the sign in page with
+            error=unapproved_institution; when tms_server's list can't be read it gets error=login_unavailable.
 
     TmsLogoutResponse:
       type: object

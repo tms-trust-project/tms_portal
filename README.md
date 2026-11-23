@@ -83,6 +83,12 @@ If you changed the port, you may need this also:
 export TMS_PORTAL_DB_PORT=<tms_db_port>
 ```
 
+Logging in requires an approved institution, and the approved list comes from tms_server
+(`/v1/tms/institutions`). Without this setting the portal starts, but nobody can log in:
+```
+export TMS_PORTAL_TMS_SERVER_URL=https://localhost:3000
+```
+
 ## Populate db with sample data
 After editing the tms_portal_dev_config.sql template, use it to initialize the db.
 ```

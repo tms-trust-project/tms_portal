@@ -62,8 +62,6 @@ pub struct ResourceProviderAuthorizationCodeResponse {
 pub struct ResourceProviderAuthorizeInfo {
     pub encoded_state: String,
     pub identity_redirect_url: Url,
-    pub client_id: String,
-    pub client_secret: String,
 }
 pub async fn get_resource_providers(
     security_context: &SecurityContext,
@@ -155,6 +153,8 @@ pub async fn get_authenticate_redirect_info(
             + 300,
         nonce: generate_nonce(),
         client_state: client_state.clone(),
+        institution_id: None,
+        login_started: None,
     };
 
     let encoded_state = match encode_state(configuration, oauth_state).await {
@@ -185,8 +185,6 @@ pub async fn get_authenticate_redirect_info(
     Ok(ResourceProviderAuthorizeInfo {
         encoded_state,
         identity_redirect_url,
-        client_id: rp.client_id,
-        client_secret: rp.client_secret,
     })
 }
 

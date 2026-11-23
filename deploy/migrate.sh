@@ -101,14 +101,14 @@ if [ ${USE_CACHE} -eq 0 ] ; then
   pushd ${MIGRATION_DIR}
 
   # get the list of migration files (based on branch)
-  MIGRATION_FILES=$(http https://api.github.com/repos/tms-trust-project/tms_server/contents/resources/migrations?ref=${TMS_SERVER_GIT_BRANCH} | jq .[].download_url -r)
+  MIGRATION_FILES=$(http --ignore-stdin https://api.github.com/repos/tms-trust-project/tms_server/contents/resources/migrations?ref=${TMS_SERVER_GIT_BRANCH} | jq .[].download_url -r)
 
   # download each migration file
   for MFILE in ${MIGRATION_FILES} ; do 
         LOCAL_NAME=$(basename ${MFILE})
         echo downloading ${MFILE} as ${LOCAL_NAME}
         # httpie download, quiet, overwrite by specifying name
-        http -dqo ${LOCAL_NAME} ${MFILE}
+        http --ignore-stdin -dqo ${LOCAL_NAME} ${MFILE}
   done
   popd
 fi

@@ -1,8 +1,9 @@
 use crate::obj_model;
 use crate::obj_model::identity_provider::IdentityProvider;
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashSet;
 use tms_lib::utils::jwt_decoder::JwtDecoderBuilder;
 use tracing::debug;
@@ -16,6 +17,19 @@ pub const STATE_COOKIE_NAME: &str = "state_cookie";
 pub struct AuthCodeQueryParams {
     pub code: String,
     pub state: String,
+}
+
+/*
+What a login idp sends back to a login callback (/login/callback, /oauth2/callback).  On
+success that's code and state; when the login fails or the user cancels it, it's error (and
+maybe error_description) instead of code, as RFC 6749 section 4.1.2.1 describes.
+ */
+#[derive(Debug, Deserialize)]
+pub struct LoginCallbackQueryParams {
+    pub code: Option<String>,
+    pub state: Option<String>,
+    pub error: Option<String>,
+    pub error_description: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -34,6 +48,11 @@ pub struct OAuth2State {
     pub redirect_uri: String, // redirect_uri requested by the tms client
     pub client_state: Option<String>, // state provided to authorize endpoint by tms client
     pub nonce: u32,           // nonce - used to help prevent replay attacks
+    #[serde(default)]
+    pub institution_id: Option<String>, // approved institution chosen on the login page
+    // login only: when it started (epoch seconds); the idp must authenticate the user after it
+    #[serde(default)]
+    pub login_started: Option<u64>,
 }
 /*
 Exchanges an auth code for an auth token.  The parameter <R> is the structure
@@ -47,13 +66,15 @@ pub async fn get_token_for_provider<R>(
 where
     R: DeserializeOwned,
 {
-    debug!("exchange_code_for_token called");
+    debug!(
+        "Exchanging an authorization code at {}",
+        idp.oauth2_token_url
+    );
     let form_params = [
         ("grant_type", &"authorization_code".to_string()),
         ("redirect_uri", callback_url),
         ("code", &code.to_owned()),
     ];
-    debug!("Form params: {:?}", form_params);
     let client = reqwest::Client::new();
     let response = client
         .post(&idp.oauth2_token_url)
@@ -62,12 +83,31 @@ where
         .send()
         .await
         .context("Error getting response body")?;
-    debug!("Response from exchange code: {:?}", response);
+    let status = response.status();
 
     let token_string = response
         .text()
         .await
         .context("Error getting response body")?;
+
+    // e.g. invalid_grant for an expired or already used code
+    if !status.is_success() {
+        let provider_error = serde_json::from_str::<Value>(&token_string)
+            .ok()
+            .and_then(|body| {
+                body.get("error")
+                    .or(body.get("message"))
+                    .and_then(Value::as_str)
+                    .map(String::from)
+            })
+            .unwrap_or_default();
+        return Err(anyhow!(
+            "Token request to {0} failed: {1} {2}",
+            idp.oauth2_token_url,
+            status,
+            provider_error
+        ));
+    }
 
     serde_json::from_str::<R>(&token_string).context("Error deserializing token response body")
 }

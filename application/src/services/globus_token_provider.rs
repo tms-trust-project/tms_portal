@@ -15,6 +15,7 @@ impl TokenProvider for GlobusTokenProvider {
             username: tms_token_claims.tms_username.clone(),
             organization: tms_token_claims.tms_organization.clone(),
             idp_display_name: tms_token_claims.tms_idp_display_name.clone(),
+            logout_url: None,
         })
     }
 }

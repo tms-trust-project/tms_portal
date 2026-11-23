@@ -1,5 +1,7 @@
-import { fireEvent, screen } from "@testing-library/react"
+import { fireEvent, screen, waitFor } from "@testing-library/react"
 import Cookies from "js-cookie"
+import { http, HttpResponse } from "msw"
+import { server } from "@/stubs/server"
 import { UserMenu } from "../UserMenu"
 import { renderWithQueryClient } from "./renderWithQueryClient"
 
@@ -12,11 +14,37 @@ describe("UserMenu", () => {
 
     expect(
       await screen.findByRole("link", { name: /Log In/i })
-    ).toHaveAttribute(
-      "href",
-      "/login?idp_id=globus_idp&redirect_uri=https://tms-portal.savanna.tacc.cloud/"
-    )
+    ).toHaveAttribute("href", "/signin")
     expect(screen.queryByText("Jake Rosenberg")).not.toBeInTheDocument()
+  })
+
+  test("leaves Log In to the sign in page's own button", async () => {
+    window.history.pushState({}, "", "/signin")
+    try {
+      renderWithQueryClient(<UserMenu />)
+
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("link", { name: /Log In/i })
+        ).not.toBeInTheDocument()
+      )
+    } finally {
+      window.history.pushState({}, "", "/")
+    }
+  })
+
+  test("shows the user menu on the sign in page when logged in", async () => {
+    Cookies.set("tmstoken", "test-token")
+    window.history.pushState({}, "", "/signin")
+    try {
+      renderWithQueryClient(<UserMenu />)
+
+      expect(
+        await screen.findByRole("button", { name: "Jake Rosenberg" })
+      ).toBeInTheDocument()
+    } finally {
+      window.history.pushState({}, "", "/")
+    }
   })
 
   test("shows the user menu when the tmstoken cookie is present", async () => {
@@ -34,9 +62,126 @@ describe("UserMenu", () => {
     expect(
       await screen.findByText("Provider: University of Texas at Austin")
     ).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: /Log Out/i })).toHaveAttribute(
-      "href",
-      "/logout"
+    const logout = screen.getByRole("button", { name: /Log Out/i })
+    expect(logout).toHaveAttribute("type", "submit")
+    expect(logout.closest("form")).toHaveAttribute("method", "post")
+    expect(logout.closest("form")).toHaveAttribute("action", "/logout")
+  })
+
+  test("shows the token's claims from the provider link", async () => {
+    const claims = {
+      sub: "jrosenberg@utexas.edu",
+      tms_institution: "utexas",
+      name: "Jake Rosenbérg",
+      exp: 1794337246,
+    }
+    // base64url, from UTF-8 bytes, without padding
+    const payload = btoa(
+      String.fromCharCode(...new TextEncoder().encode(JSON.stringify(claims)))
     )
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "")
+    Cookies.set("tmstoken", `eyJhbGciOiJSUzI1NiJ9.${payload}.signature`)
+    renderWithQueryClient(<UserMenu />)
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Jake Rosenberg" })
+    )
+    fireEvent.click(
+      await screen.findByRole("menuitem", {
+        name: "Provider: University of Texas at Austin",
+      })
+    )
+    const dialog = await screen.findByRole("dialog", { name: "Token claims" })
+    expect(JSON.parse(dialog.querySelector("pre")!.textContent!)).toEqual(
+      claims
+    )
+  })
+
+  test("says when the token can't be decoded", async () => {
+    Cookies.set("tmstoken", "test-token")
+    renderWithQueryClient(<UserMenu />)
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Jake Rosenberg" })
+    )
+    fireEvent.click(await screen.findByRole("menuitem", { name: /^Provider:/ }))
+    expect(
+      await screen.findByText("The token could not be decoded.")
+    ).toBeInTheDocument()
+  })
+
+  test("opens the Tapis sign-out page when logging out of a Tapis login", async () => {
+    Cookies.set("tmstoken", "test-token")
+    server.use(
+      http.get("/login/whoami", () =>
+        HttpResponse.json({
+          result: {
+            name: "jdoe",
+            username: "jdoe@tacc@tapis_login",
+            organization: "tacc",
+            logoutUrl: "https://tacc.tapis.io/v3/oauth2/logout",
+          },
+        })
+      )
+    )
+    const open = vi.spyOn(window, "open").mockReturnValue(null)
+    renderWithQueryClient(<UserMenu />)
+
+    fireEvent.click(await screen.findByRole("button", { name: "jdoe" }))
+    const logout = await screen.findByRole("button", { name: /Log Out/i })
+    const form = logout.closest("form")!
+    form.addEventListener("submit", (event) => event.preventDefault())
+    fireEvent.submit(form)
+    expect(open).toHaveBeenCalledWith(
+      "https://tacc.tapis.io/v3/oauth2/logout",
+      "_blank",
+      "noopener"
+    )
+    open.mockRestore()
+  })
+
+  test("drops a token cookie the portal no longer accepts", async () => {
+    Cookies.set("tmstoken", "revoked-token")
+    server.use(
+      http.get("/login/whoami", () =>
+        HttpResponse.json(
+          {
+            status: "401 Unauthorized",
+            result: "Unauthorized: Token not found",
+          },
+          { status: 401 }
+        )
+      )
+    )
+    renderWithQueryClient(<UserMenu />)
+
+    await waitFor(() => expect(Cookies.get("tmstoken")).toBeUndefined())
+    expect(screen.getByRole("link", { name: /Log In/i })).toHaveAttribute(
+      "href",
+      "/signin"
+    )
+  })
+
+  test("keeps the token cookie when whoami fails for another reason", async () => {
+    Cookies.set("tmstoken", "test-token")
+    let answered = false
+    server.use(
+      http.get("/login/whoami", () => {
+        answered = true
+        return HttpResponse.json({}, { status: 500 })
+      })
+    )
+    const { queryClient } = renderWithQueryClient(<UserMenu />)
+
+    await waitFor(() => expect(answered).toBe(true))
+    await waitFor(() =>
+      expect(queryClient.getQueryState(["auth", "whoami"])?.status).toBe(
+        "error"
+      )
+    )
+    expect(Cookies.get("tmstoken")).toBe("test-token")
+    expect(screen.getByRole("link", { name: /Log In/i })).toBeInTheDocument()
   })
 })

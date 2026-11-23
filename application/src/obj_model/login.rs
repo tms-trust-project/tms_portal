@@ -6,4 +6,5 @@ pub struct WhoAmIResponse {
     pub username: Value,
     pub idp_display_name: Option<Value>,
     pub organization: Option<Value>,
+    pub logout_url: Option<String>,
 }
