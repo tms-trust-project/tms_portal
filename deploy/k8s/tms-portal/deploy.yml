@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
       - name: tms-portal
-        image: tapis/tms-portal:local
+        image: tapis/tms-api:local
         imagePullPolicy: Never 
         resources: {}
         ports:

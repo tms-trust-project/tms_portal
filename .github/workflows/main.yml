@@ -30,13 +30,13 @@ jobs:
 
           echo "image_tag=$image_tag" >> "$GITHUB_OUTPUT"
 
-  tms-core-api:
+  tms-api:
     needs:
       - resolve-image-tag
     secrets: inherit
-    uses: ./.github/workflows/tms-core-api-ci.yml
+    uses: ./.github/workflows/tms-api.yml
     with:
-      image_name: tapis/tms-core-api
+      image_name: tapis/tms-api
       image_tag: ${{ needs.resolve-image-tag.outputs.image_tag }}
       
   tms-ui:

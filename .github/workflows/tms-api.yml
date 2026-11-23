@@ -1,4 +1,4 @@
-name: TMS Core API
+name: TMS API
 
 on:
   workflow_call:
