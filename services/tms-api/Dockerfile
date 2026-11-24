@@ -1,7 +1,15 @@
 # Stage 1: Build the client
-FROM node:24 AS node-build
+# REDIRECT_URI is compiled into the bundle (the login link sends it to /login, which checks
+# it against the allowed redirects), so each image is built for one environment.  Without
+# it every login would be rejected, so the build stops instead.
+FROM node:24-slim AS node-build
 
-RUN npm install -g pnpm
+ARG REDIRECT_URI
+# keep in step with the pnpm version in .github/workflows/client-ci.yml
+ARG PNPM_VERSION=12.6.0
+RUN test -n "${REDIRECT_URI}" || \
+    (echo "The REDIRECT_URI build arg is required, e.g. --build-arg REDIRECT_URI=https://<portal host>/" >&2 && exit 1)
+RUN npm install -g pnpm@${PNPM_VERSION}
 
 WORKDIR /client
 
@@ -14,7 +22,6 @@ RUN pnpm install --frozen-lockfile
 
 COPY ./client/ ./
 
-ARG REDIRECT_URI
 RUN pnpm run build
 
 
@@ -45,6 +52,7 @@ COPY --from=rust-build \
     /usr/local/${SERVICE_NAME}/target/release/${SERVICE_NAME} \
     /usr/local/bin/${SERVICE_NAME}
 
+# the server serves the UI from dist/ relative to its working directory (main.rs)
 WORKDIR /usr/local/client
 
 COPY --from=node-build /client/dist ./dist
