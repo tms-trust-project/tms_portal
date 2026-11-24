@@ -8,9 +8,10 @@
 ##########################################################################
 
 FROM node:24 AS node_build
-RUN npm install -g "$(node -p 'require("./package.json").packageManager')"
 COPY ./client/package.json ./client/pnpm-lock.yaml ./client/pnpm-workspace.yaml /client/
 WORKDIR /client
+# the pnpm version pinned by packageManager in client/package.json (e.g. pnpm@12.6.0)
+RUN npm install -g "$(node -p 'require("./package.json").packageManager')"
 RUN pnpm install
 COPY ./client/ /client/
 
