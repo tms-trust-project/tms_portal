@@ -142,9 +142,47 @@ describe("LoginLanding", () => {
     ).toBeInTheDocument()
   })
 
-  test("shows no Log In while the list loads", () => {
+  test("offers the plain Log In while the list loads, then the institution's", async () => {
     renderWithQueryClient(<LoginLanding />)
     expect(screen.getByText("Loading institutions…")).toBeInTheDocument()
-    expect(screen.queryByRole("link")).not.toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Log In" })).toHaveAttribute(
+      "href",
+      loginBase
+    )
+
+    await screen.findByLabelText("Institution")
+    expect(screen.queryByText("Loading institutions…")).not.toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Log In" })).toHaveAttribute(
+      "href",
+      `${loginBase}&institution=utexas`
+    )
+  })
+
+  test("keeps Log In available through a 5xx, retrying once", async () => {
+    let requests = 0
+    server.use(
+      http.get("/institutions", () => {
+        requests++
+        return HttpResponse.json(
+          { status: "503 Service Unavailable" },
+          { status: 503 }
+        )
+      })
+    )
+    // the hook's own retry rule still applies; only the backoff between tries is skipped
+    renderWithQueryClient(<LoginLanding />, { queries: { retryDelay: 0 } })
+
+    expect(screen.getByRole("link", { name: "Log In" })).toHaveAttribute(
+      "href",
+      loginBase
+    )
+    expect(
+      await screen.findByText("The list of institutions could not be loaded.")
+    ).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Log In" })).toHaveAttribute(
+      "href",
+      loginBase
+    )
+    expect(requests).toBe(2)
   })
 })

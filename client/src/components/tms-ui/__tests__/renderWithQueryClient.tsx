@@ -1,10 +1,21 @@
 import { render } from "@testing-library/react"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import {
+  QueryClient,
+  QueryClientProvider,
+  type QueryObserverOptions,
+} from "@tanstack/react-query"
 import type { ReactElement } from "react"
 
-export function renderWithQueryClient(ui: ReactElement) {
+// queries: extra query defaults, e.g. retryDelay: 0 for a hook with its own retry rule
+export function renderWithQueryClient(
+  ui: ReactElement,
+  { queries }: { queries?: Partial<QueryObserverOptions> } = {}
+) {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    defaultOptions: {
+      queries: { retry: false, ...queries },
+      mutations: { retry: false },
+    },
   })
 
   return {

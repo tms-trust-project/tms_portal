@@ -50,7 +50,10 @@ export function LoginLanding() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
-        {isPending && <p className="text-sm">Loading institutions…</p>}
+        {/* only the picker waits on the list; Log In below never does */}
+        {isPending && (
+          <p className="text-sm text-muted-foreground">Loading institutions…</p>
+        )}
         {showError && (
           <p className="text-sm text-destructive">
             The list of institutions could not be loaded.
@@ -75,19 +78,18 @@ export function LoginLanding() {
         )}
       </CardContent>
       <CardFooter>
-        {/* without a list (before login, or on an error) fall back to the plain login */}
-        {!isPending && (
-          <Button
-            role="link"
-            className="bg-neutral-200 text-black hover:bg-highlight hover:text-highlight-foreground"
-            nativeButton={false}
-            render={
-              <a href={loginHref(institutionId)}>
-                <LogIn /> Log In
-              </a>
-            }
-          />
-        )}
+        {/* the plain login until a list arrives (and if none does: before login, or on an
+            error), then the chosen institution's */}
+        <Button
+          role="link"
+          className="bg-neutral-200 text-black hover:bg-highlight hover:text-highlight-foreground"
+          nativeButton={false}
+          render={
+            <a href={loginHref(institutionId)}>
+              <LogIn /> Log In
+            </a>
+          }
+        />
       </CardFooter>
     </Card>
   )
