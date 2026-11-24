@@ -5,5 +5,3 @@
 .idea
 .run
 deploy/migrations
-/dist
-
