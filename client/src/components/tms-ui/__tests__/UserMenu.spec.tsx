@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react"
 import Cookies from "js-cookie"
-import { http, HttpResponse } from "msw"
+import { delay, http, HttpResponse } from "msw"
 import { server } from "@/stubs/server"
 import { UserMenu } from "../UserMenu"
 import { renderWithQueryClient } from "./renderWithQueryClient"
@@ -18,6 +18,28 @@ describe("UserMenu", () => {
       ).not.toBeInTheDocument()
     )
     expect(screen.queryByText("Jake Rosenberg")).not.toBeInTheDocument()
+  })
+
+  test("shows nothing, not Log In, while whoami loads", async () => {
+    Cookies.set("tmstoken", "test-token")
+    let asked = false
+    server.use(
+      http.get("/login/whoami", async () => {
+        asked = true
+        await delay("infinite")
+        return HttpResponse.json({})
+      })
+    )
+    renderWithQueryClient(<UserMenu />)
+
+    // the cookie was read and whoami is in flight
+    await waitFor(() => expect(asked).toBe(true))
+    expect(
+      screen.queryByRole("link", { name: /Log In/i })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Jake Rosenberg" })
+    ).not.toBeInTheDocument()
   })
 
   test("shows the user menu when the tmstoken cookie is present", async () => {

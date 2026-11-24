@@ -23,9 +23,13 @@ import { TokenClaimsModal } from "./TokenClaimsModal"
 export function UserMenu() {
   const { data: isAuthenticated } = useAuth()
   const [claimsOpen, setClaimsOpen] = useState(false)
-  const { data: whoami } = useWhoami({ enabled: !!isAuthenticated })
+  const { data: whoami, isError } = useWhoami({ enabled: !!isAuthenticated })
   // logged out, the home page shows the sign in card with its own Log In button
   if (!isAuthenticated) return null
+  // still loading (or the token was just dropped): show nothing rather than flash Log In
+  // at a user who is logged in
+  if (!whoami && !isError) return null
+  // whoami failed for another reason (e.g. a 5xx), so offer a fresh login
   if (!whoami)
     return (
       <Button
