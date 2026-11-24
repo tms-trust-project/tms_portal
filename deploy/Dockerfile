@@ -8,7 +8,7 @@
 ##########################################################################
 
 FROM node:24 AS node_build
-RUN npm install -g pnpm
+RUN npm install -g "$(node -p 'require("./package.json").packageManager')"
 COPY ./client/package.json ./client/pnpm-lock.yaml ./client/pnpm-workspace.yaml /client/
 WORKDIR /client
 RUN pnpm install

@@ -19,8 +19,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/setup@v2
+        # the pnpm version comes from packageManager in client/package.json
         with:
-          version: 12.6.0
           runtime: node@24
           package-json-file: client/package.json
           cache: true

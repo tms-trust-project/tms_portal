@@ -117,7 +117,15 @@ export const handlers = [
     return HttpResponse.json({ result: whoamiStub })
   }),
 
-  http.get("/institutions", () => {
+  // like the base server, which needs a TMS token for the list (httpClient sends the
+  // tmstoken cookie as a bearer token), so a logged out dev session sees the plain login
+  http.get("/institutions", ({ request }) => {
+    if (!request.headers.get("Authorization")) {
+      return HttpResponse.json(
+        { status: "401 Unauthorized", result: "Unable to find TMS token" },
+        { status: 401 }
+      )
+    }
     return HttpResponse.json({ result: institutionStubs })
   }),
 

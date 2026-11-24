@@ -1,4 +1,5 @@
 import { fireEvent, screen } from "@testing-library/react"
+import Cookies from "js-cookie"
 import { http, HttpResponse } from "msw"
 import { server } from "@/stubs/server"
 import { LoginLanding } from "../LoginLanding"
@@ -11,8 +12,29 @@ const globus = {
   globus: { redirect_idp_domain: "example.edu", idp_logout_url: "" },
 }
 
+// the default /institutions stub, like the server, only lists them for a token
+const withToken = () => Cookies.set("tmstoken", "test-token")
+afterEach(() => Cookies.remove("tmstoken"))
+
 describe("LoginLanding", () => {
+  test("gets no list from the default stub without a token", async () => {
+    renderWithQueryClient(<LoginLanding />)
+
+    expect(
+      await screen.findByText("Log in with Globus to manage resources.")
+    ).toBeInTheDocument()
+    expect(screen.queryByLabelText("Institution")).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("The list of institutions could not be loaded.")
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Log In" })).toHaveAttribute(
+      "href",
+      loginBase
+    )
+  })
+
   test("lists the institutions and logs in through the selected one", async () => {
+    withToken()
     renderWithQueryClient(<LoginLanding />)
 
     const select = await screen.findByLabelText("Institution")
@@ -143,6 +165,7 @@ describe("LoginLanding", () => {
   })
 
   test("offers the plain Log In while the list loads, then the institution's", async () => {
+    withToken()
     renderWithQueryClient(<LoginLanding />)
     expect(screen.getByText("Loading institutions…")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Log In" })).toHaveAttribute(
