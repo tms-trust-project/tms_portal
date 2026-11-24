@@ -28,7 +28,7 @@ use tms_lib::http::requests::TmsErrorResponse;
 #[axum::debug_handler]
 pub async fn list_institutions(
     State(AppState { institution_service, .. }): State<AppState>,
-    JwtValidator(_security_context): JwtValidator,
+    // JwtValidator(_security_context): JwtValidator,
 ) -> anyhow::Result<TmsResponse<Vec<Institution>>, AppError> {
     let institutions = institution_service
         .list_institutions()

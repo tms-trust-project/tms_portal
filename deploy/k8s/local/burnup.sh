@@ -8,9 +8,9 @@ here=$(pwd)
 kubectl apply -f secrets.yml
 
 # Start tms db
-cd "$here/postgres/"
-./burnup.sh
-kubectl rollout status deployment/tms-postgres --timeout=5m
+#cd "$here/postgres/"
+#./burnup.sh
+#kubectl rollout status deployment/tms-postgres --timeout=5m
 
 # Start tms portal
 cd "$here/tms-portal/"

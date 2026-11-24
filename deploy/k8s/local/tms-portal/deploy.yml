@@ -22,10 +22,12 @@ spec:
         env:
         - name: RUST_BACKTRACE
           value: "1"
+        - name: TMS_PORTAL_CONFIG_DIR
+          value: "/etc/tms-portal"
         - name: TMS_PORTAL_DB_HOST
-          value: "tms-postgres-18"
+          value: "host.minikube.internal"
         - name: TMS_PORTAL_DB_NAME
-          value: "tmsdb"
+          value: "tms_db"
         - name: TMS_PORTAL_DB_USER
           value: "tms"
         - name: TMS_PORTAL_DB_PASSWORD 
@@ -33,3 +35,11 @@ spec:
             secretKeyRef:
               name: tms-secrets
               key: postgres-tms-user-password
+        volumeMounts:
+        - name: tms-portal-config
+          mountPath: "/etc/tms-portal"
+          readOnly: true
+      volumes:
+      - name: tms-portal-config
+        configMap:
+          name: tms-portal-config

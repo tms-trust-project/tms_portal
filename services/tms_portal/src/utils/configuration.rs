@@ -2,6 +2,7 @@ use crate::obj_model::configuration::{
     DelegationPolicyConfig, HttpConfig, JwtConfig, OAuthConfig, RuntimeConfig, StateKey,
 };
 use crate::obj_model::key::Key;
+use crate::infra::persistence::configuration_repository::configuration_dao;
 use sqlx::PgPool;
 
 #[derive(Debug, Clone)]
@@ -15,9 +16,24 @@ pub struct Configuration {
 }
 
 impl Configuration {
-    #[allow(dead_code)]
-    pub async fn get(_db_pool: &PgPool) -> anyhow::Result<Configuration> {
-        unreachable!()
+    pub async fn get(db_pool: &PgPool) -> anyhow::Result<Configuration> {
+        let mut tx = db_pool.begin().await?;
+        let http_config = configuration_dao::db_get_http_config(&mut tx).await?;
+        let oauth_config = configuration_dao::db_get_oauth_config(&mut tx).await?;
+        let jwt_config = configuration_dao::db_get_jwt_config(&mut tx).await?;
+        let runtime_config = configuration_dao::db_get_runtime_config(&mut tx).await?;
+        let delegation_policy_config = configuration_dao::db_get_delegation_policy_config(&mut tx).await?;
+        let state_key = configuration_dao::db_get_state_key_id(&mut tx).await?;
+        tx.commit().await?;
+        
+        Ok(Configuration {
+            http_config,
+            oauth_config,
+            jwt_config,
+            runtime_config,
+            delegation_policy_config,
+            state_key
+        })
     }
 
     pub fn from_env() -> anyhow::Result<Self> {

@@ -11,18 +11,21 @@ use tms_portal::infra::persistence::{
     client_repository::PostgresClientRepository,
     delegation_repository::PostgresDelegationRepository,
     identity_provider_repository::PostgresIdentityProviderRepository,
-    issued_token_repository::PostgresIssuedTokenRepository,
-    issued_token_repository::issued_tokens_dao,
     institution_repository::PostgresInstitutionRepository,
-    key_repository::PostgresKeyRepository,
+    issued_token_repository::PostgresIssuedTokenRepository,
+    issued_token_repository::issued_tokens_dao, key_repository::PostgresKeyRepository,
     resource_provider_login_repository::PostgresResourceProviderLoginRepository,
     tms_identity_repository::PostgresTmsIdentityRepository,
 };
 use tms_portal::presentation::http::v1::{
-    delegations::router as delegations_router, login::router as login_router,
+    delegations::router as delegations_router,
     institutions::router as institutions_router,
-    oauth2::router as oauth_router, openapi::ApiDoc, resources::router as resources_router,
+    login::router as login_router,
+    oauth2::router as oauth_router,
+    openapi::ApiDoc,
+    resources::router as resources_router,
     well_known::router as well_known_router,
+    clients::router as clients_router,
 };
 use tms_portal::services::client_service::ClientService;
 use tms_portal::services::delegation_service::DelegationService;
@@ -53,10 +56,15 @@ async fn main() -> anyhow::Result<()> {
     let database_url_string = database_url()?;
     dbg!(&database_url_string);
     let db_pool = init_db(&database_url_string).await;
-    let config = Configuration::from_env()?;
+    let mut config = Configuration::get(&db_pool).await?;
+    if let Ok(config_directory) = std::env::var("TMS_PORTAL_CONFIG_DIR") {
+        config.runtime_config.config_directory = config_directory;
+    }
+    // let config = Configuration::from_env()?;
     let client_repo = Arc::new(PostgresClientRepository::new(db_pool.clone()));
     let delegation_repo = PostgresDelegationRepository::new(db_pool.clone());
-    let resource_provider_login_repo = PostgresResourceProviderLoginRepository::new(db_pool.clone());
+    let resource_provider_login_repo =
+        PostgresResourceProviderLoginRepository::new(db_pool.clone());
     let identity_provider_repo = PostgresIdentityProviderRepository::new(db_pool.clone());
     let issued_token_repo = PostgresIssuedTokenRepository::new(db_pool.clone());
     let institution_repo = PostgresInstitutionRepository::new(db_pool.clone());
@@ -73,10 +81,7 @@ async fn main() -> anyhow::Result<()> {
         Arc::new(resource_provider_login_repo),
     );
 
-    let client_service = ClientService::new(
-        client_repo,
-        Arc::new(allowed_redirect_repo),
-    );
+    let client_service = ClientService::new(client_repo, Arc::new(allowed_redirect_repo));
 
     let institution_service = InstitutionService::new(Arc::new(institution_repo));
 
@@ -107,7 +112,7 @@ async fn main() -> anyhow::Result<()> {
     init_logging(&state.config.runtime_config).await;
 
     let cleanup_db_pool = state.db_pool.clone();
-    
+
     spawn(async move {
         // TODO: configuration setting
         let mut interval = tokio::time::interval(tokio::time::Duration::from_mins(15));
@@ -157,6 +162,7 @@ async fn main() -> anyhow::Result<()> {
         .merge(institutions_router().await)
         .merge(resources_router().await)
         .merge(oauth_router().await)
+        .merge(clients_router().await)
         .merge(delegations_router)
         .layer(middleware::from_fn(|request: Request<Body>, next: Next| async move {
             let request_id = Uuid::new_v4().to_string();
@@ -174,8 +180,7 @@ async fn main() -> anyhow::Result<()> {
         )
         .nest_service("/debug", ServeFile::new("dist/debug.html"))
         .nest_service("/assets", ServeDir::new("dist/assets"))
-        .fallback_service(ServeDir::new("dist/")
-        .not_found_service(not_found.into_service()))
+        .fallback_service(ServeDir::new("dist/").not_found_service(not_found.into_service()))
         .method_not_allowed_fallback(method_not_allowed);
 
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", &port))

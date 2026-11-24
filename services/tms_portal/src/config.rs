@@ -10,7 +10,7 @@ pub async fn init_db(connection_url: &str) -> PgPool {
         .max_connections(5)
         .connect(connection_url)
         .await
-        .unwrap()
+        .expect("Connected to db")
 }
 
 pub async fn init_logging(runtime_config: &RuntimeConfig) {

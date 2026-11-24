@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tms-portal-config
+data:
+  log4rs.yml: |
+    refresh_rate: 30 seconds
+
+    appenders:
+      stdout:
+        kind: console
+        encoder:
+          pattern: "{d(%Y-%m-%dT%H:%M:%S.%f)(utc)}Z {l:<5} [{T}] {f:>.100}:{L} RID: {X(request_id)(N/A)} - {m}{n}"
+
+    loggers:
+      sqlx:
+        level: warn
+        appenders:
+          - stdout
+        additive: false
+
+    root:
+      level: info
+      appenders:
+        - stdout

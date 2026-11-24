@@ -45,7 +45,7 @@ pub struct RuntimeConfig {
 impl Default for RuntimeConfig {
     fn default() -> Self {
         Self {
-            config_directory: "application/resources/config".into(),
+            config_directory: "services/resources/config".into(),
             logging_config_file_name: "log4rs.yml".into(),
         }
     }

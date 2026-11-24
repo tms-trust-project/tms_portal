@@ -8,8 +8,7 @@ use crate::presentation::http::v1::clients::handlers::{
 };
 
 pub async fn router() -> OpenApiRouter<AppState> {
-    OpenApiRouter::new().routes(routes!(
-        get_client_by_id::get_client_by_id,
-        list_clients::list_clients,
-    ))
+    OpenApiRouter::new()
+        .routes(routes!(list_clients::list_clients))
+        .routes(routes!(get_client_by_id::get_client_by_id))
 }

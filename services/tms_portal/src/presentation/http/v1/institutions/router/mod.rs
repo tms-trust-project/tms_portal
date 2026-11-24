@@ -7,8 +7,7 @@ use crate::presentation::http::v1::institutions::handlers::{
 };
 
 pub async fn router() -> OpenApiRouter<AppState> {
-    OpenApiRouter::new().routes(routes!(
-        get_institution_by_id::get_institution_by_id,
-        list_institutions::list_institutions,
-    ))
+    OpenApiRouter::new()
+        .routes(routes!(list_institutions::list_institutions))
+        .routes(routes!(get_institution_by_id::get_institution_by_id))
 }
