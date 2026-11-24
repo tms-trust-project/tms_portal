@@ -16,6 +16,11 @@ describe("LoginLanding", () => {
     renderWithQueryClient(<LoginLanding />)
 
     const select = await screen.findByLabelText("Institution")
+    expect(
+      screen.getByText(
+        "Choose your institution to go straight to its login page."
+      )
+    ).toBeInTheDocument()
     expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual([
       "The University of Texas at Austin",
       "University of Chicago",
@@ -71,28 +76,54 @@ describe("LoginLanding", () => {
     )
   })
 
-  test("falls back to the plain login when the list needs a token", async () => {
-    let requests = 0
+  test.each([401, 403])(
+    "falls back to the plain login, without an error, on a %i before login",
+    async (status) => {
+      let requests = 0
+      server.use(
+        http.get("/institutions", () => {
+          requests++
+          return HttpResponse.json(
+            { status: `${status}`, result: "Unable to find TMS token" },
+            { status }
+          )
+        })
+      )
+      renderWithQueryClient(<LoginLanding />)
+
+      expect(
+        await screen.findByRole("link", { name: "Log In" })
+      ).toHaveAttribute("href", loginBase)
+      expect(
+        screen.queryByText("The list of institutions could not be loaded.")
+      ).not.toBeInTheDocument()
+      expect(screen.queryByLabelText("Institution")).not.toBeInTheDocument()
+      expect(
+        screen.getByText("Log in with Globus to manage resources.")
+      ).toBeInTheDocument()
+      expect(requests).toBe(1)
+    }
+  )
+
+  // a 404 isn't retried, unlike a 5xx, so the error shows without waiting on retries
+  test("says the list could not be loaded on other errors", async () => {
     server.use(
-      http.get("/institutions", () => {
-        requests++
-        return HttpResponse.json(
-          { status: "401 Unauthorized", result: "Unable to find TMS token" },
-          { status: 401 }
-        )
-      })
+      http.get("/institutions", () =>
+        HttpResponse.json({ status: "404 Not Found" }, { status: 404 })
+      )
     )
     renderWithQueryClient(<LoginLanding />)
 
     expect(
       await screen.findByText("The list of institutions could not be loaded.")
     ).toBeInTheDocument()
-    expect(screen.queryByLabelText("Institution")).not.toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Log In" })).toHaveAttribute(
       "href",
       loginBase
     )
-    expect(requests).toBe(1)
+    expect(
+      screen.getByText("Log in with Globus to manage resources.")
+    ).toBeInTheDocument()
   })
 
   test("falls back to the plain login when no institution is approved", async () => {
@@ -106,6 +137,9 @@ describe("LoginLanding", () => {
       loginBase
     )
     expect(screen.queryByLabelText("Institution")).not.toBeInTheDocument()
+    expect(
+      screen.getByText("Log in with Globus to manage resources.")
+    ).toBeInTheDocument()
   })
 
   test("shows no Log In while the list loads", () => {
