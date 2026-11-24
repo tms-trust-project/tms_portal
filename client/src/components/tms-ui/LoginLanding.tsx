@@ -79,7 +79,7 @@ export function LoginLanding() {
         {!isPending && (
           <Button
             role="link"
-            className="bg-neutral-200 text-black hover:bg-highlight"
+            className="bg-neutral-200 text-black hover:bg-highlight hover:text-highlight-foreground"
             nativeButton={false}
             render={
               <a href={loginHref(institutionId)}>
