@@ -33,6 +33,9 @@ jobs:
       - name: Check formatting
         run: pnpm exec prettier --check '**/*.{ts,tsx}'
       - name: build
+        # the build requires a redirect uri (vite.config.ts); this one only checks the build
+        env:
+          REDIRECT_URI: https://tms-portal.savanna.tacc.cloud/
         run: pnpm run build
       - name: Test
         run: pnpm test run --coverage
