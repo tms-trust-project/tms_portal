@@ -128,7 +128,7 @@ describe("UserMenu", () => {
     expect(Cookies.get("tmstoken")).toBe("test-token")
     expect(screen.getByRole("link", { name: /Log In/i })).toHaveAttribute(
       "href",
-      "/login?idp_id=globus_idp&redirect_uri=https://tms-portal.savanna.tacc.cloud/"
+      "/login?idp_id=globus_idp&redirect_uri=https%3A%2F%2Ftms-portal.savanna.tacc.cloud%2F"
     )
   })
 })

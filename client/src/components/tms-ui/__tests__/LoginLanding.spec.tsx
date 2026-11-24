@@ -5,7 +5,7 @@ import { LoginLanding } from "../LoginLanding"
 import { renderWithQueryClient } from "./renderWithQueryClient"
 
 const loginBase =
-  "/login?idp_id=globus_idp&redirect_uri=https://tms-portal.savanna.tacc.cloud/"
+  "/login?idp_id=globus_idp&redirect_uri=https%3A%2F%2Ftms-portal.savanna.tacc.cloud%2F"
 
 const globus = {
   globus: { redirect_idp_domain: "example.edu", idp_logout_url: "" },

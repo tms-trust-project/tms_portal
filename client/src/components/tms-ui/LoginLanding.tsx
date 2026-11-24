@@ -10,15 +10,8 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { loginHref } from "@/lib/loginHref"
 import { useListInstitutions } from "@/tms-hooks"
-
-const LOGIN_HREF = `/login?idp_id=globus_idp&redirect_uri=${__REDIRECT_URI__}`
-
-// the server ignores institution until /login supports it, which is harmless
-function loginHref(institutionId: string | undefined) {
-  if (!institutionId) return LOGIN_HREF
-  return `${LOGIN_HREF}&institution=${encodeURIComponent(institutionId)}`
-}
 
 export function LoginLanding() {
   const { data: institutions, isPending, isError } = useListInstitutions()

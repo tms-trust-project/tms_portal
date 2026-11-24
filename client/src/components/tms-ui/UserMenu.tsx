@@ -8,6 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { loginHref } from "@/lib/loginHref"
 import { useAuth } from "@/tms-hooks/useAuth"
 import { useWhoami } from "@/tms-hooks"
 import { TokenClaimsModal } from "./TokenClaimsModal"
@@ -25,7 +26,7 @@ export function UserMenu() {
         className="bg-neutral-200 text-black hover:bg-highlight"
         nativeButton={false}
         render={
-          <a href={`/login?idp_id=globus_idp&redirect_uri=${__REDIRECT_URI__}`}>
+          <a href={loginHref()}>
             <LogIn /> Log In
           </a>
         }
