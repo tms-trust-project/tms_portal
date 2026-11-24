@@ -35,13 +35,14 @@ describe("UserMenu", () => {
     expect(
       await screen.findByText("Provider: University of Texas at Austin")
     ).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: /Log Out/i })).toHaveAttribute(
+    // the menu item is the <a> itself, so its role is menuitem, not link
+    expect(screen.getByRole("menuitem", { name: /Log Out/i })).toHaveAttribute(
       "href",
       "/logout"
     )
   })
 
-  test("shows the token's claims from the provider link", async () => {
+  test("shows the token's claims from View token claims", async () => {
     const claims = {
       sub: "jrosenberg@utexas.edu",
       tms_institution: "utexas",
@@ -62,9 +63,7 @@ describe("UserMenu", () => {
       await screen.findByRole("button", { name: "Jake Rosenberg" })
     )
     fireEvent.click(
-      await screen.findByRole("menuitem", {
-        name: "Provider: University of Texas at Austin",
-      })
+      await screen.findByRole("menuitem", { name: "View token claims" })
     )
     const dialog = await screen.findByRole("dialog", { name: "Token claims" })
     expect(JSON.parse(dialog.querySelector("pre")!.textContent!)).toEqual(
@@ -79,7 +78,9 @@ describe("UserMenu", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "Jake Rosenberg" })
     )
-    fireEvent.click(await screen.findByRole("menuitem", { name: /^Provider:/ }))
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "View token claims" })
+    )
     expect(
       await screen.findByText("The token could not be decoded.")
     ).toBeInTheDocument()

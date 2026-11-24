@@ -1,11 +1,18 @@
 import { useState } from "react"
-import { UserCircle2, LogOut, EllipsisVertical, LogIn } from "lucide-react"
+import {
+  UserCircle2,
+  LogOut,
+  EllipsisVertical,
+  LogIn,
+  FileJson,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { loginHref } from "@/lib/loginHref"
@@ -47,17 +54,21 @@ export function UserMenu() {
         />
         <DropdownMenuContent>
           <DropdownMenuGroup>
+            <DropdownMenuLabel>
+              Provider: {whoami.organization}
+            </DropdownMenuLabel>
             <DropdownMenuItem
-              className="text-primary hover:text-highlight focus:text-highlight dark:focus:bg-black/50"
+              className="hover:text-highlight focus:text-highlight not-data-[variant=destructive]:focus:**:text-highlight dark:focus:bg-black/50"
               onClick={() => setClaimsOpen(true)}
             >
-              Provider: {whoami.organization}
+              <FileJson /> View token claims
             </DropdownMenuItem>
-            <DropdownMenuItem className="hover:text-highlight focus:text-highlight not-data-[variant=destructive]:focus:**:text-highlight dark:focus:bg-black/50">
-              {/* the server only routes GET /logout */}
-              <a href="/logout" className="flex items-center gap-2">
-                <LogOut /> Log Out
-              </a>
+            {/* the item is the link, so Enter and clicks anywhere on it log out; the server only routes GET /logout */}
+            <DropdownMenuItem
+              className="hover:text-highlight focus:text-highlight not-data-[variant=destructive]:focus:**:text-highlight dark:focus:bg-black/50"
+              render={<a href="/logout" />}
+            >
+              <LogOut /> Log Out
             </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>
