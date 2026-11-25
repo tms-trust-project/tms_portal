@@ -90,6 +90,10 @@ pub struct TmsTokenClaims {
     pub tms_idp_provider: IdentityProviderType,
     #[serde(rename = "tms/organization", skip_serializing_if = "Option::is_none")]
     pub tms_organization: Option<Value>,
+    // the institution (from /institutions) the user logged in through.  Every login goes
+    // through one; logout uses it to end the institution's own IdP session too.
+    #[serde(rename = "tms/institution")]
+    pub tms_institution: String,
     pub exp: Value,
 }
 
@@ -202,7 +206,8 @@ impl FromRequestParts<AppState> for JwtValidator {
         if bearer.is_empty() {
             Err(Unauthorized(String::from("Unable to find TMS token")).into())
         } else {
-            let jwt_claims = get_token_claims(&app_state.config.jwt_config, &app_state.db_pool, &bearer).await?;
+            let jwt_config = &app_state.config.jwt_config;
+            let jwt_claims = get_token_claims(jwt_config, &app_state.db_pool, &bearer).await?;
             let tms_identity = jwt_claims.get_sub()?;
             info!("Request uri: {} TMS Identity: {}", req_parts.uri, tms_identity);
             if enabled!(Level::TRACE) {
@@ -268,6 +273,7 @@ pub async fn get_tms_token_claims(
     client_id: &str,
     idp_id: &str,
     idp_type: &IdentityProviderType,
+    institution_id: &str,
     claims: &JwtClaims,
 ) -> Result<TmsTokenClaims> {
     let issuer = &configuration.http_config.base_url;
@@ -292,6 +298,7 @@ pub async fn get_tms_token_claims(
             .get(CLAIM_IDP_DISPLAY_NAME)
             .map(|value| (*value).clone()),
         tms_organization: claims.get(CLAIM_ORGANIZATION).map(|value| (*value).clone()),
+        tms_institution: institution_id.to_owned(),
         exp: Value::from(expiration.duration_since(UNIX_EPOCH)?.as_millis()),
     };
     Ok(tms_token_claims)

@@ -4,11 +4,13 @@ use chrono::Utc;
 use serde_json::{Value, json};
 
 use super::{
-    LoginRejection, check_login_callback, check_login_identity, get_login_authorize_url,
-    get_signin_url,
+    LoginRejection, check_login_callback, check_login_identity, get_globus_logout_url,
+    get_login_authorize_url, get_logout_return, get_signin_url,
 };
 use crate::obj_model::configuration::{HttpConfig, StateKey};
 use crate::obj_model::identity_provider::{IdentityProvider, IdentityProviderType};
+use crate::obj_model::institutions::test_fixtures::InstitutionBuilder;
+use crate::obj_model::institutions::{GlobusConfiguration, IdpConfig};
 use crate::obj_model::key::Key;
 use crate::utils::oauth2_authorization_code_utils::{LoginCallbackQueryParams, OAuth2State};
 use crate::utils::state_utils::encode_state;
@@ -421,4 +423,66 @@ fn refuses_a_linked_identity_from_the_domain_that_didnt_authenticate_for_this_lo
     let result = check_login_identity(&claims, "utexas.edu", LOGIN_STARTED);
 
     assert_eq!(result, Err(LoginRejection::StaleAuthentication));
+}
+
+fn institution(idp_logout_url: &str) -> crate::obj_model::institutions::Institution {
+    InstitutionBuilder::new()
+        .with_id("utexas".into())
+        .with_name("The University of Texas at Austin".into())
+        .with_idp_config(IdpConfig {
+            globus: Some(GlobusConfiguration {
+                redirect_idp_domain: "utexas.edu".into(),
+                idp_logout_url: idp_logout_url.into(),
+            }),
+        })
+        .build()
+}
+
+#[test]
+fn logging_out_of_an_institution_with_an_idp_sign_out_returns_through_logout_idp() {
+    let institution = institution("https://enterprise.login.utexas.edu/idp/profile/Logout");
+
+    let (return_url, return_name) =
+        get_logout_return(&http_config("https://tms.example.edu"), Some(&institution)).unwrap();
+
+    assert_eq!(return_url, "https://tms.example.edu/logout/idp?institution=utexas");
+    assert_eq!(return_name, "The University of Texas at Austin sign-out");
+}
+
+#[test]
+fn logging_out_of_an_institution_without_an_idp_sign_out_returns_to_the_sign_in_page() {
+    let institution = institution("  ");
+
+    let (return_url, return_name) =
+        get_logout_return(&http_config("https://tms.example.edu"), Some(&institution)).unwrap();
+
+    assert_eq!(return_url, "https://tms.example.edu/");
+    assert_eq!(return_name, "TMS Portal");
+}
+
+#[test]
+fn logging_out_without_a_known_institution_returns_to_the_sign_in_page() {
+    let (return_url, _) = get_logout_return(&http_config("https://tms.example.edu"), None).unwrap();
+
+    assert_eq!(return_url, "https://tms.example.edu/");
+}
+
+#[test]
+fn the_globus_sign_out_page_links_back_to_the_return_url() {
+    let url = get_globus_logout_url(
+        "our-client-id",
+        "https://tms.example.edu/logout/idp?institution=utexas",
+        "UT sign-out",
+    )
+    .unwrap();
+
+    assert!(url.starts_with("https://auth.globus.org/v2/web/logout?"), "{url}");
+    let query: HashMap<String, String> = url::Url::parse(&url)
+        .unwrap()
+        .query_pairs()
+        .into_owned()
+        .collect();
+    assert_eq!(query["client_id"], "our-client-id");
+    assert_eq!(query["redirect_uri"], "https://tms.example.edu/logout/idp?institution=utexas");
+    assert_eq!(query["redirect_name"], "UT sign-out");
 }

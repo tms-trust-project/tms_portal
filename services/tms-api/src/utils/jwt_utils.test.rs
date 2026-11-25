@@ -39,6 +39,7 @@ fn claims() -> TmsTokenClaims {
         tms_idp_display_name: None,
         tms_idp_provider: IdentityProviderType::Globus,
         tms_organization: None,
+        tms_institution: "utexas".into(),
         // milliseconds, as get_tms_token_claims sets it
         exp: Value::from(4_102_444_800_000_u64),
     }
@@ -88,6 +89,7 @@ async fn decodes_a_token_signed_with_the_signing_key() {
 
     assert_eq!(claims.get_sub().unwrap(), "a-globus-uuid@globus");
     assert_eq!(claims.get_aud().unwrap(), "tms");
+    assert_eq!(claims.tms_institution, "utexas");
 }
 
 #[tokio::test]

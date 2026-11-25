@@ -198,11 +198,14 @@ pub async fn generate_code_and_redirect(
     let mut claims = claims.clone();
     // TODO: get iss from config
     claims.insert("iss".to_string(), Value::from(TMS_ISSUER));
+    // check_institution_login has already refused a state without an institution
+    let institution_id = state.institution_id.as_deref().context("The login has no institution")?;
     let tms_token_claims = get_tms_token_claims(
         configuration,
         &state.client_id,
         &identity_provider.id,
         &identity_provider.identity_provider_type,
+        institution_id,
         &claims,
     )
     .await?;

@@ -4,7 +4,7 @@ pub use login_rejection::LoginRejection;
 use crate::infra::auth::globus_token_provider::GlobusTokenProvider;
 use crate::obj_model::configuration::{HttpConfig, JwtConfig, StateKey};
 use crate::obj_model::identity_provider::{IdentityProvider, IdentityProviderType};
-use crate::obj_model::institutions::identity_is_from_domain;
+use crate::obj_model::institutions::{Institution, identity_is_from_domain};
 use crate::services::institution_service::InstitutionService;
 use crate::obj_model::login::WhoAmIResponse;
 use crate::ports::authorization_code_gateway::{AuthorizationCodeExchangeGateway, ExchangeInput};
@@ -20,8 +20,8 @@ use crate::utils::oauth2_authorization_code_utils::{
 };
 use crate::utils::state_utils::decode_state;
 use log::warn;
-use crate::constants::{DEFAULT_ALGORITHM, TMS_ISSUER};
-use anyhow::Result;
+use crate::constants::{DEFAULT_ALGORITHM, GLOBUS_LOGOUT_URL, TMS_ISSUER};
+use anyhow::{Context, Result};
 use url::Url;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -87,10 +87,65 @@ impl LoginService {
         token_provider.whoami(&tms_token_claims)
     }
 
-    // Logout and return the redirct url
-    pub async fn logout(&self, ctx: &SecurityContext) -> Result<RedirectUrl> {
-        self.issued_token_repo.revoke(&ctx.token).await?;
-        Ok(RedirectUrl(self.http_config.base_url.clone()))
+    /*
+    Log out: revoke the token (when there is one that decodes) and return where to send the
+    browser.  That's Globus's sign-out page, which ends the Globus session (otherwise the
+    next login reuses it).  When the token's institution has its own IdP sign-out, Globus's
+    page links on to /logout/idp to end that session too; otherwise back to the sign in
+    page.  This works without a valid token (e.g. one revoked by logging out in another
+    tab), so a user can always get to the sign-out pages.
+     */
+    pub async fn logout(&self, login_idp_id: &str, token: Option<&str>) -> Result<String> {
+        let signin_url = get_signin_url(&self.http_config, None);
+        let Some(token) = token else {
+            return Ok(signin_url);
+        };
+        let tms_token_claims = match decode_tms_token(&self.jwt_config, token).await {
+            Ok(tms_token_claims) => tms_token_claims,
+            Err(error) => {
+                warn!("Logging out with a token that can't be decoded: {error:#}");
+                return Ok(signin_url);
+            }
+        };
+        match self.issued_token_repo.revoke(token).await {
+            Ok(_) => {}
+            // e.g. after the database was reset: there's nothing to revoke, so carry on
+            Err(error) if is_not_found(&error) => {
+                warn!("Logging out with a token that isn't in the database")
+            }
+            Err(error) => return Err(error),
+        }
+        if tms_token_claims.tms_idp_provider != IdentityProviderType::Globus {
+            return Ok(signin_url);
+        }
+
+        let institution = self
+            .institution_service
+            .find_institution_by_id(&tms_token_claims.tms_institution)
+            .await
+            .ok();
+        let (return_url, return_name) =
+            get_logout_return(&self.http_config, institution.as_ref())?;
+        let idp = self.identity_provider_repo.get_login_provider_by_id(login_idp_id).await?;
+        get_globus_logout_url(&idp.client_id, &return_url, &return_name)
+    }
+
+    /*
+    The second step of logging out of an institution: Globus's sign-out page links here
+    (/logout/idp), and this is where to send the browser: the institution's own IdP
+    sign-out page, so its session ends too, or the sign in page.  Only urls from the
+    institutions list are used, so this isn't an open redirect.
+     */
+    pub async fn get_idp_logout_url(&self, institution_id: &str) -> String {
+        let institution = self.institution_service.find_institution_by_id(institution_id).await;
+        let idp_logout_url = match institution {
+            Ok(institution) => institution_idp_logout_url(&institution).map(String::from),
+            Err(error) => {
+                warn!("IdP logout for an unknown institution: {error:#}");
+                None
+            }
+        };
+        idp_logout_url.unwrap_or_else(|| get_signin_url(&self.http_config, None))
     }
 
     /*
@@ -148,11 +203,15 @@ impl LoginService {
         // TODO: get iss from config
         claims.insert("iss".to_string(), Value::from(TMS_ISSUER));
 
+        // check_institution_login has already refused a state without an institution
+        let institution_id =
+            decoded_state.institution_id.as_deref().context("The login has no institution")?;
         let tms_token_claims = get_tms_token_claims(
             configuration,
             &decoded_state.client_id,
             &idp.id,
             &idp.identity_provider_type,
+            institution_id,
             &claims,
         )
         .await?;
@@ -300,6 +359,11 @@ pub fn get_signin_url(http_config: &HttpConfig, rejection: Option<LoginRejection
     }
 }
 
+// whether the error is a ServiceError::NotFound
+fn is_not_found(error: &anyhow::Error) -> bool {
+    matches!(error.downcast_ref::<ServiceError>(), Some(ServiceError::NotFound(_)))
+}
+
 // whether the error is a ServiceError::BadRequest (e.g. an unusable institution)
 fn is_bad_request(error: &anyhow::Error) -> bool {
     matches!(error.downcast_ref::<ServiceError>(), Some(ServiceError::BadRequest(_)))
@@ -408,12 +472,46 @@ impl<'a> LoginIdentity<'a> {
     }
 }
 
-pub struct RedirectUrl(String);
+// the institution's own IdP sign-out page, if it has one
+fn institution_idp_logout_url(institution: &Institution) -> Option<&str> {
+    institution
+        .idp_config
+        .globus
+        .as_ref()
+        .map(|globus| globus.idp_logout_url.trim())
+        .filter(|url| !url.is_empty())
+}
 
-impl RedirectUrl {
-    pub fn into_inner(self) -> String {
-        self.0
+/*
+Where Globus's sign-out page sends the user on, and the name of that link: /logout/idp for
+an institution with its own IdP sign-out, otherwise the sign in page.
+ */
+pub fn get_logout_return(
+    http_config: &HttpConfig,
+    institution: Option<&Institution>,
+) -> Result<(String, String)> {
+    match institution {
+        Some(institution) if institution_idp_logout_url(institution).is_some() => {
+            let mut idp_logout =
+                Url::parse(&http_config.make_tms_url(&http_config.base_url, "logout/idp"))?;
+            idp_logout.query_pairs_mut().append_pair("institution", &institution.id);
+            Ok((idp_logout.to_string(), format!("{} sign-out", institution.name)))
+        }
+        _ => Ok((get_signin_url(http_config, None), String::from("TMS Portal"))),
     }
+}
+
+// Globus's sign-out page, which links back to return_url as return_name
+pub fn get_globus_logout_url(
+    client_id: &str,
+    return_url: &str,
+    return_name: &str,
+) -> Result<String> {
+    Ok(Url::parse_with_params(
+        GLOBUS_LOGOUT_URL,
+        [("client_id", client_id), ("redirect_uri", return_url), ("redirect_name", return_name)],
+    )?
+    .to_string())
 }
 
 #[derive(Debug, Serialize, Deserialize)]
