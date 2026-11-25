@@ -387,13 +387,6 @@ components:
           type: string
         updated:
           type: string
-    FederatedIdentityConfig:
-      type: object
-      properties:
-        globus:
-          oneOf:
-          - $ref: '#/components/schemas/GlobusConfiguration'
-          - type: 'null'
     GlobusConfiguration:
       type: object
       required:
@@ -404,20 +397,27 @@ components:
           type: string
         redirect_idp_domain:
           type: string
+    IdpConfig:
+      type: object
+      properties:
+        globus:
+          oneOf:
+          - $ref: '#/components/schemas/GlobusConfiguration'
+          - type: 'null'
     Institution:
       type: object
       required:
       - id
       - name
       - enabled
-      - ipd_config
+      - idp_config
       properties:
         enabled:
           type: boolean
         id:
           type: string
-        ipd_config:
-          $ref: '#/components/schemas/FederatedIdentityConfig'
+        idp_config:
+          $ref: '#/components/schemas/IdpConfig'
         name:
           type: string
     TmsErrorResponse:

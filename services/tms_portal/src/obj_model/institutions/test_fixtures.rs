@@ -1,15 +1,15 @@
-use crate::obj_model::institutions::{FederatedIdentityConfig, Institution};
+use crate::obj_model::institutions::{IdpConfig, Institution};
 
 pub struct InstitutionBuilder {
     id: Option<String>,
     name: Option<String>,
     enabled: Option<bool>,
-    ipd_config: Option<FederatedIdentityConfig>,
+    idp_config: Option<IdpConfig>,
 }
 
 impl InstitutionBuilder {
     pub fn new() -> Self {
-        Self { id: None, name: None, enabled: None, ipd_config: None }
+        Self { id: None, name: None, enabled: None, idp_config: None }
     }
 
     pub fn with_id(mut self, id: String) -> Self {
@@ -27,8 +27,8 @@ impl InstitutionBuilder {
         self
     }
 
-    pub fn with_ipd_config(mut self, ipd_config: FederatedIdentityConfig) -> Self {
-        self.ipd_config = Some(ipd_config);
+    pub fn with_idp_config(mut self, idp_config: IdpConfig) -> Self {
+        self.idp_config = Some(idp_config);
         self
     }
 
@@ -43,10 +43,10 @@ impl InstitutionBuilder {
                 .clone()
                 .unwrap_or_else(|| "Test Institution".into()),
             enabled: self.enabled.unwrap_or(true),
-            ipd_config: self
-                .ipd_config
+            idp_config: self
+                .idp_config
                 .clone()
-                .unwrap_or(FederatedIdentityConfig { globus: None }),
+                .unwrap_or(IdpConfig { globus: None }),
         }
     }
 }

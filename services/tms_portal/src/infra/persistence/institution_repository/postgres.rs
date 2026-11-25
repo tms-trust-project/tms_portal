@@ -49,7 +49,7 @@ impl From<&PgRow> for Institution {
             id: row.get("id"),
             name: row.get("name"),
             enabled: row.get("enabled"),
-            ipd_config: row.get::<Json<_>, _>("federated_identity_config").0,
+            idp_config: row.get::<Json<_>, _>("federated_identity_config").0,
         }
     }
 }

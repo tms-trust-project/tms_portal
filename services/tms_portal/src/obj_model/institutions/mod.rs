@@ -8,11 +8,11 @@ pub struct Institution {
     pub id: String,
     pub name: String,
     pub enabled: bool,
-    pub ipd_config: FederatedIdentityConfig,
+    pub idp_config: IdpConfig,
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct FederatedIdentityConfig {
+pub struct IdpConfig {
     pub globus: Option<GlobusConfiguration>,
 }
 

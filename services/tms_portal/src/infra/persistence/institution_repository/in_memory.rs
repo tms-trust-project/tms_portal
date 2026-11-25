@@ -64,7 +64,7 @@ mod tests {
                         "id": "utexas",
                         "name": "The University of Texas at Austin",
                         "enabled": true,
-                        "ipd_config": {
+                        "idp_config": {
                             "globus": {
                                 "redirect_idp_domain": "utexas.edu",
                                 "idp_logout_url": "https://enterprise.login.utexas.edu/idp/profile/Logout"
@@ -83,7 +83,7 @@ mod tests {
         assert!(institutions[0].enabled);
         assert_eq!(
             institutions[0]
-                .ipd_config
+                .idp_config
                 .globus
                 .as_ref()
                 .unwrap()

@@ -7,7 +7,7 @@ pub struct Institution {
     pub id: String,
     pub name: String,
     pub enabled: bool,
-    pub ipd_config: FederatedIdentityConfig,
+    pub idp_config: IdpConfig,
 }
 
 impl From<obj_model::institutions::Institution> for Institution {
@@ -16,19 +16,19 @@ impl From<obj_model::institutions::Institution> for Institution {
             id: value.id,
             name: value.name,
             enabled: value.enabled,
-            ipd_config: value.ipd_config.into(),
+            idp_config: value.idp_config.into(),
         }
     }
 }
 
 #[derive(Debug, Hash, Serialize, ToSchema, Clone, PartialEq, Eq)]
-pub struct FederatedIdentityConfig {
+pub struct IdpConfig {
     pub globus: Option<GlobusConfiguration>,
 }
 
-impl From<obj_model::institutions::FederatedIdentityConfig> for FederatedIdentityConfig {
-    fn from(value: obj_model::institutions::FederatedIdentityConfig) -> Self {
-        FederatedIdentityConfig { globus: value.globus.map(GlobusConfiguration::from) }
+impl From<obj_model::institutions::IdpConfig> for IdpConfig {
+    fn from(value: obj_model::institutions::IdpConfig) -> Self {
+        IdpConfig { globus: value.globus.map(GlobusConfiguration::from) }
     }
 }
 
