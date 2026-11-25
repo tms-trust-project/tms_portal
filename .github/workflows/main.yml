@@ -1,4 +1,4 @@
-name: TMS Portal CI
+name: TMS Core CI
 
 on:
   push:

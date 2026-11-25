@@ -18,7 +18,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
       - name: Run Tests
-        run: cargo test -p tms_portal
+        run: cargo test -p tms-api
 
   build-push-api-image:
     needs:
@@ -34,6 +34,6 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
       - name: Build Image
-        run: docker buildx build --platform linux/x86_64 --no-cache --progress=plain -f services/tms_portal/Dockerfile -t ${{ inputs.image_name }}:${{ inputs.image_tag }} --build-arg SERVICE_NAME=tms_portal .
+        run: docker buildx build --platform linux/x86_64 --no-cache --progress=plain -f services/tms-api/Dockerfile -t ${{ inputs.image_name }}:${{ inputs.image_tag }} --build-arg SERVICE_NAME=tms-api .
       - name: Push Image
         run: docker push --all-tags ${{ inputs.image_name }}
