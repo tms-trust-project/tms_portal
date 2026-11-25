@@ -168,7 +168,7 @@ pub async fn decode_tms_token(jwt_config: &JwtConfig, token: &str) -> Result<Tms
 async fn get_token_claims(
     jwt_config: &JwtConfig,
     db_pool: &PgPool,
-    token: &String,
+    token: &str,
 ) -> Result<TmsTokenClaims> {
     let mut tx = db_pool.begin().await?;
     let issued_token = db_get_token(&mut tx, token).await?;

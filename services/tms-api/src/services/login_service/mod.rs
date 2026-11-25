@@ -43,6 +43,8 @@ pub struct LoginService {
 }
 
 impl LoginService {
+    // one argument per dependency it's wired with in main
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         state_key: StateKey,
         http_config: HttpConfig,
