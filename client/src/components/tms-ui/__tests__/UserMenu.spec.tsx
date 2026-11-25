@@ -149,40 +149,15 @@ describe("UserMenu", () => {
     )
   })
 
-  test("keeps the token cookie when whoami fails for another reason", async () => {
-    Cookies.set("tmstoken", "test-token")
-    let answered = false
-    server.use(
-      http.get("/login/whoami", () => {
-        answered = true
-        return HttpResponse.json({}, { status: 500 })
-      })
-    )
-    const { queryClient } = renderWithQueryClient(<UserMenu />)
-
-    await waitFor(() => expect(answered).toBe(true))
-    await waitFor(() =>
-      expect(queryClient.getQueryState(["auth", "whoami"])?.status).toBe(
-        "error"
-      )
-    )
-    expect(Cookies.get("tmstoken")).toBe("test-token")
-    expect(screen.getByRole("link", { name: /Log In/i })).toHaveAttribute(
-      "href",
-      "/login?idp_id=globus_idp&redirect_uri=https%3A%2F%2Ftms-portal.savanna.tacc.cloud%2F"
-    )
-  })
-
-  test("with requireInstitution, sends a failed whoami to the sign in card, not the plain login", async () => {
+  test("sends a failed whoami to the sign in card, keeping the token until asked", async () => {
     Cookies.set("tmstoken", "test-token")
     server.use(
       http.get("/login/whoami", () => HttpResponse.json({}, { status: 500 }))
     )
-    const { queryClient } = renderWithQueryClient(
-      <UserMenu requireInstitution />
-    )
+    const { queryClient } = renderWithQueryClient(<UserMenu />)
 
     const logIn = await screen.findByRole("button", { name: /Log In/i })
+    // every login needs an institution, so there's no login link here
     expect(screen.queryByRole("link")).not.toBeInTheDocument()
     // the cookie is only dropped on the user's say-so, not by the 500 itself
     expect(Cookies.get("tmstoken")).toBe("test-token")

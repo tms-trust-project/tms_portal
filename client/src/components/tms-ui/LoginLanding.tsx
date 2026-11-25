@@ -13,7 +13,6 @@ import {
 import { Label } from "@/components/ui/label"
 import { loginErrorMessage, withoutLoginError } from "@/lib/loginError"
 import { loginHref } from "@/lib/loginHref"
-import { REQUIRE_INSTITUTION } from "@/lib/loginOptions"
 import { useListInstitutions } from "@/tms-hooks"
 
 /*
@@ -57,10 +56,9 @@ function LoginErrorAlert() {
 const loginButtonClass =
   "bg-neutral-200 text-black hover:bg-highlight hover:text-highlight-foreground"
 
-// requireInstitution: no plain Globus login, so Log In waits on (and needs) the list
-export function LoginLanding({
-  requireInstitution = REQUIRE_INSTITUTION,
-}: { requireInstitution?: boolean } = {}) {
+// Every login goes through an institution (the server refuses one without), so Log In
+// waits on (and needs) the list.
+export function LoginLanding() {
   // /institutions is public, so any failure (a 401 included) means the list is unavailable
   const { data: institutions, isPending, isError } = useListInstitutions()
   const [selected, setSelected] = useState("")
@@ -73,9 +71,7 @@ export function LoginLanding({
   const showPicker = loginInstitutions.length > 0
   const showError = isError
   // the list loaded, but nothing in it can be used to log in
-  const showNoneApproved =
-    requireInstitution && !isPending && !isError && !showPicker
-  const canLogIn = !requireInstitution || !!institutionId
+  const showNoneApproved = !isPending && !isError && !showPicker
 
   return (
     <Card className="mx-auto max-w-md">
@@ -83,14 +79,12 @@ export function LoginLanding({
         <CardTitle>Log in to TMS</CardTitle>
         <CardDescription>
           {/* /login sends the chosen institution's logins to its own domain (see loginHref) */}
-          {showPicker || requireInstitution
-            ? "Choose your institution to go straight to its login page."
-            : "Log in with Globus to manage resources."}
+          Choose your institution to go straight to its login page.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
         <LoginErrorAlert />
-        {/* the picker always waits on the list; Log In waits only with requireInstitution */}
+        {/* the picker and Log In both wait on the list */}
         <div id="login-status" aria-live="polite">
           {isPending && (
             <p className="text-sm text-muted-foreground">
@@ -127,11 +121,10 @@ export function LoginLanding({
         )}
       </CardContent>
       <CardFooter>
-        {/* the plain login until a list arrives (and if none does: on an error, or when no
-            institution is approved), then the chosen institution's.  With
-            requireInstitution there's no plain login: Log In is a disabled button, with
-            no href, until an institution can be chosen. */}
-        {canLogIn ? (
+        {/* the chosen institution's login; until there is one (while the list loads, or for
+            good on an error or when no institution is approved) Log In is a disabled
+            button, with no href */}
+        {institutionId ? (
           <Button
             role="link"
             className={loginButtonClass}

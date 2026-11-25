@@ -15,8 +15,8 @@ export type Institution = {
   idp_config: { globus: GlobusConfiguration | null }
 }
 
-// The list is optional (the sign in card falls back to the plain login without it), so
-// don't wait out httpClient's 30 second timeout for it.
+// Every login needs an institution from this list, so the sign in card's Log In waits on
+// it.  Don't make the user wait out httpClient's 30 second timeout for it.
 const INSTITUTIONS_TIMEOUT_MS = 5000
 
 const fetchInstitutions = async () => {

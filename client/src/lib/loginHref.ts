@@ -7,11 +7,11 @@ the identity again when Globus redirects back.  A login without an institution, 
 that's unknown, disabled or has no Globus domain, comes back to the sign in page with
 ?error=<code> instead.
  */
-export function loginHref(institutionId?: string) {
+export function loginHref(institutionId: string) {
   const params = new URLSearchParams({
     idp_id: "globus_idp",
     redirect_uri: __REDIRECT_URI__,
+    institution: institutionId,
   })
-  if (institutionId) params.set("institution", institutionId)
   return `/login?${params}`
 }

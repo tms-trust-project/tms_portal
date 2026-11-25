@@ -1,8 +1,4 @@
-import {
-  fireEvent,
-  screen,
-  waitForElementToBeRemoved,
-} from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import { http, HttpResponse } from "msw"
 import { server } from "@/stubs/server"
 import { LoginLanding } from "../LoginLanding"
@@ -18,11 +14,13 @@ const globus = {
 const listError = "The list of institutions could not be loaded."
 const noneApproved = "No institutions are available for login."
 const chooseText = "Choose your institution to go straight to its login page."
-const globusText = "Log in with Globus to manage resources."
 
 const loginLink = () => screen.getByRole("link", { name: "Log In" })
-// with requireInstitution, Log In is a disabled button until it has an institution
+// Log In is a disabled button until it has an institution
 const disabledLogIn = () => screen.getByRole("button", { name: "Log In" })
+// no rendered link may ever be a login without an institution
+const expectNoLoginLink = () =>
+  expect(screen.queryByRole("link")).not.toBeInTheDocument()
 
 // answer /institutions with an error status, counting the requests
 function failInstitutions(status: number) {
@@ -101,72 +99,8 @@ describe("LoginLanding", () => {
     expect(loginLink()).toHaveAttribute("href", `${loginBase}&institution=ok`)
   })
 
-  // a 4xx isn't retried, so the error shows after one request
-  test.each([401, 403, 404])(
-    "says the list could not be loaded on a %i, keeping the plain login",
-    async (status) => {
-      const calls = failInstitutions(status)
-      renderWithQueryClient(<LoginLanding />)
-
-      expect(await screen.findByText(listError)).toBeInTheDocument()
-      expect(loginLink()).toHaveAttribute("href", loginBase)
-      expect(screen.queryByLabelText("Institution")).not.toBeInTheDocument()
-      expect(screen.getByText(globusText)).toBeInTheDocument()
-      expect(calls.requests).toBe(1)
-    }
-  )
-
-  test("falls back to the plain login when no institution is approved", async () => {
-    server.use(
-      http.get("/institutions", () =>
-        HttpResponse.json({ status: "200 OK", result: [] })
-      )
-    )
-    renderWithQueryClient(<LoginLanding />)
-
-    // the same text shows while loading, so wait for the (empty) list itself
-    await waitForElementToBeRemoved(() =>
-      screen.queryByText("Loading institutions…")
-    )
-    expect(screen.getByText(globusText)).toBeInTheDocument()
-    expect(loginLink()).toHaveAttribute("href", loginBase)
-    expect(screen.queryByLabelText("Institution")).not.toBeInTheDocument()
-    // the empty list is only an error when an institution is required
-    expect(screen.queryByText(noneApproved)).not.toBeInTheDocument()
-  })
-
-  test("offers the plain Log In while the list loads, then the institution's", async () => {
-    renderWithQueryClient(<LoginLanding />)
-    expect(screen.getByText("Loading institutions…")).toBeInTheDocument()
-    expect(loginLink()).toHaveAttribute("href", loginBase)
-
-    await screen.findByLabelText("Institution")
-    expect(screen.queryByText("Loading institutions…")).not.toBeInTheDocument()
-    expect(loginLink()).toHaveAttribute(
-      "href",
-      `${loginBase}&institution=utexas`
-    )
-  })
-
-  test("keeps Log In available through a 5xx, retrying once", async () => {
-    const calls = failInstitutions(503)
-    // the hook's own retry rule still applies; only the backoff between tries is skipped
-    renderWithQueryClient(<LoginLanding />, { queries: { retryDelay: 0 } })
-
-    expect(loginLink()).toHaveAttribute("href", loginBase)
-    expect(await screen.findByText(listError)).toBeInTheDocument()
-    expect(loginLink()).toHaveAttribute("href", loginBase)
-    expect(calls.requests).toBe(2)
-  })
-})
-
-describe("LoginLanding with requireInstitution", () => {
-  // no rendered link may ever be the plain Globus login
-  const expectNoLoginLink = () =>
-    expect(screen.queryByRole("link")).not.toBeInTheDocument()
-
   test("keeps Log In disabled while the list loads, then links to the institution", async () => {
-    renderWithQueryClient(<LoginLanding requireInstitution />)
+    renderWithQueryClient(<LoginLanding />)
 
     expect(screen.getByText(chooseText)).toBeInTheDocument()
     expect(screen.getByText("Loading institutions…")).toBeInTheDocument()
@@ -178,28 +112,30 @@ describe("LoginLanding with requireInstitution", () => {
       "href",
       `${loginBase}&institution=utexas`
     )
+    expect(screen.queryByText("Loading institutions…")).not.toBeInTheDocument()
     expect(
       screen.queryByRole("button", { name: "Log In" })
     ).not.toBeInTheDocument()
   })
 
+  // a 4xx isn't retried, so the error shows after one request; a 5xx is retried once
   test.each([
+    [401, 1],
+    [403, 1],
     [404, 1],
     [503, 2],
   ])(
     "leaves Log In disabled when the list fails with a %i",
     async (status, requests) => {
       const calls = failInstitutions(status)
-      renderWithQueryClient(<LoginLanding requireInstitution />, {
-        queries: { retryDelay: 0 },
-      })
+      // the hook's own retry rule still applies; only the backoff between tries is skipped
+      renderWithQueryClient(<LoginLanding />, { queries: { retryDelay: 0 } })
 
       expect(await screen.findByText(listError)).toBeInTheDocument()
       expect(disabledLogIn()).toBeDisabled()
+      expect(screen.queryByLabelText("Institution")).not.toBeInTheDocument()
       expectNoLoginLink()
-      // the description never offers the plain Globus login
       expect(screen.getByText(chooseText)).toBeInTheDocument()
-      expect(screen.queryByText(globusText)).not.toBeInTheDocument()
       expect(calls.requests).toBe(requests)
     }
   )
@@ -224,7 +160,7 @@ describe("LoginLanding with requireInstitution", () => {
         HttpResponse.json({ status: "200 OK", result })
       )
     )
-    renderWithQueryClient(<LoginLanding requireInstitution />)
+    renderWithQueryClient(<LoginLanding />)
 
     expect(await screen.findByText(noneApproved)).toBeInTheDocument()
     expect(disabledLogIn()).toBeDisabled()

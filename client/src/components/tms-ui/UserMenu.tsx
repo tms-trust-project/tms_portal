@@ -17,8 +17,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { loginHref } from "@/lib/loginHref"
-import { REQUIRE_INSTITUTION } from "@/lib/loginOptions"
 import { useAuth } from "@/tms-hooks/useAuth"
 import { useWhoami } from "@/tms-hooks"
 import { TokenClaimsModal } from "./TokenClaimsModal"
@@ -26,10 +24,7 @@ import { TokenClaimsModal } from "./TokenClaimsModal"
 const loginButtonClass =
   "bg-neutral-200 text-black hover:bg-highlight hover:text-highlight-foreground"
 
-// requireInstitution: never offer the plain Globus login (see src/lib/loginOptions.ts)
-export function UserMenu({
-  requireInstitution = REQUIRE_INSTITUTION,
-}: { requireInstitution?: boolean } = {}) {
+export function UserMenu() {
   const queryClient = useQueryClient()
   const { data: isAuthenticated } = useAuth()
   const [claimsOpen, setClaimsOpen] = useState(false)
@@ -40,11 +35,10 @@ export function UserMenu({
   // still loading (or the token was just dropped): show nothing rather than flash Log In
   // at a user who is logged in
   if (!whoami && !isError) return null
-  // whoami failed for another reason (e.g. a 5xx), so offer a fresh login.  With
-  // requireInstitution that means the sign in card: drop the token cookie, as
-  // useWhoami does on a 401, and the home page shows the card in place of the user's
-  // pages.
-  if (!whoami && requireInstitution)
+  // whoami failed for another reason (e.g. a 5xx), so offer a fresh login through the
+  // sign in card (every login needs an institution): drop the token cookie, as useWhoami
+  // does on a 401, and the home page shows the card in place of the user's pages.
+  if (!whoami)
     return (
       <Button
         className={loginButtonClass}
@@ -55,19 +49,6 @@ export function UserMenu({
       >
         <LogIn /> Log In
       </Button>
-    )
-  if (!whoami)
-    return (
-      <Button
-        role="link"
-        className={loginButtonClass}
-        nativeButton={false}
-        render={
-          <a href={loginHref()}>
-            <LogIn /> Log In
-          </a>
-        }
-      />
     )
   return (
     <>
