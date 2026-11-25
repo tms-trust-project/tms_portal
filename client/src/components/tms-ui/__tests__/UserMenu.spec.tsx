@@ -154,4 +154,31 @@ describe("UserMenu", () => {
       "/login?idp_id=globus_idp&redirect_uri=https%3A%2F%2Ftms-portal.savanna.tacc.cloud%2F"
     )
   })
+
+  test("with requireInstitution, sends a failed whoami to the sign in card, not the plain login", async () => {
+    Cookies.set("tmstoken", "test-token")
+    server.use(
+      http.get("/login/whoami", () => HttpResponse.json({}, { status: 500 }))
+    )
+    const { queryClient } = renderWithQueryClient(
+      <UserMenu requireInstitution />
+    )
+
+    const logIn = await screen.findByRole("button", { name: /Log In/i })
+    expect(screen.queryByRole("link")).not.toBeInTheDocument()
+    // the cookie is only dropped on the user's say-so, not by the 500 itself
+    expect(Cookies.get("tmstoken")).toBe("test-token")
+
+    fireEvent.click(logIn)
+    expect(Cookies.get("tmstoken")).toBeUndefined()
+    // App shows the sign in card once the auth-cookie query says logged out
+    await waitFor(() =>
+      expect(queryClient.getQueryData(["auth-cookie"])).toBeNull()
+    )
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: /Log In/i })
+      ).not.toBeInTheDocument()
+    )
+  })
 })
