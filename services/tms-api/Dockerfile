@@ -22,6 +22,14 @@ RUN pnpm install --frozen-lockfile
 
 COPY ./client/ ./
 
+# true: every login goes through an institution from /institutions, with no plain Globus
+# login (client/src/lib/loginOptions.ts).  A build arg reaches RUN as an env var, which
+# Vite reads, so no ENV is needed.  Declared here so changing it keeps the install cached,
+# and checked because the client treats anything but "true" as off.
+ARG VITE_REQUIRE_INSTITUTION=false
+RUN case "${VITE_REQUIRE_INSTITUTION}" in true|false) ;; \
+      *) echo "VITE_REQUIRE_INSTITUTION must be true or false, got '${VITE_REQUIRE_INSTITUTION}'" >&2; exit 1 ;; \
+    esac
 RUN pnpm run build
 
 
