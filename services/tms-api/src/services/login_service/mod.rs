@@ -196,14 +196,14 @@ impl LoginService {
         // the login must come back as one of the institution's identities, freshly
         // authenticated, before any TMS token is issued.  The institution is looked up
         // again, so one disabled since the login started can't be used.
-        if let Err(rejection) = self.check_institution_login(&decoded_state, &claims).await? {
+        if let Err(rejection) = self.check_login_claims(&decoded_state, &claims).await? {
             return Ok(CallbackResult::Rejected(rejection));
         }
 
         // TODO: get iss from config
         claims.insert("iss".to_string(), Value::from(TMS_ISSUER));
 
-        // check_institution_login has already refused a state without an institution
+        // check_login_claims has already refused a state without an institution
         let institution_id =
             decoded_state.institution_id.as_deref().context("The login has no institution")?;
         let tms_token_claims = get_tms_token_claims(
@@ -249,16 +249,20 @@ impl LoginService {
 
 impl LoginService {
     /*
-    Checks a login against the institution it went through (from the signed state): the
-    institution must still be usable, and the identity must be one of its identities,
-    authenticated for this login.  Every login has an institution; a state without one is
-    refused.
+    Checks the id token's claims against the login's signed state: the nonce must be the
+    one sent to the identity provider for this login, the institution must still be
+    usable, and the identity must be one of its identities, authenticated for this login.
+    Every login has an institution; a state without one is refused.
      */
-    pub async fn check_institution_login(
+    pub async fn check_login_claims(
         &self,
         state: &OAuth2State,
         claims: &HashMap<String, Value>,
     ) -> Result<std::result::Result<(), LoginRejection>> {
+        if let Err(rejection) = check_nonce(claims, state.nonce) {
+            warn!("The id token's nonce isn't this login's");
+            return Ok(Err(rejection));
+        }
         let Some(institution_id) = &state.institution_id else {
             warn!("Login callback for a login without an institution");
             return Ok(Err(LoginRejection::InstitutionRequired));
@@ -367,6 +371,20 @@ fn is_not_found(error: &anyhow::Error) -> bool {
 // whether the error is a ServiceError::BadRequest (e.g. an unusable institution)
 fn is_bad_request(error: &anyhow::Error) -> bool {
     matches!(error.downcast_ref::<ServiceError>(), Some(ServiceError::BadRequest(_)))
+}
+
+/*
+The id token's nonce must be the one sent in this login's authorize request (the state's
+nonce), so an id token from another login can't be used for this one (OIDC Core 3.1.3.7).
+ */
+pub fn check_nonce(
+    claims: &HashMap<String, Value>,
+    expected: u32,
+) -> std::result::Result<(), LoginRejection> {
+    match claims.get("nonce").and_then(Value::as_str) {
+        Some(nonce) if nonce == expected.to_string() => Ok(()),
+        _ => Err(LoginRejection::LoginFailed),
+    }
 }
 
 // how far the identity provider's clock may be behind ours

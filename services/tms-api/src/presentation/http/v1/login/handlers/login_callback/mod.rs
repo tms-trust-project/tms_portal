@@ -69,7 +69,7 @@ pub async fn login_callback(
     let token_cookie = Cookie::build((TOKEN_COOKIE_NAME, token))
         .path(ROOT_COOKIE_PATH)
         .http_only(false)
-        .secure(true)
+        .secure(app_state.config.http_config.uses_https())
         .expires(OffsetDateTime::from_unix_timestamp(
             (Utc::now() + TimeDelta::seconds(expires_in)).timestamp(),
         )?)

@@ -8,8 +8,6 @@ use axum::http::StatusCode;
 use axum::http::header::LOCATION;
 use axum_extra::extract::CookieJar;
 use axum_extra::extract::cookie::Cookie;
-use base64::Engine;
-use base64::prelude::BASE64_STANDARD;
 use log::warn;
 use tms_lib::utils::oauth_utils::generate_nonce;
 use tms_lib::utils::service_error::ServiceError;
@@ -136,13 +134,15 @@ async fn start_login(
     }
 
     let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?.as_secs();
+    // sent to Globus as the OIDC nonce, and checked against the id token's
+    let nonce = generate_nonce();
     let oauth_state = OAuth2State {
         tms_identity: String::default(), // we don't have a tms identity at this point
         client_id,
         idp_id: idp.id.clone(),
         redirect_uri: redirect_uri.to_string(),
         exp: now + 300,
-        nonce: generate_nonce(),
+        nonce,
         client_state: None,
         institution_id: Some(institution_id.clone()),
         login_started: now,
@@ -150,19 +150,19 @@ async fn start_login(
     let encoded_state = encode_state(&configuration.state_key, oauth_state).await?;
 
     let callback_url = &configuration.http_config.get_identity_provider_callback_url();
-    let encoded_nonce = BASE64_STANDARD.encode(generate_nonce().to_ne_bytes());
     let location = get_login_authorize_url(
         &idp,
         callback_url,
         &encoded_state,
-        &encoded_nonce,
+        &nonce.to_string(),
         &login_domain,
     )?;
 
     let updated_jar = jar.add(
         Cookie::build((STATE_COOKIE_NAME, encoded_state))
             .path(ROOT_COOKIE_PATH)
-            .http_only(true),
+            .http_only(true)
+            .secure(configuration.http_config.uses_https()),
     );
 
     // This response goes to the browser, so it must not carry the idp's client secret.  The

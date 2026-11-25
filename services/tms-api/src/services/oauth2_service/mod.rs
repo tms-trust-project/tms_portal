@@ -19,8 +19,6 @@ use crate::utils::oauth2_authorization_code_utils::{
 use crate::utils::redirect_utils::check_allowed_redirects;
 use crate::utils::state_utils::encode_state;
 use anyhow::Context;
-use base64::Engine;
-use base64::prelude::BASE64_STANDARD;
 use chrono::TimeDelta;
 use rand::RngExt;
 use rand::distr::Alphanumeric;
@@ -127,14 +125,14 @@ pub async fn authorize_code(
         Err(error) => return Err(error),
     };
 
-    // encode our state
-    let encoded_state = get_state(configuration, request, &idp.id, institution_id).await?;
+    // encode our state, with the OIDC nonce sent to Globus (checked against the id token's)
+    let nonce = generate_nonce();
+    let encoded_state = get_state(configuration, request, &idp.id, institution_id, nonce).await?;
 
     // compute the location url that will be used for the redirect
     let callback_url = configuration.http_config.get_oauth_provider_callback_url();
-    let encoded_nonce = BASE64_STANDARD.encode(generate_nonce().to_ne_bytes());
-    let location =
-        get_login_authorize_url(&idp, &callback_url, &encoded_state, &encoded_nonce, &domain)?;
+    let nonce = nonce.to_string();
+    let location = get_login_authorize_url(&idp, &callback_url, &encoded_state, &nonce, &domain)?;
 
     Ok(AuthorizeOutcome::Login { location: location.to_string(), encoded_state })
 }
@@ -198,7 +196,7 @@ pub async fn generate_code_and_redirect(
     let mut claims = claims.clone();
     // TODO: get iss from config
     claims.insert("iss".to_string(), Value::from(TMS_ISSUER));
-    // check_institution_login has already refused a state without an institution
+    // check_login_claims has already refused a state without an institution
     let institution_id = state.institution_id.as_deref().context("The login has no institution")?;
     let tms_token_claims = get_tms_token_claims(
         configuration,
@@ -236,6 +234,7 @@ async fn get_state(
     request: &AuthorizeCodeRequest<'_>,
     idp_id: &str,
     institution_id: &str,
+    nonce: u32,
 ) -> anyhow::Result<String> {
     let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?.as_secs();
     // populate state structure
@@ -246,7 +245,7 @@ async fn get_state(
         redirect_uri: request.redirect_uri.to_owned(),
         // TODO:  This should be a config setting
         exp: now + 300,
-        nonce: generate_nonce(),
+        nonce,
         client_state: request.state.clone(),
         institution_id: Some(institution_id.to_owned()),
         login_started: now,
@@ -365,7 +364,7 @@ async fn complete_oauth2_login(
         }
     };
 
-    if let Err(rejection) = login_service.check_institution_login(state, &claims).await? {
+    if let Err(rejection) = login_service.check_login_claims(state, &claims).await? {
         return Ok(Err(rejection));
     }
 

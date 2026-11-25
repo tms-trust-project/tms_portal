@@ -4,7 +4,7 @@ use chrono::Utc;
 use serde_json::{Value, json};
 
 use super::{
-    LoginRejection, check_login_callback, check_login_identity, get_globus_logout_url,
+    LoginRejection, check_login_callback, check_login_identity, check_nonce, get_globus_logout_url,
     get_login_authorize_url, get_logout_return, get_signin_url,
 };
 use crate::obj_model::configuration::{HttpConfig, StateKey};
@@ -485,4 +485,28 @@ fn the_globus_sign_out_page_links_back_to_the_return_url() {
     assert_eq!(query["client_id"], "our-client-id");
     assert_eq!(query["redirect_uri"], "https://tms.example.edu/logout/idp?institution=utexas");
     assert_eq!(query["redirect_name"], "UT sign-out");
+}
+
+#[test]
+fn accepts_the_id_token_with_this_logins_nonce() {
+    assert_eq!(check_nonce(&claims(json!({"nonce": "4242"})), 4242), Ok(()));
+}
+
+#[test]
+fn refuses_an_id_token_with_another_logins_nonce() {
+    let result = check_nonce(&claims(json!({"nonce": "1"})), 4242);
+
+    assert_eq!(result, Err(LoginRejection::LoginFailed));
+}
+
+#[test]
+fn refuses_an_id_token_without_a_nonce() {
+    assert_eq!(check_nonce(&claims(json!({})), 4242), Err(LoginRejection::LoginFailed));
+}
+
+#[test]
+fn cookies_are_secure_only_when_the_portal_is_served_over_https() {
+    assert!(http_config("https://tms.example.edu").uses_https());
+    assert!(http_config("HTTPS://tms.example.edu/").uses_https());
+    assert!(!http_config("http://localhost:8080").uses_https());
 }

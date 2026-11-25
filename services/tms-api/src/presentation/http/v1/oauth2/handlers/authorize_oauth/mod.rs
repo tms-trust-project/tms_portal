@@ -86,7 +86,8 @@ pub async fn authorize_oauth(
                     let updated_jar = jar.add(
                         Cookie::build((STATE_COOKIE_NAME, encoded_state))
                             .path(ROOT_COOKIE_PATH)
-                            .http_only(true),
+                            .http_only(true)
+                            .secure(app_state.config.http_config.uses_https()),
                     );
                     let headers = HashMap::from([(LOCATION.to_string(), location)]);
                     Ok((
