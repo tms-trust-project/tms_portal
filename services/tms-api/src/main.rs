@@ -49,8 +49,8 @@ use uuid::Uuid;
 #[tokio::main]
 #[instrument]
 async fn main() -> anyhow::Result<()> {
+    // the url has the database password, so it's never printed or logged
     let database_url_string = database_url()?;
-    dbg!(&database_url_string);
     let db_pool = init_db(&database_url_string).await;
     let mut config = Configuration::get(&db_pool).await?;
     if let Ok(config_directory) = std::env::var("TMS_PORTAL_CONFIG_DIR") {
