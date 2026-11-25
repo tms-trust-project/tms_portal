@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: tms-portal-config
+  name: tms-api-config
 data:
   log4rs.yml: |
     refresh_rate: 30 seconds

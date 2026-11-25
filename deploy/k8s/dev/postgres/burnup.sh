@@ -1,0 +1,6 @@
+#!/bin/bash
+
+
+kubectl apply -f ./pvc.yml
+kubectl apply -f ./service.yml
+kubectl apply -f ./deploy.yml

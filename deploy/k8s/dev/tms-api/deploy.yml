@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tms-api
+spec:
+  selector:
+    matchLabels:
+      app: tms-api
+  template:
+    metadata:
+      labels:
+        app: tms-api
+    spec:
+      containers:
+      - name: tms-api
+        image: tapis/tms-api:23-merge
+        imagePullPolicy: Always
+        resources: {}
+        ports:
+        - name: tms-api
+          containerPort: 8080
+        env:
+        - name: RUST_BACKTRACE
+          value: "1"
+        - name: TMS_PORTAL_CONFIG_DIR
+          value: "/etc/tms-api"
+        - name: TMS_PORTAL_INSTITUTIONS_CONFIG_FILE
+          value: "/etc/tms-api/institutions.json"
+        - name: TMS_PORTAL_DB_HOST
+          value: "host.minikube.internal"
+        - name: TMS_PORTAL_DB_NAME
+          value: "tms_db"
+        - name: TMS_PORTAL_DB_USER
+          value: "tms"
+        - name: TMS_PORTAL_DB_PASSWORD 
+          valueFrom:
+            secretKeyRef:
+              name: tms-secrets
+              key: postgres-tms-user-password
+        volumeMounts:
+        - name: tms-api-config
+          mountPath: "/etc/tms-api"
+          readOnly: true
+      volumes:
+      - name: tms-api-config
+        configMap:
+          name: tms-api-config

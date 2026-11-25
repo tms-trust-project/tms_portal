@@ -1,31 +1,31 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: tms-portal
+  name: tms-api
 spec:
   selector:
     matchLabels:
-      app: tms-portal
+      app: tms-api
   template:
     metadata:
       labels:
-        app: tms-portal
+        app: tms-api
     spec:
       containers:
-      - name: tms-portal
+      - name: tms-api
         image: tapis/tms-api:local
         imagePullPolicy: Never 
         resources: {}
         ports:
-        - name: tms-portal
+        - name: tms-api
           containerPort: 8080
         env:
         - name: RUST_BACKTRACE
           value: "1"
         - name: TMS_PORTAL_CONFIG_DIR
-          value: "/etc/tms-portal"
+          value: "/etc/tms-api"
         - name: TMS_PORTAL_INSTITUTIONS_CONFIG_FILE
-          value: "/etc/tms-portal/institutions.json"
+          value: "/etc/tms-api/institutions.json"
         - name: TMS_PORTAL_DB_HOST
           value: "host.minikube.internal"
         - name: TMS_PORTAL_DB_NAME
@@ -38,10 +38,10 @@ spec:
               name: tms-secrets
               key: postgres-tms-user-password
         volumeMounts:
-        - name: tms-portal-config
-          mountPath: "/etc/tms-portal"
+        - name: tms-api-config
+          mountPath: "/etc/tms-api"
           readOnly: true
       volumes:
-      - name: tms-portal-config
+      - name: tms-api-config
         configMap:
-          name: tms-portal-config
+          name: tms-api-config
