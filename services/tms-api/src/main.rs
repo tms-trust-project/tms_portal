@@ -4,9 +4,9 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use axum::body::Body;
-use tms_portal::config::{init_db, init_logging};
-use tms_portal::infra::auth::authorization_code_gateway::ReqwestAuthorizationCodeExchangeGateway;
-use tms_portal::infra::persistence::{
+use tms_api::config::{init_db, init_logging};
+use tms_api::infra::auth::authorization_code_gateway::ReqwestAuthorizationCodeExchangeGateway;
+use tms_api::infra::persistence::{
     allowed_redirect_repository::PostgresAllowedRedirectRepository,
     client_repository::PostgresClientRepository,
     delegation_repository::PostgresDelegationRepository,
@@ -18,19 +18,19 @@ use tms_portal::infra::persistence::{
     resource_provider_login_repository::PostgresResourceProviderLoginRepository,
     tms_identity_repository::PostgresTmsIdentityRepository,
 };
-use tms_portal::presentation::http::v1::{
+use tms_api::presentation::http::v1::{
     clients::router as clients_router, delegations::router as delegations_router,
     institutions::router as institutions_router, login::router as login_router,
     oauth2::router as oauth_router, openapi::ApiDoc, resources::router as resources_router,
     well_known::router as well_known_router,
 };
-use tms_portal::services::client_service::ClientService;
-use tms_portal::services::delegation_service::DelegationService;
-use tms_portal::services::institution_service::InstitutionService;
-use tms_portal::services::login_service::LoginService;
-use tms_portal::utils::app_error::AppError;
-use tms_portal::utils::configuration::Configuration;
-use tms_portal::{AppState, database_url};
+use tms_api::services::client_service::ClientService;
+use tms_api::services::delegation_service::DelegationService;
+use tms_api::services::institution_service::InstitutionService;
+use tms_api::services::login_service::LoginService;
+use tms_api::utils::app_error::AppError;
+use tms_api::utils::configuration::Configuration;
+use tms_api::{AppState, database_url};
 //use axum_extra::extract::cookie::Key;
 use axum::handler::HandlerWithoutStateExt;
 use axum::middleware::Next;

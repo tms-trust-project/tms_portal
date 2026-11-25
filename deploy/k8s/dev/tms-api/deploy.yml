@@ -27,9 +27,9 @@ spec:
         - name: TMS_PORTAL_INSTITUTIONS_CONFIG_FILE
           value: "/etc/tms-api/institutions.json"
         - name: TMS_PORTAL_DB_HOST
-          value: "host.minikube.internal"
+          value: "tms-postgres-18"
         - name: TMS_PORTAL_DB_NAME
-          value: "tms_db"
+          value: "tmsdb"
         - name: TMS_PORTAL_DB_USER
           value: "tms"
         - name: TMS_PORTAL_DB_PASSWORD 

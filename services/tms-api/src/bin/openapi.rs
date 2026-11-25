@@ -1,4 +1,4 @@
-use tms_portal::presentation::http::v1::openapi::ApiDoc;
+use tms_api::presentation::http::v1::openapi::ApiDoc;
 use utoipa::OpenApi;
 
 fn main() {
