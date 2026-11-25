@@ -35,11 +35,11 @@ pub struct OAuth2State {
     pub redirect_uri: String, // redirect_uri requested by the tms client
     pub client_state: Option<String>, // state provided to authorize endpoint by tms client
     pub nonce: u32,           // nonce - used to help prevent replay attacks
-    // the redirect_idp_domain of the institution a portal login went through, if any.  The
-    // login callback only accepts an identity from this domain.  It's in the signed state,
-    // so the browser can't change it; default keeps older state tokens decodable.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub institution_domain: Option<String>,
+    // the institution a login goes through (None for a resource provider login).  The
+    // callback looks it up again and only accepts an identity from its domain.
+    pub institution_id: Option<String>,
+    // when the login started (epoch seconds): the identity must authenticate after it
+    pub login_started: u64,
 }
 /*
 Exchanges an auth code for an auth token.  The parameter <R> is the structure

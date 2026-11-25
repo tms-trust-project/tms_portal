@@ -164,7 +164,8 @@ async fn get_state(
             + 300,
         nonce: generate_nonce(),
         client_state: state.clone(),
-        institution_domain: None,
+        institution_id: None,
+        login_started: SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?.as_secs(),
     };
 
     // encode state structure

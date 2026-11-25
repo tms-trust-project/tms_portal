@@ -1,7 +1,11 @@
+mod login_rejection;
+pub use login_rejection::LoginRejection;
+
 use crate::infra::auth::globus_token_provider::GlobusTokenProvider;
 use crate::obj_model::configuration::{HttpConfig, JwtConfig, StateKey};
 use crate::obj_model::identity_provider::{IdentityProvider, IdentityProviderType};
 use crate::obj_model::institutions::identity_is_from_domain;
+use crate::services::institution_service::InstitutionService;
 use crate::obj_model::login::WhoAmIResponse;
 use crate::ports::authorization_code_gateway::{AuthorizationCodeExchangeGateway, ExchangeInput};
 use crate::ports::identity_porvider::IdentityProviderRepository;
@@ -16,6 +20,7 @@ use crate::utils::oauth2_authorization_code_utils::{
 };
 use crate::constants::{DEFAULT_ALGORITHM, TMS_ISSUER};
 use anyhow::Result;
+use url::Url;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tms_lib::utils::jwt_encoder::JwtEncoderBuilder;
@@ -36,6 +41,7 @@ pub struct LoginService {
     tms_identity_repo: Arc<dyn TmsIdentityRepository>,
     jwt_config: JwtConfig,
     authorization_code_exchange_gateway: Arc<dyn AuthorizationCodeExchangeGateway>,
+    institution_service: InstitutionService,
 }
 
 impl LoginService {
@@ -47,6 +53,7 @@ impl LoginService {
         tms_identity_repo: Arc<dyn TmsIdentityRepository>,
         jwt_config: JwtConfig,
         authorization_code_exchange_gateway: Arc<dyn AuthorizationCodeExchangeGateway>,
+        institution_service: InstitutionService,
     ) -> Self {
         Self {
             state_key,
@@ -56,6 +63,7 @@ impl LoginService {
             tms_identity_repo,
             jwt_config,
             authorization_code_exchange_gateway,
+            institution_service,
         }
     }
 
@@ -124,10 +132,13 @@ impl LoginService {
     
         let mut claims: HashMap<String, Value> = decode_access_token(&idp, &oauth_token_set.id_token).await?;
 
-        // a login through an institution must come back as one of its identities, before
-        // any TMS token is issued
-        if let Some(domain) = &decoded_state.institution_domain {
-            check_institution_identity(&claims, domain)?;
+        // a login through an institution must come back as one of its identities, freshly
+        // authenticated, before any TMS token is issued.  The institution is looked up
+        // again, so one disabled since the login started can't be used.
+        if let Some(institution_id) = &decoded_state.institution_id {
+            let domain = self.institution_service.globus_login_domain(institution_id).await?;
+            check_login_identity(&claims, &domain, decoded_state.login_started)
+                .map_err(|rejection| Unauthorized(rejection.description().to_string()))?;
         }
 
         // TODO: get iss from config
@@ -171,28 +182,71 @@ impl LoginService {
     }
 }
 
+// how far the identity provider's clock may be behind ours
+const AUTHENTICATION_CLOCK_SKEW_SECS: f64 = 5.0;
+
 /*
-Checks that a login through an institution came back with an identity from the
-institution's domain.  redirect_idp_domain only steers the login to the institution's
-identity provider: a user already signed in to Globus with another identity, or one who
-edits the authorize URL, can come back as someone else.  Globus puts the identity's
-username (e.g. jdoe@utexas.edu) in the ID token's preferred_username.
+The login identity provider's authorize url, which the browser is redirected to.  For
+Globus:
+- prompt=login makes Globus authenticate the user again, even with a Globus session
+  (a user can drop it from the url, so check_login_identity checks last_authentication)
+- for an institution, redirect_idp_domain sends a user not yet signed in to Globus
+  straight to the institution's IdP, and session_required_single_domain makes Globus
+  require an identity from that domain
  */
-fn check_institution_identity(claims: &HashMap<String, Value>, domain: &str) -> Result<()> {
-    match claims.get("preferred_username").and_then(Value::as_str) {
-        Some(username) if identity_is_from_domain(username, domain) => Ok(()),
-        Some(username) => Err(Unauthorized(format!(
-            "Signed in as '{}', which isn't an identity from {}.  Log out of Globus, then \
-             log in again with your {} identity.",
-            username, domain, domain
-        ))
-        .into()),
-        None => Err(Unauthorized(format!(
-            "The login returned no username, so it can't be checked against {}",
-            domain
-        ))
-        .into()),
+pub fn get_login_authorize_url(
+    idp: &IdentityProvider,
+    callback_url: &str,
+    encoded_state: &str,
+    nonce: &str,
+    institution_domain: Option<&str>,
+) -> Result<Url> {
+    let mut query_params = vec![
+        ("response_type", "code"),
+        ("client_id", idp.client_id.as_str()),
+        ("redirect_uri", callback_url),
+        ("state", encoded_state),
+        ("nonce", nonce),
+        ("access_type", "offline"),
+    ];
+    if let Some(scope) = &idp.scope {
+        query_params.push(("scope", scope.as_str()))
     }
+    if idp.identity_provider_type == IdentityProviderType::Globus {
+        query_params.push(("prompt", "login"));
+        if let Some(domain) = institution_domain {
+            query_params.push(("redirect_idp_domain", domain));
+            query_params.push(("session_required_single_domain", domain));
+        }
+    }
+    Ok(Url::parse_with_params(&idp.identity_redirect_url, query_params)?)
+}
+
+/*
+Checks the identity a login through an institution came back with, before a TMS token is
+issued:
+- Its username (Globus puts it in the id token's preferred_username, e.g.
+  jdoe@utexas.edu) must be from the institution's domain.  redirect_idp_domain only
+  steers the login, and a user can edit the authorize url.
+- It must have authenticated after the login started (last_authentication, epoch
+  seconds), as prompt=login asks, rather than come from an earlier Globus session.
+ */
+pub fn check_login_identity(
+    claims: &HashMap<String, Value>,
+    domain: &str,
+    login_started: u64,
+) -> std::result::Result<(), LoginRejection> {
+    let username = claims.get("preferred_username").and_then(Value::as_str);
+    if !username.is_some_and(|username| identity_is_from_domain(username, domain)) {
+        return Err(LoginRejection::UnapprovedInstitution);
+    }
+    let last_authentication = claims.get("last_authentication").and_then(Value::as_f64);
+    if !last_authentication
+        .is_some_and(|last| last + AUTHENTICATION_CLOCK_SKEW_SECS >= login_started as f64)
+    {
+        return Err(LoginRejection::StaleAuthentication);
+    }
+    Ok(())
 }
 
 pub struct RedirectUrl(String);

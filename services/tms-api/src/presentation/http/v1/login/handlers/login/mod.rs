@@ -18,6 +18,7 @@ use crate::infra::persistence::identity_provider_repository::identity_provider_d
 use crate::obj_model::identity_provider::IdentityProviderType;
 use crate::presentation::http::v1::login::requests::AuthorizeRequest;
 use crate::presentation::http::v1::utils::tms_response::TmsResponse;
+use crate::services::login_service::get_login_authorize_url;
 use crate::utils::app_error::AppError;
 use crate::utils::oauth2_authorization_code_utils::{
     CLIENT_ID_TMS, OAuth2State, ROOT_COOKIE_PATH, STATE_COOKIE_NAME,
@@ -105,18 +106,17 @@ pub async fn login(
                     .append_pair("client_name", client_name.as_str());
             }
 
+            let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?.as_secs();
             let oauth_state = OAuth2State {
                 tms_identity: String::default(), // we don't have a tms identity at this point
                 client_id,
-                idp_id: idp.id,
+                idp_id: idp.id.clone(),
                 redirect_uri: redirect_uri.to_string(),
-                exp: SystemTime::now()
-                    .duration_since(SystemTime::UNIX_EPOCH)?
-                    .as_secs()
-                    + 300,
+                exp: now + 300,
                 nonce: generate_nonce(),
                 client_state: None,
-                institution_domain: login_domain.clone(),
+                institution_id: form_data.institution.clone(),
+                login_started: now,
             };
 
             let encoded_state = match encode_state(&app_state.config.state_key, oauth_state).await {
@@ -128,27 +128,13 @@ pub async fn login(
                 .http_config
                 .get_identity_provider_callback_url();
             let encoded_nonce = BASE64_STANDARD.encode(generate_nonce().to_ne_bytes());
-            let mut query_params = vec![
-                ("response_type", "code"),
-                ("client_id", &idp.client_id),
-                ("redirect_uri", callback_url),
-                ("state", &encoded_state),
-                ("nonce", &encoded_nonce),
-                ("access_type", "offline"),
-            ];
-
-            if let Some(scope) = &idp.scope {
-                query_params.push(("scope", scope.as_str()))
-            }
-            // Globus Auth: a user not yet signed in to Globus skips its organization picker
-            // and goes straight to the login page of the IdP registered for this domain.
-            // It's a convenience redirect, not an access control (a user already signed in
-            // to Globus keeps that identity), so login_callback checks the identity.
-            if let Some(domain) = &login_domain {
-                query_params.push(("redirect_idp_domain", domain.as_str()))
-            }
-
-            let location = Url::parse_with_params(&idp.identity_redirect_url, query_params)?;
+            let location = get_login_authorize_url(
+                &idp,
+                callback_url,
+                &encoded_state,
+                &encoded_nonce,
+                login_domain.as_deref(),
+            )?;
 
             let updated_jar = jar.add(
                 Cookie::build((STATE_COOKIE_NAME, encoded_state))

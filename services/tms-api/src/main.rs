@@ -93,6 +93,7 @@ async fn main() -> anyhow::Result<()> {
         Arc::new(tms_identity_repo),
         config.jwt_config.clone(),
         Arc::new(authorization_code_exchange_gateway),
+        institution_service.clone(),
     );
 
     let state = AppState {
