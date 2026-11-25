@@ -1,5 +1,6 @@
-import { useState } from "react"
-import { LogIn } from "lucide-react"
+import { useEffect, useState } from "react"
+import { CircleAlert, LogIn, X } from "lucide-react"
+import { Alert, AlertAction, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -10,9 +11,48 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { loginErrorMessage, withoutLoginError } from "@/lib/loginError"
 import { loginHref } from "@/lib/loginHref"
 import { REQUIRE_INSTITUTION } from "@/lib/loginOptions"
 import { useListInstitutions } from "@/tms-hooks"
+
+/*
+Why the last login didn't work, from the ?error=<code> the server adds when it sends a
+refused or failed login back here.  The error is dropped from the url straight away, so a
+reload doesn't show it again; the message stays until it's dismissed.
+ */
+function LoginErrorAlert() {
+  const [message, setMessage] = useState(() =>
+    loginErrorMessage(window.location.search)
+  )
+  useEffect(() => {
+    const { pathname, search, hash } = window.location
+    if (!new URLSearchParams(search).has("error")) return
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${pathname}${withoutLoginError(search)}${hash}`
+    )
+  }, [])
+  if (!message) return null
+
+  return (
+    <Alert variant="destructive">
+      <CircleAlert />
+      <AlertDescription>{message}</AlertDescription>
+      <AlertAction>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Dismiss"
+          onClick={() => setMessage(undefined)}
+        >
+          <X />
+        </Button>
+      </AlertAction>
+    </Alert>
+  )
+}
 
 const loginButtonClass =
   "bg-neutral-200 text-black hover:bg-highlight hover:text-highlight-foreground"
@@ -49,6 +89,7 @@ export function LoginLanding({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
+        <LoginErrorAlert />
         {/* the picker always waits on the list; Log In waits only with requireInstitution */}
         <div id="login-status" aria-live="polite">
           {isPending && (

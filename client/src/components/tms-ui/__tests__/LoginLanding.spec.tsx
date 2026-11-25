@@ -233,3 +233,44 @@ describe("LoginLanding with requireInstitution", () => {
     expectNoLoginLink()
   })
 })
+
+describe("LoginLanding login errors", () => {
+  const visit = (url: string) => window.history.replaceState(null, "", url)
+  afterEach(() => visit("/"))
+
+  test("explains a refused login and drops the error from the url", async () => {
+    visit("/?error=unapproved_institution")
+    renderWithQueryClient(<LoginLanding />)
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "That login isn't from an approved institution."
+    )
+    // a reload wouldn't show it again
+    expect(window.location.search).toBe("")
+    await screen.findByLabelText("Institution")
+  })
+
+  test("keeps the rest of the query string", () => {
+    visit("/?error=login_cancelled&client_id=other&state=s")
+    renderWithQueryClient(<LoginLanding />)
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "The login was cancelled."
+    )
+    expect(window.location.search).toBe("?client_id=other&state=s")
+  })
+
+  test("can be dismissed", () => {
+    visit("/?error=login_expired")
+    renderWithQueryClient(<LoginLanding />)
+
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }))
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
+  test("shows nothing without an error", () => {
+    renderWithQueryClient(<LoginLanding />)
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+})
