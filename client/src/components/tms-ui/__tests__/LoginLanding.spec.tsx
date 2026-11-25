@@ -68,19 +68,19 @@ describe("LoginLanding", () => {
               id: "off",
               name: "Disabled",
               enabled: false,
-              federated_identity_config: globus,
+              ipd_config: globus,
             },
             {
               id: "none",
               name: "No Globus",
               enabled: true,
-              federated_identity_config: { globus: null },
+              ipd_config: { globus: null },
             },
             {
               id: "ok",
               name: "Approved",
               enabled: true,
-              federated_identity_config: globus,
+              ipd_config: globus,
             },
           ],
         })

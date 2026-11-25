@@ -11,7 +11,8 @@ export type Institution = {
   id: string
   name: string
   enabled: boolean
-  federated_identity_config: { globus: GlobusConfiguration | null }
+  // the server's field name (services/tms_portal/.../institutions/responses/mod.rs)
+  ipd_config: { globus: GlobusConfiguration | null }
 }
 
 // The list is optional (the sign in card falls back to the plain login without it), so

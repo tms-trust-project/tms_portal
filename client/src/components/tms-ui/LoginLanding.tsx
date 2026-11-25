@@ -29,10 +29,10 @@ export function LoginLanding() {
     error,
   } = useListInstitutions()
   const [selected, setSelected] = useState("")
-  // only enabled institutions with a Globus redirect domain can steer the login
+  // only enabled institutions with a Globus redirect domain can steer the login;
+  // the ?. keeps one malformed entry from crashing the sign in page
   const loginInstitutions = (institutions ?? []).filter(
-    (institution) =>
-      institution.enabled && !!institution.federated_identity_config.globus
+    (institution) => institution.enabled && !!institution.ipd_config?.globus
   )
   const institutionId = selected || loginInstitutions[0]?.id
   const showPicker = loginInstitutions.length > 0
