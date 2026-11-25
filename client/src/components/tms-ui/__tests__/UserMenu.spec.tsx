@@ -57,11 +57,29 @@ describe("UserMenu", () => {
     expect(
       await screen.findByText("Provider: University of Texas at Austin")
     ).toBeInTheDocument()
-    // the menu item is the <a> itself, so its role is menuitem, not link
-    expect(screen.getByRole("menuitem", { name: /Log Out/i })).toHaveAttribute(
-      "href",
-      "/logout"
+    expect(
+      screen.getByRole("menuitem", { name: /Log Out/i })
+    ).toBeInTheDocument()
+  })
+
+  test("logs out with a POST to /logout", async () => {
+    Cookies.set("tmstoken", "test-token")
+    // jsdom can't navigate, so catch the submit instead
+    const requestSubmit = vi
+      .spyOn(HTMLFormElement.prototype, "requestSubmit")
+      .mockImplementation(() => {})
+    renderWithQueryClient(<UserMenu />)
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Jake Rosenberg" })
     )
+    fireEvent.click(await screen.findByRole("menuitem", { name: /Log Out/i }))
+
+    expect(requestSubmit).toHaveBeenCalledTimes(1)
+    const form = requestSubmit.mock.contexts[0] as HTMLFormElement
+    expect(form.method).toBe("post")
+    expect(form.getAttribute("action")).toBe("/logout")
+    requestSubmit.mockRestore()
   })
 
   test("shows the token's claims from View token claims", async () => {

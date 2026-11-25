@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import Cookies from "js-cookie"
 import {
@@ -33,6 +33,7 @@ export function UserMenu({
   const queryClient = useQueryClient()
   const { data: isAuthenticated } = useAuth()
   const [claimsOpen, setClaimsOpen] = useState(false)
+  const logoutForm = useRef<HTMLFormElement>(null)
   const { data: whoami, isError } = useWhoami({ enabled: !!isAuthenticated })
   // logged out, the home page shows the sign in card with its own Log In button
   if (!isAuthenticated) return null
@@ -42,7 +43,7 @@ export function UserMenu({
   // whoami failed for another reason (e.g. a 5xx), so offer a fresh login.  With
   // requireInstitution that means the sign in card: drop the token cookie, as
   // useWhoami does on a 401, and the home page shows the card in place of the user's
-  // pages.  (/logout isn't used because it needs the server to accept the token.)
+  // pages.
   if (!whoami && requireInstitution)
     return (
       <Button
@@ -92,16 +93,20 @@ export function UserMenu({
             >
               <FileJson /> View token claims
             </DropdownMenuItem>
-            {/* the item is the link, so Enter and clicks anywhere on it log out; the server only routes GET /logout */}
+            {/* submits the logout form below (Enter or a click anywhere on the item) */}
             <DropdownMenuItem
               className="hover:text-highlight focus:text-highlight not-data-[variant=destructive]:focus:**:text-highlight dark:focus:bg-black/50"
-              render={<a href="/logout" />}
+              onClick={() => logoutForm.current?.requestSubmit()}
             >
               <LogOut /> Log Out
             </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
+      {/* The server only logs out on a POST, so another site can't log a user out with a
+          link.  It revokes the token, clears the cookie, and sends the browser to Globus's
+          sign-out page, which links on to the institution's own sign-out. */}
+      <form ref={logoutForm} method="post" action="/logout" hidden />
       <TokenClaimsModal
         token={isAuthenticated}
         open={claimsOpen}
