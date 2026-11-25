@@ -14,7 +14,6 @@ use tms_api::infra::persistence::{
     institution_repository::InMemoryInstitutionRepository,
     issued_token_repository::PostgresIssuedTokenRepository,
     issued_token_repository::issued_tokens_dao,
-    key_repository::PostgresKeyRepository,
     resource_provider_login_repository::PostgresResourceProviderLoginRepository,
     tms_identity_repository::PostgresTmsIdentityRepository,
 };
@@ -50,8 +49,8 @@ use uuid::Uuid;
 #[tokio::main]
 #[instrument]
 async fn main() -> anyhow::Result<()> {
+    // the url has the database password, so it's never printed or logged
     let database_url_string = database_url()?;
-    dbg!(&database_url_string);
     let db_pool = init_db(&database_url_string).await;
     let mut config = Configuration::get(&db_pool).await?;
     if let Ok(config_directory) = std::env::var("TMS_PORTAL_CONFIG_DIR") {
@@ -65,7 +64,6 @@ async fn main() -> anyhow::Result<()> {
     let identity_provider_repo = PostgresIdentityProviderRepository::new(db_pool.clone());
     let issued_token_repo = PostgresIssuedTokenRepository::new(db_pool.clone());
     let tms_identity_repo = PostgresTmsIdentityRepository::new(db_pool.clone());
-    let key_repo = PostgresKeyRepository::new(db_pool.clone());
     let allowed_redirect_repo = PostgresAllowedRedirectRepository::new(db_pool.clone());
     let authorization_code_exchange_gateway = ReqwestAuthorizationCodeExchangeGateway::new();
 
@@ -79,12 +77,14 @@ async fn main() -> anyhow::Result<()> {
 
     let client_service = ClientService::new(client_repo, Arc::new(allowed_redirect_repo));
 
-    let institution_service = match std::env::var("TMS_PORTAL_INSTITUTIONS_CONFIG_FILE") {
-        Ok(config_path) => {
-            InstitutionService::new(Arc::new(InMemoryInstitutionRepository::new(config_path)?))
-        }
-        Err(error) => return Err(error.into()),
-    };
+    // the approved institutions users log in through
+    let institutions_config_file = std::env::var("TMS_PORTAL_INSTITUTIONS_CONFIG_FILE").context(
+        "TMS_PORTAL_INSTITUTIONS_CONFIG_FILE must be set to the approved institutions JSON file \
+         (see deploy/institutions.sample.json)",
+    )?;
+    let institution_service = InstitutionService::new(Arc::new(
+        InMemoryInstitutionRepository::new(institutions_config_file)?,
+    ));
 
     // Initialize Login Service
     let login_service = LoginService::new(
@@ -93,8 +93,9 @@ async fn main() -> anyhow::Result<()> {
         Arc::new(identity_provider_repo),
         Arc::new(issued_token_repo),
         Arc::new(tms_identity_repo),
-        Arc::new(key_repo),
+        config.jwt_config.clone(),
         Arc::new(authorization_code_exchange_gateway),
+        institution_service.clone(),
     );
 
     let state = AppState {

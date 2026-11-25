@@ -42,6 +42,13 @@ impl InstitutionRepository for MockInstitutionRepo {
             .iter()
             .find(|institution| institution.id == institution_id)
             .cloned()
-            .ok_or_else(|| anyhow::Error::msg("Institution not found"))
+            // the same error as InMemoryInstitutionRepository's, so callers see real behavior
+            .ok_or_else(|| {
+                tms_lib::utils::service_error::ServiceError::NotFound(format!(
+                    "Institution id '{}' not found",
+                    institution_id
+                ))
+                .into()
+            })
     }
 }
