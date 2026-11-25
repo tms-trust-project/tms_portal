@@ -23,7 +23,7 @@ const institutionStubs = [
     id: "utexas",
     name: "The University of Texas at Austin",
     enabled: true,
-    ipd_config: {
+    idp_config: {
       globus: {
         redirect_idp_domain: "utexas.edu",
         idp_logout_url:
@@ -35,7 +35,7 @@ const institutionStubs = [
     id: "uchicago",
     name: "University of Chicago",
     enabled: true,
-    ipd_config: {
+    idp_config: {
       globus: {
         redirect_idp_domain: "uchicago.edu",
         idp_logout_url: "https://shibboleth2.uchicago.edu/idp/profile/Logout",

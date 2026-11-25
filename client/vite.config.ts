@@ -2,7 +2,7 @@
 import path from "path"
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
-import { defineConfig } from "vite"
+import { defineConfig, searchForWorkspaceRoot } from "vite"
 
 // The tests expect this redirect uri.  Defaulting it under Vitest lets `vitest run` work
 // without the REDIRECT_URI the `pnpm test` script sets.  Builds still take it from the
@@ -38,6 +38,19 @@ export default defineConfig(({ command }) => {
         "@": path.resolve(import.meta.dirname, "./src"),
       },
     },
+    // Under Vitest only, also allow the repo's specs/ folder, where the contract test
+    // (useListInstitutions.contract.test.ts) reads the server's OpenAPI spec.  The dev
+    // server keeps Vite's default and can't read files outside client/.
+    ...(process.env.VITEST && {
+      server: {
+        fs: {
+          allow: [
+            searchForWorkspaceRoot(process.cwd()),
+            path.resolve(import.meta.dirname, "../specs"),
+          ],
+        },
+      },
+    }),
 
     test: {
       globals: true,

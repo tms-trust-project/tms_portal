@@ -12,7 +12,7 @@ export type Institution = {
   name: string
   enabled: boolean
   // the server's field name (services/tms_portal/.../institutions/responses/mod.rs)
-  ipd_config: { globus: GlobusConfiguration | null }
+  idp_config: { globus: GlobusConfiguration | null }
 }
 
 // The list is optional (the sign in card falls back to the plain login without it), so

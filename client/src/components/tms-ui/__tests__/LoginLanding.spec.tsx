@@ -78,16 +78,16 @@ describe("LoginLanding", () => {
         HttpResponse.json({
           status: "200 OK",
           result: [
-            { id: "off", name: "Disabled", enabled: false, ipd_config: globus },
+            { id: "off", name: "Disabled", enabled: false, idp_config: globus },
             {
               id: "none",
               name: "No Globus",
               enabled: true,
-              ipd_config: { globus: null },
+              idp_config: { globus: null },
             },
-            // malformed: no ipd_config at all, which must not crash the page
+            // malformed: no idp_config at all, which must not crash the page
             { id: "bad", name: "Malformed", enabled: true },
-            { id: "ok", name: "Approved", enabled: true, ipd_config: globus },
+            { id: "ok", name: "Approved", enabled: true, idp_config: globus },
           ],
         })
       )
@@ -209,12 +209,12 @@ describe("LoginLanding with requireInstitution", () => {
     [
       "has nothing approved",
       [
-        { id: "off", name: "Disabled", enabled: false, ipd_config: globus },
+        { id: "off", name: "Disabled", enabled: false, idp_config: globus },
         {
           id: "none",
           name: "No Globus",
           enabled: true,
-          ipd_config: { globus: null },
+          idp_config: { globus: null },
         },
       ],
     ],
