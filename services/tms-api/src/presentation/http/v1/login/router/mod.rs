@@ -3,11 +3,8 @@ use axum::routing::{get, post};
 
 use crate::AppState;
 use crate::presentation::http::v1::login::handlers::{
-    list_identity_providers::list_identity_providers,
-    login::login,
-    login_callback::login_callback,
-    logout::{logout, logout_idp},
-    whoami::whoami,
+    list_identity_providers::list_identity_providers, login::login, login_callback::login_callback,
+    logout::logout, logout_idp::logout_idp, whoami::whoami,
 };
 
 pub async fn router() -> Router<AppState> {

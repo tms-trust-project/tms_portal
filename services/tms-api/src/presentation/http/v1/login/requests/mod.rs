@@ -10,3 +10,10 @@ pub struct AuthorizeRequest {
     // one goes back to the sign in page with ?error=institution_required.
     pub institution: Option<String>,
 }
+
+// /logout/idp, which Globus's sign-out page links to: the institution (from the TMS token)
+// whose own IdP sign-out page to go to
+#[derive(Debug, Deserialize)]
+pub struct LogoutIdpRequest {
+    pub institution: String,
+}

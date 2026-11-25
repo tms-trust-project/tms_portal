@@ -1,11 +1,10 @@
 use std::collections::HashMap;
 
-use axum::extract::{Query, State};
+use axum::extract::State;
 use axum::http::header::{AUTHORIZATION, LOCATION};
 use axum::http::{HeaderMap, StatusCode};
 use axum_extra::extract::CookieJar;
 use axum_extra::extract::cookie::Cookie;
-use serde::Deserialize;
 
 use crate::AppState;
 use crate::presentation::http::v1::utils::tms_response::TmsResponse;
@@ -52,29 +51,4 @@ pub async fn logout(
             .headers(headers)
             .build(),
     ))
-}
-
-#[derive(Debug, Deserialize)]
-pub struct LogoutIdpRequest {
-    pub institution: String,
-}
-
-/*
-Second step of logging out of an institution: Globus's sign-out page links here, and this
-redirects to the institution's own IdP sign-out page so its session ends too.  Only urls
-from the institutions list are used, so this isn't an open redirect.
- */
-#[axum::debug_handler]
-pub async fn logout_idp(
-    State(app_state): State<AppState>,
-    Query(request): Query<LogoutIdpRequest>,
-) -> anyhow::Result<TmsResponse<()>, AppError> {
-    let location = app_state
-        .login_service
-        .get_idp_logout_url(&request.institution)
-        .await;
-    let headers = HashMap::from([(LOCATION.to_string(), location)]);
-    Ok(TmsResponse::builder(StatusCode::SEE_OTHER)
-        .headers(headers)
-        .build())
 }

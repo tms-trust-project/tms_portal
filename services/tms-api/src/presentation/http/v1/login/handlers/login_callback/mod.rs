@@ -29,7 +29,9 @@ pub async fn login_callback(
     jar: CookieJar,
     Query(query_params): Query<LoginCallbackQueryParams>,
 ) -> anyhow::Result<(CookieJar, TmsResponse<()>), AppError> {
-    let cookie_state = jar.get(STATE_COOKIE_NAME).map(|cookie| cookie.value().to_owned());
+    let cookie_state = jar
+        .get(STATE_COOKIE_NAME)
+        .map(|cookie| cookie.value().to_owned());
     let removal_cookie = Cookie::build((STATE_COOKIE_NAME, String::from("")))
         .path(ROOT_COOKIE_PATH)
         .http_only(true);
