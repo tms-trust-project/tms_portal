@@ -17,7 +17,7 @@ export function UserMenu() {
   if (!isAuthenticated || !whoami)
     return (
       <Button variant="outline" role="link" asChild>
-        <a href="/login?idp_id=globus_idp&redirect_uri=https://tms-portal-stg.savanna.tacc.cloud/">
+        <a href="/login?idp_id=globus_idp&redirect_uri=https://tms-portal-staging.savanna.tacc.cloud/">
           <LogIn /> Log In
         </a>
       </Button>
