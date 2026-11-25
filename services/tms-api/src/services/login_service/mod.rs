@@ -108,7 +108,7 @@ impl LoginService {
         let (decoded_state, code) =
             match check_login_callback(&self.state_key, query, cookie_state).await {
                 Ok(valid) => valid,
-                Err(rejection) => return Ok(CallbackResult::Rejected(rejection)),
+                Err((_, rejection)) => return Ok(CallbackResult::Rejected(rejection)),
             };
 
         let idp = self
@@ -238,26 +238,27 @@ pub enum CallbackResult {
 Check what the login identity provider sent back, before the code is exchanged.  The
 state must be the one in this browser's state cookie, and still valid (signed, and it
 expires 5 minutes after the login started).  The identity provider may send an error
-(RFC 6749 4.1.2.1) instead of a code.
+(RFC 6749 4.1.2.1) instead of a code.  A rejection comes with the decoded state when it
+was valid, so an OAuth2 login can report it to its client.
  */
 pub async fn check_login_callback(
     state_key: &StateKey,
     query: &LoginCallbackQueryParams,
     cookie_state: Option<&str>,
-) -> std::result::Result<(OAuth2State, String), LoginRejection> {
+) -> std::result::Result<(OAuth2State, String), (Option<OAuth2State>, LoginRejection)> {
     let (Some(state), Some(cookie_state)) = (query.state.as_deref(), cookie_state) else {
         warn!("Login callback without a state, or without a state cookie");
-        return Err(LoginRejection::LoginExpired);
+        return Err((None, LoginRejection::LoginExpired));
     };
     if state != cookie_state {
         warn!("Login callback state does not match the state cookie");
-        return Err(LoginRejection::LoginExpired);
+        return Err((None, LoginRejection::LoginExpired));
     }
     let decoded_state: OAuth2State = match decode_state(state_key, state).await {
         Ok(decoded_state) => decoded_state,
         Err(error) => {
             warn!("Login callback state is not valid: {error:#}");
-            return Err(LoginRejection::LoginExpired);
+            return Err((None, LoginRejection::LoginExpired));
         }
     };
     if let Some(error) = &query.error {
@@ -265,17 +266,18 @@ pub async fn check_login_callback(
             "The login identity provider sent back an error: {error} {0}",
             query.error_description.as_deref().unwrap_or_default()
         );
-        return Err(if error == "access_denied" {
+        let rejection = if error == "access_denied" {
             LoginRejection::LoginCancelled
         } else {
             LoginRejection::LoginFailed
-        });
+        };
+        return Err((Some(decoded_state), rejection));
     }
     match &query.code {
         Some(code) => Ok((decoded_state, code.clone())),
         None => {
             warn!("Login callback without a code or an error");
-            Err(LoginRejection::LoginFailed)
+            Err((Some(decoded_state), LoginRejection::LoginFailed))
         }
     }
 }

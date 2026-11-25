@@ -224,6 +224,26 @@ async fn rejection(query: LoginCallbackQueryParams, cookie: Option<&str>) -> Log
     check_login_callback(&state_key(), &query, cookie)
         .await
         .expect_err("the callback should be rejected")
+        .1
+}
+
+#[tokio::test]
+async fn a_rejection_after_the_state_is_checked_comes_with_the_state() {
+    let state = signed_state(300).await;
+
+    let (decoded, rejection) = check_login_callback(
+        &state_key(),
+        &callback(None, Some(&state), Some("access_denied")),
+        Some(&state),
+    )
+    .await
+    .expect_err("the callback should be rejected");
+
+    assert_eq!(rejection, LoginRejection::LoginCancelled);
+    assert_eq!(
+        decoded.expect("the state should come back").redirect_uri,
+        "https://tms.example.edu/"
+    );
 }
 
 #[tokio::test]
