@@ -1,4 +1,6 @@
 import { useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
+import Cookies from "js-cookie"
 import {
   UserCircle2,
   LogOut,
@@ -16,11 +18,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { loginHref } from "@/lib/loginHref"
+import { REQUIRE_INSTITUTION } from "@/lib/loginOptions"
 import { useAuth } from "@/tms-hooks/useAuth"
 import { useWhoami } from "@/tms-hooks"
 import { TokenClaimsModal } from "./TokenClaimsModal"
 
-export function UserMenu() {
+const loginButtonClass =
+  "bg-neutral-200 text-black hover:bg-highlight hover:text-highlight-foreground"
+
+// requireInstitution: never offer the plain Globus login (see src/lib/loginOptions.ts)
+export function UserMenu({
+  requireInstitution = REQUIRE_INSTITUTION,
+}: { requireInstitution?: boolean } = {}) {
+  const queryClient = useQueryClient()
   const { data: isAuthenticated } = useAuth()
   const [claimsOpen, setClaimsOpen] = useState(false)
   const { data: whoami, isError } = useWhoami({ enabled: !!isAuthenticated })
@@ -29,12 +39,27 @@ export function UserMenu() {
   // still loading (or the token was just dropped): show nothing rather than flash Log In
   // at a user who is logged in
   if (!whoami && !isError) return null
-  // whoami failed for another reason (e.g. a 5xx), so offer a fresh login
+  // whoami failed for another reason (e.g. a 5xx), so offer a fresh login.  With
+  // requireInstitution that means the sign in card: drop the token cookie, as
+  // useWhoami does on a 401, and the home page shows the card in place of the user's
+  // pages.  (/logout isn't used because it needs the server to accept the token.)
+  if (!whoami && requireInstitution)
+    return (
+      <Button
+        className={loginButtonClass}
+        onClick={() => {
+          Cookies.remove("tmstoken", { path: "/" })
+          queryClient.setQueryData(["auth-cookie"], null)
+        }}
+      >
+        <LogIn /> Log In
+      </Button>
+    )
   if (!whoami)
     return (
       <Button
         role="link"
-        className="bg-neutral-200 text-black hover:bg-highlight hover:text-highlight-foreground"
+        className={loginButtonClass}
         nativeButton={false}
         render={
           <a href={loginHref()}>

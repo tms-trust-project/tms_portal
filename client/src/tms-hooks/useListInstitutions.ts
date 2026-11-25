@@ -31,10 +31,10 @@ export const useListInstitutions = () => {
   return useQuery({
     queryKey: ["institutions"],
     queryFn: () => fetchInstitutions(),
-    // the list rarely changes, and before login every fetch is a 401, so fetch it once
+    // the list rarely changes, so fetch it once per page load
     staleTime: Infinity,
     refetchOnWindowFocus: false,
-    // a 4xx (e.g. 401 before login) won't change on retry; a 5xx, network error or timeout
+    // a 4xx (e.g. a 404) won't change on retry; a 5xx, network error or timeout
     // gets one more try, so the list gives up within about 11 seconds at worst
     retry: (failureCount, error) =>
       !(isAxiosError(error) && (error.response?.status ?? 500) < 500) &&

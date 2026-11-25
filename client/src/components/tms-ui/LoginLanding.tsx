@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { isAxiosError } from "axios"
 import { LogIn } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -12,22 +11,18 @@ import {
 } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { loginHref } from "@/lib/loginHref"
+import { REQUIRE_INSTITUTION } from "@/lib/loginOptions"
 import { useListInstitutions } from "@/tms-hooks"
 
-// The base server's /institutions needs a TMS token, so before login it always answers
-// 401 (or 403).  That's expected, not a failure: there's just no list to choose from.
-function isUnauthorized(error: unknown) {
-  const status = isAxiosError(error) ? error.response?.status : undefined
-  return status === 401 || status === 403
-}
+const loginButtonClass =
+  "bg-neutral-200 text-black hover:bg-highlight hover:text-highlight-foreground"
 
-export function LoginLanding() {
-  const {
-    data: institutions,
-    isPending,
-    isError,
-    error,
-  } = useListInstitutions()
+// requireInstitution: no plain Globus login, so Log In waits on (and needs) the list
+export function LoginLanding({
+  requireInstitution = REQUIRE_INSTITUTION,
+}: { requireInstitution?: boolean } = {}) {
+  // /institutions is public, so any failure (a 401 included) means the list is unavailable
+  const { data: institutions, isPending, isError } = useListInstitutions()
   const [selected, setSelected] = useState("")
   // only enabled institutions with a Globus redirect domain can steer the login;
   // the ?. keeps one malformed entry from crashing the sign in page
@@ -36,7 +31,11 @@ export function LoginLanding() {
   )
   const institutionId = selected || loginInstitutions[0]?.id
   const showPicker = loginInstitutions.length > 0
-  const showError = isError && !isUnauthorized(error)
+  const showError = isError
+  // the list loaded, but nothing in it can be used to log in
+  const showNoneApproved =
+    requireInstitution && !isPending && !isError && !showPicker
+  const canLogIn = !requireInstitution || !!institutionId
 
   return (
     <Card className="mx-auto max-w-md">
@@ -44,21 +43,30 @@ export function LoginLanding() {
         <CardTitle>Log in to TMS</CardTitle>
         <CardDescription>
           {/* the base server's /login ignores institution for now (see loginHref) */}
-          {showPicker
+          {showPicker || requireInstitution
             ? "Choose your institution to go straight to its login page."
             : "Log in with Globus to manage resources."}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
-        {/* only the picker waits on the list; Log In below never does */}
-        {isPending && (
-          <p className="text-sm text-muted-foreground">Loading institutions…</p>
-        )}
-        {showError && (
-          <p className="text-sm text-destructive">
-            The list of institutions could not be loaded.
-          </p>
-        )}
+        {/* the picker always waits on the list; Log In waits only with requireInstitution */}
+        <div id="login-status" aria-live="polite">
+          {isPending && (
+            <p className="text-sm text-muted-foreground">
+              Loading institutions…
+            </p>
+          )}
+          {showError && (
+            <p className="text-sm text-destructive">
+              The list of institutions could not be loaded.
+            </p>
+          )}
+          {showNoneApproved && (
+            <p className="text-sm text-destructive">
+              No institutions are available for login.
+            </p>
+          )}
+        </div>
         {showPicker && (
           <>
             <Label htmlFor="institution">Institution</Label>
@@ -78,18 +86,30 @@ export function LoginLanding() {
         )}
       </CardContent>
       <CardFooter>
-        {/* the plain login until a list arrives (and if none does: before login, or on an
-            error), then the chosen institution's */}
-        <Button
-          role="link"
-          className="bg-neutral-200 text-black hover:bg-highlight hover:text-highlight-foreground"
-          nativeButton={false}
-          render={
-            <a href={loginHref(institutionId)}>
-              <LogIn /> Log In
-            </a>
-          }
-        />
+        {/* the plain login until a list arrives (and if none does: on an error, or when no
+            institution is approved), then the chosen institution's.  With
+            requireInstitution there's no plain login: Log In is a disabled button, with
+            no href, until an institution can be chosen. */}
+        {canLogIn ? (
+          <Button
+            role="link"
+            className={loginButtonClass}
+            nativeButton={false}
+            render={
+              <a href={loginHref(institutionId)}>
+                <LogIn /> Log In
+              </a>
+            }
+          />
+        ) : (
+          <Button
+            disabled
+            aria-describedby="login-status"
+            className={loginButtonClass}
+          >
+            <LogIn /> Log In
+          </Button>
+        )}
       </CardFooter>
     </Card>
   )
