@@ -16,10 +16,10 @@ pub async fn get_login_providers<'a>(
     tx: &mut PgTransaction<'a>,
 ) -> Result<HashSet<IdentityProvider>> {
     let idp_query_result = query(
-        "select id, name, client_id, client_secret, identity_redirect_url,
+        "select id, name, oauth2_client_id, oauth2_client_secret, identity_redirect_url,
                      oauth2_token_url, oauth2_jwks_url, oidc_user_info_url,
                      oauth2_public_key, scope, provider_type,
-                     supports_login, supports_resources, resources_endpoint, created, updated
+                     supports_login, supports_resources, resources_services_url, created, updated
                      from identity_providers where supports_login = true",
     )
     .fetch_all(&mut **tx)
@@ -40,7 +40,7 @@ pub async fn get_login_provider_by_id<'a>(
     id: &String,
 ) -> Result<IdentityProvider> {
     let row = query(
-        "select id, name, client_id, client_secret, identity_redirect_url,
+        "select id, name, oauth2_client_id, oauth2_client_secret, identity_redirect_url,
                      oauth2_token_url, oauth2_jwks_url, oidc_user_info_url,
                      oauth2_public_key, scope, provider_type,
                      supports_login, supports_resources, resources_services_url, created, updated 
@@ -67,7 +67,7 @@ pub async fn list_resource_providers<'a>(
         true => {
             query(
                 "select ip.* from identity_providers as ip
-                      INNER JOIN resource_provider_account_logins
+                      INNER JOIN resource_provider_logins
                       AS rpal ON ip.id = rpal.rp_id where supports_resources = true
                       and tms_identity = $1",
             )

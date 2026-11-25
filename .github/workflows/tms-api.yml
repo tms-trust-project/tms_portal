@@ -9,6 +9,10 @@ on:
       image_tag:
         required: true
         type: string
+      redirect_uri:
+        description: The portal URL the login returns to, compiled into the web client
+        required: true
+        type: string
 
 jobs:
   tests:
@@ -34,6 +38,8 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
       - name: Build Image
-        run: docker buildx build --platform linux/x86_64 --no-cache --progress=plain -f services/tms-api/Dockerfile -t ${{ inputs.image_name }}:${{ inputs.image_tag }} --build-arg SERVICE_NAME=tms-api .
+        env:
+          REDIRECT_URI: ${{ inputs.redirect_uri }}
+        run: docker buildx build --platform linux/x86_64 --no-cache --progress=plain -f services/tms-api/Dockerfile -t ${{ inputs.image_name }}:${{ inputs.image_tag }} --build-arg SERVICE_NAME=tms-api --build-arg REDIRECT_URI="$REDIRECT_URI" .
       - name: Push Image
         run: docker push --all-tags ${{ inputs.image_name }}

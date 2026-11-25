@@ -93,6 +93,20 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn loads_the_sample_configuration() {
+        let repository = InMemoryInstitutionRepository::from_json(include_str!(
+            "../../../../../../deploy/institutions.sample.json"
+        ))
+        .unwrap();
+
+        let utexas = repository.get_by_id("utexas").await.unwrap();
+
+        assert_eq!(utexas.globus_login_domain().unwrap(), "utexas.edu");
+        let disabled = repository.get_by_id("example-disabled").await.unwrap();
+        assert!(disabled.globus_login_domain().is_err());
+    }
+
+    #[tokio::test]
     async fn returns_not_found_for_an_unknown_institution() {
         let repository =
             InMemoryInstitutionRepository::from_json(r#"{"institutions": []}"#).unwrap();

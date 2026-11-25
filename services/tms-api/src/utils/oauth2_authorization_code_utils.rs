@@ -1,5 +1,6 @@
+use crate::constants::GLOBUS_ISSUER;
 use crate::obj_model;
-use crate::obj_model::identity_provider::IdentityProvider;
+use crate::obj_model::identity_provider::{IdentityProvider, IdentityProviderType};
 use anyhow::{Context, Result};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -18,6 +19,16 @@ pub struct AuthCodeQueryParams {
     pub state: String,
 }
 
+// the login identity provider's redirect to /login/callback: a code and the state, or an
+// error (RFC 6749 4.1.2.1), e.g. access_denied when the user cancels
+#[derive(Debug, Deserialize)]
+pub struct LoginCallbackQueryParams {
+    pub code: Option<String>,
+    pub state: Option<String>,
+    pub error: Option<String>,
+    pub error_description: Option<String>,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct ListResourceProviderRequestParams {
     pub linked_only: Option<bool>,
@@ -34,6 +45,11 @@ pub struct OAuth2State {
     pub redirect_uri: String, // redirect_uri requested by the tms client
     pub client_state: Option<String>, // state provided to authorize endpoint by tms client
     pub nonce: u32,           // nonce - used to help prevent replay attacks
+    // the institution a login goes through (None for a resource provider login).  The
+    // callback looks it up again and only accepts an identity from its domain.
+    pub institution_id: Option<String>,
+    // when the login started (epoch seconds): the identity must authenticate after it
+    pub login_started: u64,
 }
 /*
 Exchanges an auth code for an auth token.  The parameter <R> is the structure
@@ -79,10 +95,14 @@ pub async fn decode_access_token<T>(
 where
     T: for<'a> Deserialize<'a>,
 {
+    // an id token must be for our client, and a Globus one from Globus
     let audience = HashSet::from([idp.client_id.to_owned()]);
     let mut builder = JwtDecoderBuilder::builder().jwks_url(&idp.oauth2_jwks_url);
     if let Some(key) = &idp.oauth2_public_key {
         builder = builder.public_key(key.as_bytes());
+    }
+    if idp.identity_provider_type == IdentityProviderType::Globus {
+        builder = builder.issuer(GLOBUS_ISSUER);
     }
     builder
         .audience(audience)

@@ -13,3 +13,6 @@ serde_json = { version = "1.0.149", features = ["default"] }
 thiserror = "2.0.18"
 rand = {  version = "0.10.2", features = ["thread_rng"] }
 utoipa = { workspace = true }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt"] }

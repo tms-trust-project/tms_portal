@@ -1,0 +1,37 @@
+{
+  "institutions": [
+    {
+      "id": "utexas",
+      "name": "The University of Texas at Austin",
+      "enabled": true,
+      "idp_config": {
+        "globus": {
+          "redirect_idp_domain": "utexas.edu",
+          "idp_logout_url": "https://enterprise.login.utexas.edu/idp/profile/Logout"
+        }
+      }
+    },
+    {
+      "id": "uchicago",
+      "name": "University of Chicago",
+      "enabled": true,
+      "idp_config": {
+        "globus": {
+          "redirect_idp_domain": "uchicago.edu",
+          "idp_logout_url": "https://uchicago.okta.com/login/signout"
+        }
+      }
+    },
+    {
+      "id": "example-disabled",
+      "name": "An institution that is listed but can't be used to log in",
+      "enabled": false,
+      "idp_config": {
+        "globus": {
+          "redirect_idp_domain": "example.edu",
+          "idp_logout_url": ""
+        }
+      }
+    }
+  ]
+}

@@ -124,6 +124,12 @@ impl HttpConfig {
     pub fn get_jwks_url(&self) -> String {
         self.make_tms_url(&self.base_url, &self.jwks_endpoint)
     }
+    // whether the portal is served over https, so its cookies can be Secure (a browser
+    // drops a Secure cookie set over plain http, except on localhost)
+    pub fn uses_https(&self) -> bool {
+        self.base_url.trim().to_ascii_lowercase().starts_with("https://")
+    }
+
     pub fn make_tms_url(&self, base_url: &str, relative_path: &str) -> String {
         // trim and ensure string ends with a "/"
         let base_url_string = base_url.trim_end_matches("/");

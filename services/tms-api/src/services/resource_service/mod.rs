@@ -64,8 +64,6 @@ pub struct ResourceProviderAuthorizationCodeResponse {
 pub struct ResourceProviderAuthorizeInfo {
     pub encoded_state: String,
     pub identity_redirect_url: Url,
-    pub client_id: String,
-    pub client_secret: String,
 }
 
 // TODO Refactor these methods into an application service
@@ -156,6 +154,10 @@ pub async fn get_authenticate_redirect_info(
             + 300,
         nonce: generate_nonce(),
         client_state: client_state.clone(),
+        institution_id: None,
+        login_started: SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)?
+            .as_secs(),
     };
 
     let encoded_state = match encode_state(&configuration.state_key, oauth_state).await {
@@ -183,12 +185,7 @@ pub async fn get_authenticate_redirect_info(
 
     let identity_redirect_url = Url::parse_with_params(&rp.identity_redirect_url, query_params)?;
 
-    Ok(ResourceProviderAuthorizeInfo {
-        encoded_state,
-        identity_redirect_url,
-        client_id: rp.client_id,
-        client_secret: rp.client_secret,
-    })
+    Ok(ResourceProviderAuthorizeInfo { encoded_state, identity_redirect_url })
 }
 
 pub async fn get_resource_provider_token(
@@ -210,8 +207,11 @@ pub async fn get_resource_provider_token(
     let access_token = reponse.result.access_token;
     let refresh_token = reponse.result.refresh_token;
 
+    // TODO: check the aud once it's confirmed what Tapis puts in it (probably the client
+    // id).  Until JwtDecoderBuilder's audience check was fixed it was never checked here.
     let decoded_token: Value = JwtDecoderBuilder::builder()
         .jwks_url(&rp.oauth2_jwks_url)
+        .validate_aud(false)
         .decode(&access_token.id_token)
         .await?;
 

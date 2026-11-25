@@ -2,3 +2,9 @@ client/node_modules/
 client/.pnpm_store/
 target/
 **/target/
+client/dist/
+client/coverage/
+# local env files (e.g. VITE_DEV_JWT) must never reach an image build
+client/.env*.local
+# the root dist is a local symlink to client/dist
+dist

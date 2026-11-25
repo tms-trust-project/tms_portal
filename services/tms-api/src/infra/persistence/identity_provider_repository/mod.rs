@@ -23,10 +23,10 @@ impl PostgresIdentityProviderRepository {
 impl IdentityProviderRepository for PostgresIdentityProviderRepository {
     async fn list_login_providers(&self) -> Result<HashSet<IdentityProvider>> {
         let idp_query_result = query(
-            "select id, name, client_id, client_secret, identity_redirect_url,
+            "select id, name, oauth2_client_id, oauth2_client_secret, identity_redirect_url,
                          oauth2_token_url, oauth2_jwks_url, oidc_user_info_url,
                          oauth2_public_key, scope, provider_type,
-                         supports_login, supports_resources, resources_endpoint, created, updated
+                         supports_login, supports_resources, resources_services_url, created, updated
                          from identity_providers where supports_login = true",
         )
         .fetch_all(&self.db_pool)
@@ -45,7 +45,7 @@ impl IdentityProviderRepository for PostgresIdentityProviderRepository {
         id: &str,
     ) -> Result<IdentityProvider> {
         let row = query(
-            "select id, name, client_id, client_secret, identity_redirect_url,
+            "select id, name, oauth2_client_id, oauth2_client_secret, identity_redirect_url,
                          oauth2_token_url, oauth2_jwks_url, oidc_user_info_url,
                          oauth2_public_key, scope, provider_type,
                          supports_login, supports_resources, resources_services_url, created, updated 
@@ -70,7 +70,7 @@ impl IdentityProviderRepository for PostgresIdentityProviderRepository {
             true => {
                 query(
                     "select ip.* from identity_providers as ip
-                          INNER JOIN resource_provider_account_logins
+                          INNER JOIN resource_provider_logins
                           AS rpal ON ip.id = rpal.rp_id where supports_resources = true
                           and tms_identity = $1",
                 )
@@ -121,6 +121,8 @@ impl IdentityProviderRepository for PostgresIdentityProviderRepository {
 // have been named login_allowed and resources_allowed because it's not about support, but
 // rather if we allow it.
 
+// The column names are the tms_server migrations' (10003_tms_1_0.sql), which prefix the
+// OAuth2 client credentials with oauth2_; the struct keeps the shorter field names.
 impl TryFrom<&PgRow> for IdentityProvider {
     type Error = anyhow::Error;
     fn try_from(row: &PgRow) -> anyhow::Result<Self, Self::Error> {
@@ -128,8 +130,8 @@ impl TryFrom<&PgRow> for IdentityProvider {
         Ok(IdentityProvider {
             id: row.get("id"),
             name: row.get("name"),
-            client_id: row.get("client_id"),
-            client_secret: row.get("client_secret"),
+            client_id: row.get("oauth2_client_id"),
+            client_secret: row.get("oauth2_client_secret"),
             identity_redirect_url: row.get("identity_redirect_url"),
             oauth2_token_url: row.get("oauth2_token_url"),
             oauth2_jwks_url: row.get("oauth2_jwks_url"),

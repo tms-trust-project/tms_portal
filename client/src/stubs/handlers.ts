@@ -18,6 +18,32 @@ const whoamiStub = {
   organization: "University of Texas at Austin",
 }
 
+const institutionStubs = [
+  {
+    id: "utexas",
+    name: "The University of Texas at Austin",
+    enabled: true,
+    idp_config: {
+      globus: {
+        redirect_idp_domain: "utexas.edu",
+        idp_logout_url:
+          "https://enterprise.login.utexas.edu/idp/profile/Logout",
+      },
+    },
+  },
+  {
+    id: "uchicago",
+    name: "University of Chicago",
+    enabled: true,
+    idp_config: {
+      globus: {
+        redirect_idp_domain: "uchicago.edu",
+        idp_logout_url: "https://shibboleth2.uchicago.edu/idp/profile/Logout",
+      },
+    },
+  },
+]
+
 const resourceStubs: Record<string, string>[] = [
   {
     id: "cffc01ff-a85d-437c-aebb-a42e05b817a9",
@@ -89,6 +115,11 @@ export const handlers = [
   }),
   http.get("/login/whoami", () => {
     return HttpResponse.json({ result: whoamiStub })
+  }),
+
+  // public, like the base server: the sign in card lists institutions before login
+  http.get("/institutions", () => {
+    return HttpResponse.json({ status: "200 OK", result: institutionStubs })
   }),
 
   http.get("/resources/providers", () => {

@@ -9,6 +9,7 @@ pub struct JwtDecoderBuilder {
     public_key_bytes: Option<Vec<u8>>,
     validate_aud: bool,
     audience: Option<HashSet<String>>,
+    issuer: Option<String>,
 }
 
 impl JwtDecoderBuilder {
@@ -18,6 +19,7 @@ impl JwtDecoderBuilder {
             public_key_bytes: None,
             audience: None,
             validate_aud: true,
+            issuer: None,
         }
     }
     pub fn jwks_url(mut self, jwks_url: &Option<String>) -> Self {
@@ -39,6 +41,12 @@ impl JwtDecoderBuilder {
 
     pub fn audience(mut self, audience: HashSet<String>) -> Self {
         self.audience = Some(audience);
+        self
+    }
+
+    // The token's iss must be this issuer (and the token must have an iss).
+    pub fn issuer(mut self, issuer: &str) -> Self {
+        self.issuer = Some(String::from(issuer));
         self
     }
 
@@ -78,10 +86,17 @@ impl JwtDecoderBuilder {
         // TODO: remember this trick for generics.  It helps a lot!!
         // println!("Type is: {}", std::any::type_name::<T>());
         let mut validation = Validation::new(algorithm);
-        if self.validate_aud {
-            validation.validate_aud = false;
-        } else if self.audience.is_some() {
-            validation.aud = self.audience.to_owned();
+        // With validate_aud (the default) the token's aud must be in audience, and a token
+        // that has an aud is refused when no audience was given.  Decoders of tokens whose
+        // aud isn't ours to check turn it off with validate_aud(false).
+        validation.validate_aud = self.validate_aud;
+        if let Some(audience) = &self.audience {
+            validation.aud = Some(audience.clone());
+            validation.required_spec_claims.insert(String::from("aud"));
+        }
+        if let Some(issuer) = &self.issuer {
+            validation.set_issuer(&[issuer]);
+            validation.required_spec_claims.insert(String::from("iss"));
         }
 
         let decoded: TokenData<T> = decode(token, &decoding_key, &validation)?;
@@ -95,3 +110,7 @@ async fn get_public_key(pub_key_url: &str) -> anyhow::Result<JwkSet> {
     let jwks_string = response.text().await?;
     serde_json::from_str(jwks_string.as_str()).map_err(|error| error.into())
 }
+
+#[cfg(test)]
+#[path = "jwt_decoder.test.rs"]
+mod jwt_decoder_test;
