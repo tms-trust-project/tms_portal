@@ -16,8 +16,14 @@ paths:
       tags:
         - Login
       summary: Login
-      description: Login to TMS Portal using specified identity provider, and redirect back to redirect uri (must be |
-        configured as an allowed redirect uri)
+      description: |
+        Log in to the TMS Portal through an approved institution (from /institutions), and
+        redirect back to redirect_uri (which must be configured as an allowed redirect uri).
+        Globus is given the institution's redirect_idp_domain (so a user not yet signed in
+        goes straight to the institution's login page), session_required_single_domain (so
+        Globus requires an identity from its domain) and prompt=login.  A login that can't
+        start (no institution, an unusable one, a redirect uri that isn't allowed, no Globus
+        login provider) goes back to the sign in page with ?error=<code> instead.
       requestBody:
         content:
           application/x-www-form-urlencoded:
@@ -25,24 +31,31 @@ paths:
               $ref: '#/components/schemas/TmsLoginRequest'
       responses:
         "307":
-          description: Temporary redirect
+          description: Redirect to the Globus authorize url.  Sets the state_cookie.
           headers:
             location:
               schema:
                 type: string
-              description: redirect url
-        "400":
-          description: Bad Request
-          content:
-            application/json:
+              description: Globus authorize url
+        "303":
+          description: The login can't start; redirect to the sign in page with ?error=<code>
+          headers:
+            location:
               schema:
-                $ref: '#/components/schemas/TmsErrorResponse'
+                type: string
+              description: "sign in page (base url) with ?error=<code>: institution_required, unapproved_institution, stale_authentication, login_cancelled, login_expired, login_failed or login_unavailable"
     get:
       tags:
         - Login
       summary: Login
-      description: Login to TMS Portal using specified identity provider, and redirect back to redirect uri (must be |
-        configured as an allowed redirect uri)
+      description: |
+        Log in to the TMS Portal through an approved institution (from /institutions), and
+        redirect back to redirect_uri (which must be configured as an allowed redirect uri).
+        Globus is given the institution's redirect_idp_domain (so a user not yet signed in
+        goes straight to the institution's login page), session_required_single_domain (so
+        Globus requires an identity from its domain) and prompt=login.  A login that can't
+        start (no institution, an unusable one, a redirect uri that isn't allowed, no Globus
+        login provider) goes back to the sign in page with ?error=<code> instead.
       parameters:
         - name: redirect_uri
           schema:
@@ -59,33 +72,74 @@ paths:
             type: string
           in: query
           required: false
+        - name: institution
+          description: The id of an approved institution from /institutions.  Without one the login goes back to the sign in page with ?error=institution_required.
+          schema:
+            type: string
+          in: query
+          required: true
       responses:
         "307":
-          description: Temporary redirect
+          description: Redirect to the Globus authorize url.  Sets the state_cookie.
           headers:
             location:
               schema:
                 type: string
-              description: redirect url
-        "400":
-          description: Bad Request
-          content:
-            application/json:
+              description: Globus authorize url
+        "303":
+          description: The login can't start; redirect to the sign in page with ?error=<code>
+          headers:
+            location:
               schema:
-                $ref: '#/components/schemas/TmsErrorResponse'
+                type: string
+              description: "sign in page (base url) with ?error=<code>: institution_required, unapproved_institution, stale_authentication, login_cancelled, login_expired, login_failed or login_unavailable"
   "/logout":
     post:
       tags:
         - Login
       summary: Logout
-      description: Log out of TMS Portal
+      description: |
+        Log out of the TMS Portal.  The token is taken from the Authorization: Bearer header
+        or the tmstoken cookie; a missing, revoked or invalid token still logs out.  The
+        token is revoked, the tmstoken cookie removed, and the browser sent to Globus's
+        sign-out page, which links on to /logout/idp when the token's institution has its own
+        IdP sign-out page (otherwise back to the sign in page).  Only POST is accepted, so
+        another site can't log a user out with a link.
       responses:
-        "200":
-          description: Success
-          content:
-            application/json:
+        "303":
+          description: Redirect to Globus's sign-out page (or the sign in page without a valid token)
+          headers:
+            location:
               schema:
-                $ref: '#/components/schemas/TmsLogoutResponse'
+                type: string
+              description: https://auth.globus.org/v2/web/logout?client_id=...&redirect_uri=...&redirect_name=...
+
+  "/logout/idp":
+    get:
+      tags:
+        - Login
+      summary: Logout of the institution's IdP
+      description: |
+        The second step of logging out of an institution: Globus's sign-out page links here,
+        and this redirects to the institution's own IdP sign-out page (idp_logout_url from the
+        institutions list), so its session ends too.  An unknown institution, or one without
+        an IdP sign-out page, goes to the sign in page.  Only urls from the institutions list
+        are used, so this isn't an open redirect.
+      parameters:
+        - name: institution
+          description: The institution id (from the TMS token's tms/institution claim)
+          required: true
+          schema:
+            type: string
+          in: query
+      responses:
+        "303":
+          description: Redirect to the institution's IdP sign-out page, or the sign in page
+          headers:
+            location:
+              schema:
+                type: string
+              description: idp_logout_url, or the sign in page
 
   "/login/whoami":
     get:
@@ -128,23 +182,49 @@ paths:
       tags:
         - Login
       summary: callback
-      description: Called by identity provider with code that can be exchanged for a token.
+      description: |
+        Called by the identity provider (Globus) with a code that can be exchanged for a
+        token, or with an error (RFC 6749 4.1.2.1).  The state must match the state_cookie
+        and still be valid.  The id token's nonce must be this login's; its identity must be
+        from the institution's domain (preferred_username, or an identity in identity_set) and
+        must have authenticated after the login started.  The state_cookie is always removed.
       parameters:
         - name: code
           schema:
             type: string
           in: query
+          required: false
         - name: state
           in: query
           schema:
             type: string
+          required: false
+        - name: error
+          description: Sent by the identity provider instead of a code, e.g. access_denied when the user cancels
+          in: query
+          schema:
+            type: string
+          required: false
+        - name: error_description
+          in: query
+          schema:
+            type: string
+          required: false
       responses:
-        "200":
-          description: Success
-          content:
-            application/json:
+        "307":
+          description: Logged in.  Sets the tmstoken cookie (the TMS JWT) and redirects to the login's redirect uri.
+          headers:
+            location:
               schema:
-                $ref: '#/components/schemas/TmsCallbackResponse'
+                type: string
+              description: the redirect_uri given to /login
+        "303":
+          description: The login was refused, cancelled, failed or expired; redirect to the sign in page with ?error=<code>
+          headers:
+            location:
+              schema:
+                type: string
+              description: "sign in page (base url) with ?error=<code>: institution_required, unapproved_institution, stale_authentication, login_cancelled, login_expired, login_failed or login_unavailable"
 
   "/resources/{provider_id}/{provider_account_id}":
     get:
@@ -289,7 +369,13 @@ paths:
       tags:
         - OAuth2
       summary: authorize
-      description: authorize endpoint for oauth2
+      description: |
+        Authorize endpoint for oauth2.  The client and redirect uri are checked first, and an
+        error there is returned, never redirected to.  Every login goes through an approved
+        institution: without one, the browser is sent to the TMS Portal's sign in page with
+        the request, which shows the institution picker and sends the request back with
+        &institution=<id>.  An unusable institution goes back to the client's redirect uri
+        with an RFC 6749 error.  Otherwise the browser goes to Globus, like a portal /login.
       parameters:
         - name: response_type
           description: Response type expected from authorize - currently only "code is" supported
@@ -321,14 +407,81 @@ paths:
           schema:
             type: string
           in: query
+        - name: institution
+          description: The id of an approved institution from /institutions.  Without one the browser goes to the sign in page's institution picker.
+          required: false
+          schema:
+            type: string
+          in: query
       responses:
         "307":
-          description: Temporary redirect
+          description: Redirect to the Globus authorize url.  Sets the state_cookie.
           headers:
             location:
               schema:
                 type: string
-              description: redirect url
+              description: Globus authorize url
+        "303":
+          description: |
+            Without an institution, redirect to the sign in page carrying the request
+            (response_type, client_id, redirect_uri, state, scope).  With an unusable
+            institution, or no Globus login provider, redirect to the client's redirect_uri
+            with error, error_description and state.
+          headers:
+            location:
+              schema:
+                type: string
+              description: the sign in page, or the client's redirect_uri with an error
+        "400":
+          description: The client or redirect uri isn't allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TmsErrorResponse'
+
+  "/oauth2/callback":
+    get:
+      tags:
+        - OAuth2
+      summary: callback
+      description: |
+        Called by Globus for another client's login, with a code or an error (RFC 6749
+        4.1.2.1).  The same checks as /login/callback apply.  The state_cookie is always
+        removed.
+      parameters:
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: error
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: error_description
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "303":
+          description: |
+            Logged in: redirect to the client's redirect_uri with code (for /oauth2/tokens)
+            and state.  Refused, cancelled or failed: redirect to the client's redirect_uri
+            with error (invalid_request, access_denied, server_error or
+            temporarily_unavailable), error_description and state.  When the state can't be
+            trusted, redirect to the sign in page with ?error=<code>.
+          headers:
+            location:
+              schema:
+                type: string
+              description: the client's redirect_uri, or the sign in page
 
 
   "/oauth2/tokens":
@@ -508,8 +661,7 @@ components:
     TmsLoginRequest:
       required:
         - redirect_uri
-        - client_return_uri
-        - client_name
+        - institution
       type: object
       properties:
         redirect_uri:
@@ -518,13 +670,8 @@ components:
           type: string
         client_name:
           type: string
-
-    TmsLogoutResponse:
-      type: object
-      properties:
-        status:
-          type: string
-        result:
+        institution:
+          description: The id of an approved institution from /institutions
           type: string
 
     ListLoginIdpResponse:
@@ -546,16 +693,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Resource'
-
-    TmsCallbackResponse:
-      type: object
-      properties:
-        status:
-          type: string
-        result:
-          properties:
-            token:
-              type: string
 
     IdentityProvider:
       type: object
