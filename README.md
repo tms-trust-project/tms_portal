@@ -22,46 +22,30 @@ cargo build ( or cargo build --release )
 ```
 
 ## Build the UI (only if you want to run the UI locally)
-At present, the UI has the url hard coded ... we probably need to change this.  But for now youll need to 
-make a change in 2 files for it to work on your machine.  Here's the diff.  You can put it in a file, for
-example patch.txt, and then git apply it.  Or, you could apply these changes manually.
-
-`git apply patch.txt`
-
+The UI's login link carries the portal url the login returns to, which is compiled into the
+build from `REDIRECT_URI` (the build stops without it).  It must be one of the `tms` client's
+allowed redirects (`BASE_URL` and `BASE_URL/` in the sample data).  For a local portal:
 ```
-diff --git a/client/src/App.tsx b/client/src/App.tsx
-index 6b18750..a351621 100644
---- a/client/src/App.tsx
-+++ b/client/src/App.tsx
-@@ -132,7 +132,7 @@ function App() {
-           <div>
-             Please{" "}
-             <a
--              href="/login?idp_id=globus_idp&redirect_uri=https://tms-auth-service.tacc.cloud/"
-+              href="/login?idp_id=globus_idp&redirect_uri=http://localhost:8080/"
-               className="text-primary underline-offset-4 hover:underline"
-             >
-               log in
-diff --git a/client/src/components/tms-ui/UserMenu.tsx b/client/src/components/tms-ui/UserMenu.tsx
-index dad72b7..2278063 100644
---- a/client/src/components/tms-ui/UserMenu.tsx
-+++ b/client/src/components/tms-ui/UserMenu.tsx
-@@ -17,7 +17,7 @@ export function UserMenu() {
-   if (!isAuthenticated || !whoami)
-     return (
-       <Button variant="outline" role="link" asChild>
--        <a href="/login?idp_id=globus_idp&redirect_uri=https://tms-auth-service.tacc.cloud/">
-+        <a href="/login?idp_id=globus_idp&redirect_uri=http://localhost:8080/">
-           <LogIn /> Log In
-         </a>
-       </Button>
+cd client
+pnpm install
+REDIRECT_URI=http://localhost:8080/ pnpm build
+```
+or, without node/pnpm installed, build it in docker (`REDIRECT_URI` defaults to
+`http://localhost:8080/`):
+```
+./setupClient.sh
+REDIRECT_URI=https://<portal host>/ ./setupClient.sh
 ```
 
-`./setupClient.sh` 
-
-Depending on the current working directory, you'll need to make sure the portal can see the ui code.
-If you're running from the top level of the git repo, you can just create a symlink:
+The portal serves the UI from `dist/` in its working directory.  If you're running from the
+top level of the git repo, create a symlink:
 `ln -s ./client/dist/ ./dist`
+
+The portal's docker image builds the UI itself; pass the url as a build arg
+(`./buildTmsPortal.sh` defaults it to `http://localhost:8080/`):
+```
+REDIRECT_URI=https://<portal host>/ ./buildTmsPortal.sh
+```
 
 ## Create the schema
 run the following command to create the schema from the tms_server project.  It will download the 
