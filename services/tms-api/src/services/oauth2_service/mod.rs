@@ -164,6 +164,7 @@ async fn get_state(
             + 300,
         nonce: generate_nonce(),
         client_state: state.clone(),
+        institution_domain: None,
     };
 
     // encode state structure

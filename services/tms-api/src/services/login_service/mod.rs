@@ -1,6 +1,7 @@
 use crate::infra::auth::globus_token_provider::GlobusTokenProvider;
 use crate::obj_model::configuration::{HttpConfig, StateKey};
 use crate::obj_model::identity_provider::{IdentityProvider, IdentityProviderType};
+use crate::obj_model::institutions::identity_is_from_domain;
 use crate::obj_model::login::WhoAmIResponse;
 use crate::ports::authorization_code_gateway::{AuthorizationCodeExchangeGateway, ExchangeInput};
 use crate::ports::identity_porvider::IdentityProviderRepository;
@@ -136,6 +137,12 @@ impl LoginService {
     
         let mut claims: HashMap<String, Value> = decode_access_token(&idp, &oauth_token_set.id_token).await?;
 
+        // a login through an institution must come back as one of its identities, before
+        // any TMS token is issued
+        if let Some(domain) = &decoded_state.institution_domain {
+            check_institution_identity(&claims, domain)?;
+        }
+
         // TODO: get iss from config
         claims.insert("iss".to_string(), Value::from(TMS_ISSUER));
     
@@ -177,6 +184,30 @@ impl LoginService {
     }
 }
 
+/*
+Checks that a login through an institution came back with an identity from the
+institution's domain.  redirect_idp_domain only steers the login to the institution's
+identity provider: a user already signed in to Globus with another identity, or one who
+edits the authorize URL, can come back as someone else.  Globus puts the identity's
+username (e.g. jdoe@utexas.edu) in the ID token's preferred_username.
+ */
+fn check_institution_identity(claims: &HashMap<String, Value>, domain: &str) -> Result<()> {
+    match claims.get("preferred_username").and_then(Value::as_str) {
+        Some(username) if identity_is_from_domain(username, domain) => Ok(()),
+        Some(username) => Err(Unauthorized(format!(
+            "Signed in as '{}', which isn't an identity from {}.  Log out of Globus, then \
+             log in again with your {} identity.",
+            username, domain, domain
+        ))
+        .into()),
+        None => Err(Unauthorized(format!(
+            "The login returned no username, so it can't be checked against {}",
+            domain
+        ))
+        .into()),
+    }
+}
+
 pub struct RedirectUrl(String);
 
 impl RedirectUrl {
@@ -194,3 +225,7 @@ pub struct AuthorizationCodeResponse {
     pub expires_in: u64,
     //    pub refresh_token_iat: u64,
 }
+
+#[cfg(test)]
+#[path = "login_service.test.rs"]
+mod login_service_test;

@@ -156,6 +156,7 @@ pub async fn get_authenticate_redirect_info(
             + 300,
         nonce: generate_nonce(),
         client_state: client_state.clone(),
+        institution_domain: None,
     };
 
     let encoded_state = match encode_state(&configuration.state_key, oauth_state).await {

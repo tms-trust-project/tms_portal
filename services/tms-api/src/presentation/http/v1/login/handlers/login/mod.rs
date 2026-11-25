@@ -15,6 +15,7 @@ use url::Url;
 
 use crate::AppState;
 use crate::infra::persistence::identity_provider_repository::identity_provider_dao::get_login_provider_by_id;
+use crate::obj_model::identity_provider::IdentityProviderType;
 use crate::presentation::http::v1::login::requests::AuthorizeRequest;
 use crate::presentation::http::v1::utils::tms_response::TmsResponse;
 use crate::utils::app_error::AppError;
@@ -54,6 +55,25 @@ pub async fn login(
 
     match login_idp {
         Ok(idp) => {
+            // An institution sends the login straight to its own identity provider: Globus
+            // is given the institution's redirect_idp_domain, and the callback then requires
+            // the identity to be from it.  Checked before anything else, so a bad
+            // institution never starts a login.
+            let login_domain = match &form_data.institution {
+                Some(institution_id) => {
+                    if idp.identity_provider_type != IdentityProviderType::Globus {
+                        return Err(BadRequest(format!(
+                            "Logging in through an institution needs a Globus login provider, \
+                             and '{}' isn't one",
+                            idp.id
+                        ))
+                        .into());
+                    }
+                    Some(app_state.institution_service.globus_login_domain(institution_id).await?)
+                }
+                None => None,
+            };
+
             let mut redirect_uri = Url::parse(&form_data.redirect_uri)?;
             if let Some(client_return_uri) = &form_data.client_return_uri {
                 if let Some(return_client_name) = &form_data.client_name {
@@ -96,6 +116,7 @@ pub async fn login(
                     + 300,
                 nonce: generate_nonce(),
                 client_state: None,
+                institution_domain: login_domain.clone(),
             };
 
             let encoded_state = match encode_state(&app_state.config.state_key, oauth_state).await {
@@ -118,6 +139,13 @@ pub async fn login(
 
             if let Some(scope) = &idp.scope {
                 query_params.push(("scope", scope.as_str()))
+            }
+            // Globus Auth: a user not yet signed in to Globus skips its organization picker
+            // and goes straight to the login page of the IdP registered for this domain.
+            // It's a convenience redirect, not an access control (a user already signed in
+            // to Globus keeps that identity), so login_callback checks the identity.
+            if let Some(domain) = &login_domain {
+                query_params.push(("redirect_idp_domain", domain.as_str()))
             }
 
             let location = Url::parse_with_params(&idp.identity_redirect_url, query_params)?;
