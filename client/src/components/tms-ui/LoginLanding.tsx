@@ -42,7 +42,7 @@ export function LoginLanding({
       <CardHeader>
         <CardTitle>Log in to TMS</CardTitle>
         <CardDescription>
-          {/* the base server's /login ignores institution for now (see loginHref) */}
+          {/* /login sends the chosen institution's logins to its own domain (see loginHref) */}
           {showPicker || requireInstitution
             ? "Choose your institution to go straight to its login page."
             : "Log in with Globus to manage resources."}
