@@ -25,7 +25,7 @@ use std::collections::HashMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tms_lib::utils::jwt_decoder::JwtDecoderBuilder;
 use tms_lib::utils::jwt_encoder::JwtEncoderBuilder;
-use tms_lib::utils::service_error::ServiceError::{Internal, Unauthorized};
+use tms_lib::utils::service_error::ServiceError::{self, Internal, Unauthorized};
 use tracing::{Level, enabled};
 use uuid::Uuid;
 
@@ -171,13 +171,30 @@ async fn get_token_claims(
     token: &str,
 ) -> Result<TmsTokenClaims> {
     let mut tx = db_pool.begin().await?;
-    let issued_token = db_get_token(&mut tx, token).await?;
+    let issued_token = db_get_token(&mut tx, token)
+        .await
+        .map_err(unissued_token_is_unauthorized)?;
     tx.commit().await?;
     if issued_token.is_revoked() || issued_token.is_expired() {
         return Err(Unauthorized("Token is expired or revoked".to_string()).into());
     }
 
     decode_tms_token(jwt_config, token).await
+}
+
+/*
+A token that isn't in issued_tokens (forged, or issued before the database was reset)
+isn't accepted, like a revoked one: unauthorized, not "not found".  The client drops its
+token cookie on a 401, so the user can log in again.  Other errors (e.g. the database)
+pass through unchanged.
+ */
+pub fn unissued_token_is_unauthorized(error: anyhow::Error) -> anyhow::Error {
+    match error.downcast_ref::<ServiceError>() {
+        Some(ServiceError::NotFound(_)) => {
+            Unauthorized(String::from("The token was not issued by TMS")).into()
+        }
+        _ => error,
+    }
 }
 impl FromRequestParts<AppState> for JwtValidator {
     type Rejection = AppError;

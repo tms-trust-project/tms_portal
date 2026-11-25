@@ -2,7 +2,7 @@ use serde_json::Value;
 use tms_lib::utils::jwt_encoder::JwtEncoderBuilder;
 use tms_lib::utils::service_error::ServiceError;
 
-use super::{TmsTokenClaims, decode_tms_token, get_signing_key};
+use super::{TmsTokenClaims, decode_tms_token, get_signing_key, unissued_token_is_unauthorized};
 use crate::obj_model::configuration::JwtConfig;
 use crate::obj_model::identity_provider::IdentityProviderType;
 use crate::obj_model::key::Key;
@@ -121,4 +121,19 @@ async fn refuses_a_token_that_is_not_a_jwt() {
             .await
             .unwrap_err(),
     );
+}
+
+#[test]
+fn a_token_that_was_never_issued_is_unauthorized() {
+    let not_found: anyhow::Error = ServiceError::NotFound("Token not found".into()).into();
+
+    assert_unauthorized(unissued_token_is_unauthorized(not_found));
+}
+
+#[test]
+fn other_errors_looking_up_a_token_pass_through() {
+    let error = unissued_token_is_unauthorized(anyhow::anyhow!("database unavailable"));
+
+    assert!(error.downcast_ref::<ServiceError>().is_none());
+    assert_eq!(error.to_string(), "database unavailable");
 }
