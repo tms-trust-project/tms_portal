@@ -100,14 +100,40 @@ Run `deploy/createConfigData.sh -?` to see the generation and key options.
 The `tms_portal_dev_config.sql` file is a template. The initial values will be
 different for each installation.
 
+## Configure the approved institutions
+Every login goes through an approved institution: Globus sends the user straight to the
+institution's own login page (`redirect_idp_domain`) and requires an identity from its domain
+(`session_required_single_domain`), and the portal checks the identity again when Globus
+redirects back.  The institutions are read at startup from a JSON file; the server won't
+start without it.
+```
+export TMS_PORTAL_INSTITUTIONS_CONFIG_FILE=$PWD/deploy/institutions.sample.json
+```
+Each entry has an `id` (what the client sends as `institution`), a `name`, `enabled`, and
+`idp_config.globus` with the `redirect_idp_domain` registered with Globus (e.g. `utexas.edu`)
+and the `idp_logout_url` of the institution's own IdP sign-out page (empty if it has none).
+The k8s deployments mount the same file from their ConfigMap
+(`deploy/k8s/*/tms-api/config-map.yml`).
+
+The Globus identity provider's scope should include
+`urn:globus:auth:scope:auth.globus.org:view_identity_set` (the sample data does), so a user
+can log in with an institution identity linked to a Globus account whose primary identity is
+from somewhere else.  For an existing database:
+```
+update identity_providers
+   set scope = 'openid profile email urn:globus:auth:scope:auth.globus.org:view_identity_set'
+ where id = 'globus';
+```
+
 ## Run
 ```
 cargo run
 ```
 Point the browser at http://localhost:8080/
 
-Now the portal should be fully functional.  Some parts of this store cookies for later use.  If you want
-to force a new login, you can go to globus.io, login, and logout.  This will force authentication
-when you login via the tms portal.  For tacc resource provider, you can go to tacc.tapis.io, and from
-the chrome dev tools, you can clear the cookies to force a new auth check.
+Now the portal should be fully functional.  Log Out ends the Globus session and, when the
+institution has an `idp_logout_url`, Globus's sign-out page links on to the institution's
+own sign-out, so the next login asks for credentials again.  For tacc resource provider, you
+can go to tacc.tapis.io, and from the chrome dev tools, you can clear the cookies to force a
+new auth check.
 

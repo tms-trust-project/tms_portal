@@ -77,12 +77,14 @@ async fn main() -> anyhow::Result<()> {
 
     let client_service = ClientService::new(client_repo, Arc::new(allowed_redirect_repo));
 
-    let institution_service = match std::env::var("TMS_PORTAL_INSTITUTIONS_CONFIG_FILE") {
-        Ok(config_path) => {
-            InstitutionService::new(Arc::new(InMemoryInstitutionRepository::new(config_path)?))
-        }
-        Err(error) => return Err(error.into()),
-    };
+    // the approved institutions users log in through
+    let institutions_config_file = std::env::var("TMS_PORTAL_INSTITUTIONS_CONFIG_FILE").context(
+        "TMS_PORTAL_INSTITUTIONS_CONFIG_FILE must be set to the approved institutions JSON file \
+         (see deploy/institutions.sample.json)",
+    )?;
+    let institution_service = InstitutionService::new(Arc::new(
+        InMemoryInstitutionRepository::new(institutions_config_file)?,
+    ));
 
     // Initialize Login Service
     let login_service = LoginService::new(
