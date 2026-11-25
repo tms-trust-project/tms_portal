@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { authorizeHref, getAuthorizeRequest } from "@/lib/authorizeRequest"
 import { loginErrorMessage, withoutLoginError } from "@/lib/loginError"
 import { loginHref } from "@/lib/loginHref"
 import { useListInstitutions } from "@/tms-hooks"
@@ -56,9 +57,17 @@ function LoginErrorAlert() {
 const loginButtonClass =
   "bg-neutral-200 text-black hover:bg-highlight hover:text-highlight-foreground"
 
-// Every login goes through an institution (the server refuses one without), so Log In
-// waits on (and needs) the list.
+/*
+Every login goes through an institution (the server refuses one without), so Log In
+waits on (and needs) the list.  The card also logs a user in for another app: when the
+page's url carries that app's OAuth2 authorize request, Log In sends the request back to
+/oauth2/authorize with the chosen institution instead of starting a portal login.
+ */
 export function LoginLanding() {
+  // read once: the url only changes when the error alert drops ?error=
+  const [authorizeRequest] = useState(() =>
+    getAuthorizeRequest(window.location.search)
+  )
   // /institutions is public, so any failure (a 401 included) means the list is unavailable
   const { data: institutions, isPending, isError } = useListInstitutions()
   const [selected, setSelected] = useState("")
@@ -76,9 +85,12 @@ export function LoginLanding() {
   return (
     <Card className="mx-auto max-w-md">
       <CardHeader>
-        <CardTitle>Log in to TMS</CardTitle>
+        <CardTitle>
+          {authorizeRequest ? "Log in with TMS" : "Log in to TMS"}
+        </CardTitle>
         <CardDescription>
-          {/* /login sends the chosen institution's logins to its own domain (see loginHref) */}
+          {/* /login and /oauth2/authorize send the chosen institution's logins to its own
+              domain (see loginHref) */}
           Choose your institution to go straight to its login page.
         </CardDescription>
       </CardHeader>
@@ -130,7 +142,13 @@ export function LoginLanding() {
             className={loginButtonClass}
             nativeButton={false}
             render={
-              <a href={loginHref(institutionId)}>
+              <a
+                href={
+                  authorizeRequest
+                    ? authorizeHref(authorizeRequest, institutionId)
+                    : loginHref(institutionId)
+                }
+              >
                 <LogIn /> Log In
               </a>
             }

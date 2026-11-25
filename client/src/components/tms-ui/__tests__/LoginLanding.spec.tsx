@@ -210,3 +210,53 @@ describe("LoginLanding login errors", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
 })
+
+describe("LoginLanding for another app's OAuth2 login", () => {
+  const visit = (url: string) => window.history.replaceState(null, "", url)
+  afterEach(() => visit("/"))
+
+  const authorizeRequest =
+    "response_type=code&client_id=other-portal&redirect_uri=https%3A%2F%2Fother.example.edu%2Fcallback&state=s"
+
+  test("sends the app's authorize request back with the chosen institution", async () => {
+    visit(`/?${authorizeRequest}`)
+    renderWithQueryClient(<LoginLanding />)
+
+    expect(screen.getByText("Log in with TMS")).toBeInTheDocument()
+    const select = await screen.findByLabelText("Institution")
+    expect(loginLink()).toHaveAttribute(
+      "href",
+      `/oauth2/authorize?${authorizeRequest}&institution=utexas`
+    )
+
+    fireEvent.change(select, { target: { value: "uchicago" } })
+    expect(loginLink()).toHaveAttribute(
+      "href",
+      `/oauth2/authorize?${authorizeRequest}&institution=uchicago`
+    )
+  })
+
+  test("keeps the request when it shows a login error", async () => {
+    visit(`/?error=login_expired&${authorizeRequest}`)
+    renderWithQueryClient(<LoginLanding />)
+
+    expect(screen.getByRole("alert")).toHaveTextContent("took too long")
+    await screen.findByLabelText("Institution")
+    expect(loginLink()).toHaveAttribute(
+      "href",
+      `/oauth2/authorize?${authorizeRequest}&institution=utexas`
+    )
+    expect(window.location.search).toBe(`?${authorizeRequest}`)
+  })
+
+  test("is the portal's own login without a request", async () => {
+    renderWithQueryClient(<LoginLanding />)
+
+    expect(screen.getByText("Log in to TMS")).toBeInTheDocument()
+    await screen.findByLabelText("Institution")
+    expect(loginLink()).toHaveAttribute(
+      "href",
+      `${loginBase}&institution=utexas`
+    )
+  })
+})
