@@ -328,28 +328,66 @@ pub fn get_login_authorize_url(
 /*
 Checks the identity a login through an institution came back with, before a TMS token is
 issued:
-- Its username (Globus puts it in the id token's preferred_username, e.g.
-  jdoe@utexas.edu) must be from the institution's domain.  redirect_idp_domain only
-  steers the login, and a user can edit the authorize url.
+- Its username (e.g. jdoe@utexas.edu) must be from the institution's domain.
+  redirect_idp_domain only steers the login, and a user can edit the authorize url.
 - It must have authenticated after the login started (last_authentication, epoch
   seconds), as prompt=login asks, rather than come from an earlier Globus session.
+Globus's top-level preferred_username and last_authentication are for the account's
+primary identity.  With the view_identity_set scope the id token also has identity_set,
+every identity linked to the account, each with its own username and
+last_authentication; then any of them can be the institution's.  That way a user whose
+primary identity is, say, ORCID can still log in with their institution identity.
  */
 pub fn check_login_identity(
     claims: &HashMap<String, Value>,
     domain: &str,
     login_started: u64,
 ) -> std::result::Result<(), LoginRejection> {
-    let username = claims.get("preferred_username").and_then(Value::as_str);
-    if !username.is_some_and(|username| identity_is_from_domain(username, domain)) {
+    // the primary identity's claims are at the top level of the id token
+    let mut candidates = vec![LoginIdentity::from_claims(
+        claims.get("preferred_username"),
+        claims.get("last_authentication"),
+    )];
+    if let Some(identity_set) = claims.get("identity_set").and_then(Value::as_array) {
+        candidates.extend(identity_set.iter().map(|identity| {
+            let last_authentication = identity.get("last_authentication");
+            LoginIdentity::from_claims(identity.get("username"), last_authentication)
+        }));
+    }
+
+    let from_domain: Vec<&LoginIdentity> = candidates
+        .iter()
+        .filter(|identity| {
+            identity.username.is_some_and(|name| identity_is_from_domain(name, domain))
+        })
+        .collect();
+    if from_domain.is_empty() {
         return Err(LoginRejection::UnapprovedInstitution);
     }
-    let last_authentication = claims.get("last_authentication").and_then(Value::as_f64);
-    if !last_authentication
-        .is_some_and(|last| last + AUTHENTICATION_CLOCK_SKEW_SECS >= login_started as f64)
-    {
+    let fresh = |identity: &&LoginIdentity| {
+        identity
+            .last_authentication
+            .is_some_and(|last| last + AUTHENTICATION_CLOCK_SKEW_SECS >= login_started as f64)
+    };
+    if !from_domain.iter().any(fresh) {
         return Err(LoginRejection::StaleAuthentication);
     }
     Ok(())
+}
+
+// one of the account's identities, as the id token describes it
+struct LoginIdentity<'a> {
+    username: Option<&'a str>,
+    last_authentication: Option<f64>,
+}
+
+impl<'a> LoginIdentity<'a> {
+    fn from_claims(username: Option<&'a Value>, last_authentication: Option<&Value>) -> Self {
+        Self {
+            username: username.and_then(Value::as_str),
+            last_authentication: last_authentication.and_then(Value::as_f64),
+        }
+    }
 }
 
 pub struct RedirectUrl(String);

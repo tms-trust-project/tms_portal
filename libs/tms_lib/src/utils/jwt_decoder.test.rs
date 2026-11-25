@@ -34,7 +34,9 @@ async fn decode(builder: JwtDecoderBuilder, token: &str) -> anyhow::Result<HashM
 async fn accepts_a_token_for_the_audience() {
     let token = token(json!({"aud": "our-client"})).await;
 
-    let claims = decode(decoder().audience(audience("our-client")), &token).await.unwrap();
+    let claims = decode(decoder().audience(audience("our-client")), &token)
+        .await
+        .unwrap();
 
     assert_eq!(claims["aud"], "our-client");
 }
@@ -43,14 +45,22 @@ async fn accepts_a_token_for_the_audience() {
 async fn refuses_a_token_for_another_audience() {
     let token = token(json!({"aud": "another-client"})).await;
 
-    assert!(decode(decoder().audience(audience("our-client")), &token).await.is_err());
+    assert!(
+        decode(decoder().audience(audience("our-client")), &token)
+            .await
+            .is_err()
+    );
 }
 
 #[tokio::test]
 async fn refuses_a_token_without_an_aud_when_an_audience_is_given() {
     let token = token(json!({"sub": "someone"})).await;
 
-    assert!(decode(decoder().audience(audience("our-client")), &token).await.is_err());
+    assert!(
+        decode(decoder().audience(audience("our-client")), &token)
+            .await
+            .is_err()
+    );
 }
 
 #[tokio::test]
@@ -71,7 +81,12 @@ async fn ignores_the_aud_without_aud_validation() {
 async fn accepts_a_token_from_the_issuer() {
     let token = token(json!({"iss": "https://auth.example.org"})).await;
 
-    let result = decode(decoder().validate_aud(false).issuer("https://auth.example.org"), &token);
+    let result = decode(
+        decoder()
+            .validate_aud(false)
+            .issuer("https://auth.example.org"),
+        &token,
+    );
 
     assert!(result.await.is_ok());
 }
@@ -80,7 +95,12 @@ async fn accepts_a_token_from_the_issuer() {
 async fn refuses_a_token_from_another_issuer() {
     let token = token(json!({"iss": "https://other.example.org"})).await;
 
-    let result = decode(decoder().validate_aud(false).issuer("https://auth.example.org"), &token);
+    let result = decode(
+        decoder()
+            .validate_aud(false)
+            .issuer("https://auth.example.org"),
+        &token,
+    );
 
     assert!(result.await.is_err());
 }
@@ -89,7 +109,12 @@ async fn refuses_a_token_from_another_issuer() {
 async fn refuses_a_token_without_an_iss_when_an_issuer_is_given() {
     let token = token(json!({"sub": "someone"})).await;
 
-    let result = decode(decoder().validate_aud(false).issuer("https://auth.example.org"), &token);
+    let result = decode(
+        decoder()
+            .validate_aud(false)
+            .issuer("https://auth.example.org"),
+        &token,
+    );
 
     assert!(result.await.is_err());
 }

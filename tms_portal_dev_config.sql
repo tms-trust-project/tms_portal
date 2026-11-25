@@ -1,4 +1,6 @@
--- Add the globus identity provider (as login identity provider)
+-- Add the globus identity provider (as login identity provider).  view_identity_set puts
+-- every linked identity in the id token (identity_set), so a login through an institution
+-- is accepted when any of them is from the institution's domain.
 INSERT INTO identity_providers
         (id, name, oauth2_client_id, oauth2_client_secret, identity_redirect_url,
                 oauth2_token_url, oauth2_jwks_url, oidc_user_info_url,
@@ -10,7 +12,7 @@ VALUES
                 'https://auth.globus.org/v2/oauth2/authorize',
                 'https://auth.globus.org/v2/oauth2/token',
                 'https://auth.globus.org/jwk.json', '',
-                'openid profile email', 'globus', true, false)
+                'openid profile email urn:globus:auth:scope:auth.globus.org:view_identity_set', 'globus', true, false)
 ON CONFLICT DO NOTHING;
 
 -- Add the tacc identity provider (as resource provider)

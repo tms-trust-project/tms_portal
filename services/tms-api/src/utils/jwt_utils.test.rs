@@ -94,17 +94,29 @@ async fn decodes_a_token_signed_with_the_signing_key() {
 async fn refuses_a_token_with_an_unknown_kid() {
     let token = sign("other-kid").await;
 
-    assert_unauthorized(decode_tms_token(&jwt_config(PUBLIC_KEY), &token).await.unwrap_err());
+    assert_unauthorized(
+        decode_tms_token(&jwt_config(PUBLIC_KEY), &token)
+            .await
+            .unwrap_err(),
+    );
 }
 
 #[tokio::test]
 async fn refuses_a_token_whose_signature_does_not_match() {
     let token = sign(KID).await;
 
-    assert_unauthorized(decode_tms_token(&jwt_config(OTHER_PUBLIC_KEY), &token).await.unwrap_err());
+    assert_unauthorized(
+        decode_tms_token(&jwt_config(OTHER_PUBLIC_KEY), &token)
+            .await
+            .unwrap_err(),
+    );
 }
 
 #[tokio::test]
 async fn refuses_a_token_that_is_not_a_jwt() {
-    assert_unauthorized(decode_tms_token(&jwt_config(PUBLIC_KEY), "not-a-jwt").await.unwrap_err());
+    assert_unauthorized(
+        decode_tms_token(&jwt_config(PUBLIC_KEY), "not-a-jwt")
+            .await
+            .unwrap_err(),
+    );
 }

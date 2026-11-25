@@ -55,7 +55,8 @@ fn query(url: &url::Url) -> HashMap<String, String> {
 
 #[test]
 fn accepts_a_fresh_identity_from_the_institutions_domain() {
-    let result = check_login_identity(&fresh_login_as("jdoe@utexas.edu"), "utexas.edu", LOGIN_STARTED);
+    let result =
+        check_login_identity(&fresh_login_as("jdoe@utexas.edu"), "utexas.edu", LOGIN_STARTED);
 
     assert_eq!(result, Ok(()));
 }
@@ -129,7 +130,10 @@ fn a_globus_institution_login_requires_the_institutions_domain_and_a_new_login()
     .unwrap();
 
     let query = query(&url);
-    assert!(url.as_str().starts_with("https://auth.globus.org/v2/oauth2/authorize?"));
+    assert!(
+        url.as_str()
+            .starts_with("https://auth.globus.org/v2/oauth2/authorize?")
+    );
     assert_eq!(query["response_type"], "code");
     assert_eq!(query["client_id"], "our-client-id");
     assert_eq!(query["redirect_uri"], "https://tms.example.edu/v1/login/callback");
@@ -198,10 +202,16 @@ async fn signed_state(expires_in: i64) -> String {
         institution_id: Some("utexas".into()),
         login_started: now as u64,
     };
-    encode_state(&state_key(), state).await.expect("the test state should be signed")
+    encode_state(&state_key(), state)
+        .await
+        .expect("the test state should be signed")
 }
 
-fn callback(code: Option<&str>, state: Option<&str>, error: Option<&str>) -> LoginCallbackQueryParams {
+fn callback(
+    code: Option<&str>,
+    state: Option<&str>,
+    error: Option<&str>,
+) -> LoginCallbackQueryParams {
     LoginCallbackQueryParams {
         code: code.map(String::from),
         state: state.map(String::from),
@@ -274,7 +284,8 @@ async fn a_callback_with_a_forged_state_has_expired() {
 async fn access_denied_from_the_identity_provider_is_a_cancelled_login() {
     let state = signed_state(300).await;
 
-    let rejection = rejection(callback(None, Some(&state), Some("access_denied")), Some(&state)).await;
+    let rejection =
+        rejection(callback(None, Some(&state), Some("access_denied")), Some(&state)).await;
 
     assert_eq!(rejection, LoginRejection::LoginCancelled);
 }
@@ -283,7 +294,8 @@ async fn access_denied_from_the_identity_provider_is_a_cancelled_login() {
 async fn another_error_from_the_identity_provider_is_a_failed_login() {
     let state = signed_state(300).await;
 
-    let rejection = rejection(callback(None, Some(&state), Some("server_error")), Some(&state)).await;
+    let rejection =
+        rejection(callback(None, Some(&state), Some("server_error")), Some(&state)).await;
 
     assert_eq!(rejection, LoginRejection::LoginFailed);
 }
@@ -303,7 +315,10 @@ fn http_config(base_url: &str) -> HttpConfig {
 
 #[test]
 fn the_sign_in_page_is_the_portals_home_page() {
-    assert_eq!(get_signin_url(&http_config("https://tms.example.edu"), None), "https://tms.example.edu/");
+    assert_eq!(
+        get_signin_url(&http_config("https://tms.example.edu"), None),
+        "https://tms.example.edu/"
+    );
 }
 
 #[test]
@@ -341,4 +356,49 @@ fn each_rejection_has_its_own_error_code() {
             "login_unavailable",
         ]
     );
+}
+
+// an id token whose primary identity isn't the institution's, with the given identity_set
+fn login_with_identity_set(identity_set: Value) -> HashMap<String, Value> {
+    claims(json!({
+        "sub": "a-globus-uuid",
+        "preferred_username": "0000-0002-1825-0097@orcid.org",
+        "last_authentication": LOGIN_STARTED - 86_400,
+        "identity_set": identity_set,
+    }))
+}
+
+#[test]
+fn accepts_a_fresh_linked_identity_from_the_institutions_domain() {
+    let claims = login_with_identity_set(json!([
+        {"username": "0000-0002-1825-0097@orcid.org", "last_authentication": LOGIN_STARTED - 86_400},
+        {"username": "jdoe@utexas.edu", "last_authentication": LOGIN_STARTED + 20},
+    ]));
+
+    assert_eq!(check_login_identity(&claims, "utexas.edu", LOGIN_STARTED), Ok(()));
+}
+
+#[test]
+fn refuses_when_no_linked_identity_is_from_the_domain() {
+    let claims = login_with_identity_set(json!([
+        {"username": "0000-0002-1825-0097@orcid.org", "last_authentication": LOGIN_STARTED + 20},
+        {"username": "jdoe@uchicago.edu", "last_authentication": LOGIN_STARTED + 20},
+    ]));
+
+    let result = check_login_identity(&claims, "utexas.edu", LOGIN_STARTED);
+
+    assert_eq!(result, Err(LoginRejection::UnapprovedInstitution));
+}
+
+#[test]
+fn refuses_a_linked_identity_from_the_domain_that_didnt_authenticate_for_this_login() {
+    // the user authenticated with ORCID just now, but with utexas a day ago
+    let claims = login_with_identity_set(json!([
+        {"username": "0000-0002-1825-0097@orcid.org", "last_authentication": LOGIN_STARTED + 20},
+        {"username": "jdoe@utexas.edu", "last_authentication": LOGIN_STARTED - 86_400},
+    ]));
+
+    let result = check_login_identity(&claims, "utexas.edu", LOGIN_STARTED);
+
+    assert_eq!(result, Err(LoginRejection::StaleAuthentication));
 }
