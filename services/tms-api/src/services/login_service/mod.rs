@@ -138,29 +138,11 @@ impl LoginService {
             }
         };
 
-        // a login through an institution must come back as one of its identities, freshly
+        // the login must come back as one of the institution's identities, freshly
         // authenticated, before any TMS token is issued.  The institution is looked up
         // again, so one disabled since the login started can't be used.
-        if let Some(institution_id) = &decoded_state.institution_id {
-            let domain = match self.institution_service.globus_login_domain(institution_id).await
-            {
-                Ok(domain) => domain,
-                Err(error) if is_bad_request(&error) => {
-                    warn!("Login callback for an unusable institution: {error:#}");
-                    return Ok(CallbackResult::Rejected(LoginRejection::UnapprovedInstitution));
-                }
-                Err(error) => return Err(error),
-            };
-            if let Err(rejection) =
-                check_login_identity(&claims, &domain, decoded_state.login_started)
-            {
-                warn!(
-                    "Login through {institution_id} refused ({0}) for {1:?}",
-                    rejection.error_code(),
-                    claims.get("preferred_username")
-                );
-                return Ok(CallbackResult::Rejected(rejection));
-            }
+        if let Err(rejection) = self.check_institution_login(&decoded_state, &claims).await? {
+            return Ok(CallbackResult::Rejected(rejection));
         }
 
         // TODO: get iss from config
@@ -203,6 +185,42 @@ impl LoginService {
             expires_in: tms_token_claims.get_expires_in()?,
             redirect_uri: decoded_state.redirect_uri,
         })
+    }
+}
+
+impl LoginService {
+    /*
+    Checks a login against the institution it went through (from the signed state): the
+    institution must still be usable, and the identity must be one of its identities,
+    authenticated for this login.  Every login has an institution; a state without one is
+    refused.
+     */
+    pub async fn check_institution_login(
+        &self,
+        state: &OAuth2State,
+        claims: &HashMap<String, Value>,
+    ) -> Result<std::result::Result<(), LoginRejection>> {
+        let Some(institution_id) = &state.institution_id else {
+            warn!("Login callback for a login without an institution");
+            return Ok(Err(LoginRejection::InstitutionRequired));
+        };
+        let domain = match self.institution_service.globus_login_domain(institution_id).await {
+            Ok(domain) => domain,
+            Err(error) if is_bad_request(&error) => {
+                warn!("Login callback for an unusable institution: {error:#}");
+                return Ok(Err(LoginRejection::UnapprovedInstitution));
+            }
+            Err(error) => return Err(error),
+        };
+        let checked = check_login_identity(claims, &domain, state.login_started);
+        if let Err(rejection) = &checked {
+            warn!(
+                "Login through {institution_id} refused ({0}) for {1:?}",
+                rejection.error_code(),
+                claims.get("preferred_username")
+            );
+        }
+        Ok(checked)
     }
 }
 
@@ -293,16 +311,16 @@ The login identity provider's authorize url, which the browser is redirected to.
 Globus:
 - prompt=login makes Globus authenticate the user again, even with a Globus session
   (a user can drop it from the url, so check_login_identity checks last_authentication)
-- for an institution, redirect_idp_domain sends a user not yet signed in to Globus
-  straight to the institution's IdP, and session_required_single_domain makes Globus
-  require an identity from that domain
+- redirect_idp_domain sends a user not yet signed in to Globus straight to the
+  institution's IdP, and session_required_single_domain makes Globus require an identity
+  from that domain
  */
 pub fn get_login_authorize_url(
     idp: &IdentityProvider,
     callback_url: &str,
     encoded_state: &str,
     nonce: &str,
-    institution_domain: Option<&str>,
+    institution_domain: &str,
 ) -> Result<Url> {
     let mut query_params = vec![
         ("response_type", "code"),
@@ -317,10 +335,8 @@ pub fn get_login_authorize_url(
     }
     if idp.identity_provider_type == IdentityProviderType::Globus {
         query_params.push(("prompt", "login"));
-        if let Some(domain) = institution_domain {
-            query_params.push(("redirect_idp_domain", domain));
-            query_params.push(("session_required_single_domain", domain));
-        }
+        query_params.push(("redirect_idp_domain", institution_domain));
+        query_params.push(("session_required_single_domain", institution_domain));
     }
     Ok(Url::parse_with_params(&idp.identity_redirect_url, query_params)?)
 }

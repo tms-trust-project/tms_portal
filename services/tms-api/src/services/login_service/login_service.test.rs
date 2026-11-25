@@ -125,7 +125,7 @@ fn a_globus_institution_login_requires_the_institutions_domain_and_a_new_login()
         "https://tms.example.edu/v1/login/callback",
         "the-state",
         "the-nonce",
-        Some("utexas.edu"),
+        "utexas.edu",
     )
     .unwrap();
 
@@ -152,7 +152,7 @@ fn the_authorize_url_never_carries_the_client_secret() {
         "https://tms.example.edu/v1/login/callback",
         "the-state",
         "the-nonce",
-        Some("utexas.edu"),
+        "utexas.edu",
     )
     .unwrap();
 
@@ -166,7 +166,7 @@ fn other_providers_get_no_globus_parameters() {
         "https://tms.example.edu/v1/login/callback",
         "the-state",
         "the-nonce",
-        Some("utexas.edu"),
+        "utexas.edu",
     )
     .unwrap();
 

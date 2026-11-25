@@ -37,7 +37,8 @@ Accepts a form with information about the login (idp and redirect uri).  There's
 associated table of redirect uris that are allowed.  The redirect url must be in that
 table.  This tells us where to redirect back to after the login.  Having multiple allowed
 redirects allows for easier debugging - redirect back to localhost if debugging, etc.
-A login that can't start (an unusable institution, a bad redirect, the login idp missing)
+Every login names an institution (from /institutions).  A login that can't start (no or
+an unusable institution, a bad redirect, the login idp missing)
 goes back to the sign in page with ?error=<code>, which says why.
  */
 #[axum::debug_handler]
@@ -86,31 +87,28 @@ async fn start_login(
         .with_context(|| "Invalid login redirect")?;
     tx.commit().await?;
 
-    // An institution sends the login straight to its own identity provider: Globus is
-    // given the institution's redirect_idp_domain, and the callback then requires the
-    // identity to be from it.  Checked before anything else, so a bad institution never
-    // starts a login.
-    let login_domain = match &form_data.institution {
-        Some(institution_id) => {
-            if idp.identity_provider_type != IdentityProviderType::Globus {
-                warn!("Institution logins need a Globus login idp, and {0} isn't one", idp.id);
-                return Ok(Err(LoginRejection::LoginUnavailable));
-            }
-            match app_state.institution_service.globus_login_domain(institution_id).await {
-                Ok(domain) => Some(domain),
-                Err(error)
-                    if matches!(
-                        error.downcast_ref::<ServiceError>(),
-                        Some(ServiceError::BadRequest(_))
-                    ) =>
-                {
-                    warn!("Login started with an unusable institution: {error:#}");
-                    return Ok(Err(LoginRejection::UnapprovedInstitution));
-                }
-                Err(error) => return Err(error),
-            }
+    // Every login goes through an approved institution, straight to its own identity
+    // provider: Globus is given the institution's redirect_idp_domain, and the callback
+    // then requires the identity to be from it.  Checked before anything else, so a bad
+    // institution never starts a login.
+    let Some(institution_id) = &form_data.institution else {
+        warn!("Login started without an institution");
+        return Ok(Err(LoginRejection::InstitutionRequired));
+    };
+    if idp.identity_provider_type != IdentityProviderType::Globus {
+        warn!("Institution logins need a Globus login idp, and {0} isn't one", idp.id);
+        return Ok(Err(LoginRejection::LoginUnavailable));
+    }
+    let login_domain = match app_state.institution_service.globus_login_domain(institution_id).await
+    {
+        Ok(domain) => domain,
+        Err(error)
+            if matches!(error.downcast_ref::<ServiceError>(), Some(ServiceError::BadRequest(_))) =>
+        {
+            warn!("Login started with an unusable institution: {error:#}");
+            return Ok(Err(LoginRejection::UnapprovedInstitution));
         }
-        None => None,
+        Err(error) => return Err(error),
     };
 
     let mut redirect_uri = Url::parse(&form_data.redirect_uri)?;
@@ -146,7 +144,7 @@ async fn start_login(
         exp: now + 300,
         nonce: generate_nonce(),
         client_state: None,
-        institution_id: form_data.institution.clone(),
+        institution_id: Some(institution_id.clone()),
         login_started: now,
     };
     let encoded_state = encode_state(&configuration.state_key, oauth_state).await?;
@@ -158,7 +156,7 @@ async fn start_login(
         callback_url,
         &encoded_state,
         &encoded_nonce,
-        login_domain.as_deref(),
+        &login_domain,
     )?;
 
     let updated_jar = jar.add(
