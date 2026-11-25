@@ -1,6 +1,8 @@
 #!/bin/bash
 #set -xv
 
+set -eo pipefail
+
 SCRIPT_DIR=$(dirname $0)
 GENERATE_TOKEN_KEYS="true"
 GENERATE_STATE_KEYS="true"
@@ -17,19 +19,25 @@ VARS_TO_REPLACE=(
   '$TMS_STATE_KID'
   '$TMS_STATE_PUB_KEY'
   '$TMS_STATE_PRIV_KEY'
-  '$TAPIS_TEST_TENANT_CLIENT_ID',
+  '$TAPIS_TEST_TENANT_CLIENT_ID'
   '$TAPIS_TEST_TENANT_CLIENT_SECRET'
   '$TAPIS_AUTH_CLIENT_ID'
   '$CONFIG_DIR'
   '$RESOURCES_ENDPOINT'
+  '$LOGIN_OAUTH_PROVIDER'
+  '$JWT_EXPIRATION_MINUTES'
+  '$DELEGATION_MAX_MINS_SINCE_LOGIN'
 )
 
 OUTPUT_FILE_NAME="output.sql"
 BASE_URL="http://localhost:8080"
-CONFIG_DIR="application/resources/config"
+CONFIG_DIR="services/resources/config"
+LOGIN_OAUTH_PROVIDER="globus"
+JWT_EXPIRATION_MINUTES="60"
+DELEGATION_MAX_MINS_SINCE_LOGIN="1440"
 
 function usage() {
-  echo "$0 [-p port] [-u user] [-w password] [-d db]"
+  echo "$0 [-o output-file] [-v vars-file] [-u base-url]"
 
   echo "OPTIONS:"
   echo "     -o --out"
@@ -195,31 +203,27 @@ export TMS_STATE_PUB_KEY
 export TMS_STATE_PRIV_KEY
 export TAPIS_TEST_TENANT_CLIENT_ID
 export TAPIS_TEST_TENANT_CLIENT_SECRET
+export TAPIS_AUTH_CLIENT_ID
 export CONFIG_DIR
 export RESOURCES_ENDPOINT
+export LOGIN_OAUTH_PROVIDER
+export JWT_EXPIRATION_MINUTES
+export DELEGATION_MAX_MINS_SINCE_LOGIN
 
-#echo BASE_URL $BASE_URL
-#echo GLOBUS_CLIENT_ID $GLOBUS_CLIENT_ID
-#echo GLOBUS_CLIENT_SECRET $GLOBUS_CLIENT_SECRET
-#echo TACC_RP_CLIENT_ID $TACC_RP_CLIENT_ID
-#echo TACC_RP_CLIENT_SECRET $TACC_RP_CLIENT_SECRET
-#echo TMS_TOKEN_KID $TMS_TOKEN_KID
-#echo TMS_TOKEN_PUB_KEY $TMS_TOKEN_PUB_KEY
-#echo TMS_TOKEN_PRIV_KEY $TMS_TOKEN_PRIV_KEY
-#echo TMS_STATE_KID $TMS_STATE_KID
-#echo TMS_STATE_PUB_KEY $TMS_STATE_PUB_KEY
-#echo TMS_STATE_PRIV_KEY $TMS_STATE_PRIV_KEY
-#echo TAPIS_TEST_TENANT_CLIENT_ID $TAPIS_TEST_TENANT_CLIENT_ID
-#echo TAPIS_TEST_TENANT_CLIENT_SECRET $TAPIS_TEST_TENANT_CLIENT_SECRET
-#echo TAPIS_AUTH_CLIENT_ID $TAPIS_AUTH_CLIENT_ID
-#echo CONFIG_DIR $CONFIG_DIR
+echo BASE_URL $BASE_URL
+echo TMS_TOKEN_KID $TMS_TOKEN_KID
+echo TMS_STATE_KID $TMS_STATE_KID
+echo CONFIG_DIR $CONFIG_DIR
 
 # make a backup copy if the output file already exists (outputfile.create_config_bkup).
 if [[ -e ${OUTPUT_FILE_NAME} ]] ; then
        cp ${OUTPUT_FILE_NAME} ${OUTPUT_FILE_NAME}.create_config_data_bkup
 fi
-# do envsubst
-export VARS_PARAM=$(IFS=,;echo "${VARS_TO_REPLACE[*]}")
-envsubst "'"${VARS_PARAM}"'" < ${SCRIPT_DIR}/../tms_portal_dev_config.sql > ${OUTPUT_FILE_NAME}
+# Substitute only the explicitly listed variables. This leaves PostgreSQL
+# dollar-quote delimiters in the SQL template untouched.
+VARS_PARAM="${VARS_TO_REPLACE[*]}"
+envsubst "${VARS_PARAM}" \
+  < "${SCRIPT_DIR}/../tms_portal_dev_config.sql" \
+  > "${OUTPUT_FILE_NAME}"
 
-
+echo "Generated ${OUTPUT_FILE_NAME}"

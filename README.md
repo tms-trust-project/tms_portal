@@ -84,12 +84,21 @@ export TMS_PORTAL_DB_PORT=<tms_db_port>
 ```
 
 ## Populate db with sample data
-After editing the tms_portal_dev_config.sql template, use it to initialize the db.
+Copy `deploy/vars.sh`, fill in the installation-specific values, and use the
+configuration script to generate the seed SQL.
 ```
-cat tms_portal_dev_config.sql | docker exec -i tms_portal_postgres psql -U tms tms_db 
+deploy/createConfigData.sh -v deploy/vars.sh
 ```
-The tms_portal_dev_config.sql file is just an example, so you could also use a different file to initialize the 
-database.  The initial setup will be different for each installation.
+The script creates `output.sql`; it does not modify the database. Review the
+file, then apply it explicitly when ready:
+```
+docker exec -i tms_portal_postgres \
+  psql -v ON_ERROR_STOP=1 -U tms -d tms_db < output.sql
+```
+Run `deploy/createConfigData.sh -?` to see the generation and key options.
+
+The `tms_portal_dev_config.sql` file is a template. The initial values will be
+different for each installation.
 
 ## Run
 ```
