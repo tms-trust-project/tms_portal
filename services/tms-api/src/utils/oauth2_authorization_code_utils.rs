@@ -19,6 +19,16 @@ pub struct AuthCodeQueryParams {
     pub state: String,
 }
 
+// the login identity provider's redirect to /login/callback: a code and the state, or an
+// error (RFC 6749 4.1.2.1), e.g. access_denied when the user cancels
+#[derive(Debug, Deserialize)]
+pub struct LoginCallbackQueryParams {
+    pub code: Option<String>,
+    pub state: Option<String>,
+    pub error: Option<String>,
+    pub error_description: Option<String>,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct ListResourceProviderRequestParams {
     pub linked_only: Option<bool>,

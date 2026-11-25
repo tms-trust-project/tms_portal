@@ -16,8 +16,10 @@ use crate::utils::app_error::AppError;
 use crate::utils::configuration::Configuration;
 use crate::utils::jwt_utils::{SecurityContext, decode_tms_token, get_tms_token_claims};
 use crate::utils::oauth2_authorization_code_utils::{
-    OAuth2State, decode_access_token,
+    LoginCallbackQueryParams, OAuth2State, decode_access_token,
 };
+use crate::utils::state_utils::decode_state;
+use log::warn;
 use crate::constants::{DEFAULT_ALGORITHM, TMS_ISSUER};
 use anyhow::Result;
 use url::Url;
@@ -26,11 +28,7 @@ use serde_json::Value;
 use tms_lib::utils::jwt_encoder::JwtEncoderBuilder;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use tms_lib::utils::jwt_decoder::JwtDecoderBuilder;
-use tms_lib::utils::service_error::{
-    ServiceError,
-    ServiceError::Unauthorized,
-};
+use tms_lib::utils::service_error::ServiceError;
 
 #[derive(Clone)]
 pub struct LoginService {
@@ -95,55 +93,79 @@ impl LoginService {
         Ok(RedirectUrl(self.http_config.base_url.clone()))
     }
 
+    /*
+    The login identity provider's redirect back to /login/callback.  Every way the login
+    can be refused (a bad or expired state, an error or cancel at the identity provider, a
+    code that can't be exchanged, an identity that isn't the institution's) is a
+    LoginRejection; an Err is something unexpected (e.g. the database).
+     */
     pub async fn handle_callback(
         &self,
         configuration: &Configuration,
-        state: &str,
-        code: &str,
-        cookie_state: &str,
-    ) -> Result<(String, i64)> {
-        if !cookie_state.eq(state) {
-            return Err(Unauthorized("State cookies do not match".to_string()).into());
-        }
+        query: &LoginCallbackQueryParams,
+        cookie_state: Option<&str>,
+    ) -> Result<CallbackResult> {
+        let (decoded_state, code) =
+            match check_login_callback(&self.state_key, query, cookie_state).await {
+                Ok(valid) => valid,
+                Err(rejection) => return Ok(CallbackResult::Rejected(rejection)),
+            };
 
-        let keys = &self.state_key.key;
-        // let decoding_key = Some(DecodingKey::from_rsa_pem(&keys.jwt_public_key.as_bytes())?);
-
-        let decoded_state = JwtDecoderBuilder::builder()
-            .public_key(keys.jwt_public_key.as_bytes())
-            .validate_aud(false)
-            .decode::<OAuth2State>(state.into())
-            .await?;
-        
-        let idp = self.identity_provider_repo
+        let idp = self
+            .identity_provider_repo
             .get_login_provider_by_id(&decoded_state.idp_id)
             .await?;
-        
-        let oauth_token_set = self.authorization_code_exchange_gateway
-            .exchange(
-                &idp,
-                ExchangeInput {
-                    code: code.into(),
-                    callback_url: self.http_config
-                        .get_identity_provider_callback_url().clone(),
-                }
-            )
-            .await?;
-    
-        let mut claims: HashMap<String, Value> = decode_access_token(&idp, &oauth_token_set.id_token).await?;
+
+        let exchanged = async {
+            let oauth_token_set = self
+                .authorization_code_exchange_gateway
+                .exchange(
+                    &idp,
+                    ExchangeInput {
+                        code,
+                        callback_url: self.http_config.get_identity_provider_callback_url(),
+                    },
+                )
+                .await?;
+            decode_access_token::<HashMap<String, Value>>(&idp, &oauth_token_set.id_token).await
+        }
+        .await;
+        let mut claims = match exchanged {
+            Ok(claims) => claims,
+            Err(error) => {
+                warn!("Unable to get the login identity from {0}: {error:#}", idp.id);
+                return Ok(CallbackResult::Rejected(LoginRejection::LoginFailed));
+            }
+        };
 
         // a login through an institution must come back as one of its identities, freshly
         // authenticated, before any TMS token is issued.  The institution is looked up
         // again, so one disabled since the login started can't be used.
         if let Some(institution_id) = &decoded_state.institution_id {
-            let domain = self.institution_service.globus_login_domain(institution_id).await?;
-            check_login_identity(&claims, &domain, decoded_state.login_started)
-                .map_err(|rejection| Unauthorized(rejection.description().to_string()))?;
+            let domain = match self.institution_service.globus_login_domain(institution_id).await
+            {
+                Ok(domain) => domain,
+                Err(error) if is_bad_request(&error) => {
+                    warn!("Login callback for an unusable institution: {error:#}");
+                    return Ok(CallbackResult::Rejected(LoginRejection::UnapprovedInstitution));
+                }
+                Err(error) => return Err(error),
+            };
+            if let Err(rejection) =
+                check_login_identity(&claims, &domain, decoded_state.login_started)
+            {
+                warn!(
+                    "Login through {institution_id} refused ({0}) for {1:?}",
+                    rejection.error_code(),
+                    claims.get("preferred_username")
+                );
+                return Ok(CallbackResult::Rejected(rejection));
+            }
         }
 
         // TODO: get iss from config
         claims.insert("iss".to_string(), Value::from(TMS_ISSUER));
-    
+
         let tms_token_claims = get_tms_token_claims(
             configuration,
             &decoded_state.client_id,
@@ -152,17 +174,14 @@ impl LoginService {
             &claims,
         )
         .await?;
-    
+
         // make sure the tms_identity is stored in the db
         let sub = tms_token_claims.get_sub()?;
         let _tms_identity = self.tms_identity_repo.insert_if_absent(&sub).await?;
 
-        // let http_config = db_get_http_config(&mut tx).await?;
         let jwt_config = &configuration.jwt_config;
         let kid = &jwt_config.signing_key_kid;
         let keys = &jwt_config.key;
-        // let tms_token_claims = get_tms_token_claims(&http_config,
-        //         &jwt_config, &client_id, &idp_id, &idp_type, &claims).await?;
 
         // TODO: add kid, alg, and jti in header ... maybe other stuff?
         let tms_token_string = JwtEncoderBuilder::builder(
@@ -171,15 +190,99 @@ impl LoginService {
             DEFAULT_ALGORITHM,
             kid,
         )
-            .encode()
-            .await?;
+        .encode()
+        .await?;
 
-        let _issued_token = self.issued_token_repo
+        let _issued_token = self
+            .issued_token_repo
             .insert(&tms_token_string, &tms_token_claims.get_expires_at_dt()?)
             .await?;
 
-        Ok((tms_token_string, tms_token_claims.get_expires_in()?))
+        Ok(CallbackResult::LoggedIn {
+            token: tms_token_string,
+            expires_in: tms_token_claims.get_expires_in()?,
+            redirect_uri: decoded_state.redirect_uri,
+        })
     }
+}
+
+pub enum CallbackResult {
+    // the TMS token, its lifetime in seconds, and where to send the browser
+    LoggedIn {
+        token: String,
+        expires_in: i64,
+        redirect_uri: String,
+    },
+    Rejected(LoginRejection),
+}
+
+/*
+Check what the login identity provider sent back, before the code is exchanged.  The
+state must be the one in this browser's state cookie, and still valid (signed, and it
+expires 5 minutes after the login started).  The identity provider may send an error
+(RFC 6749 4.1.2.1) instead of a code.
+ */
+pub async fn check_login_callback(
+    state_key: &StateKey,
+    query: &LoginCallbackQueryParams,
+    cookie_state: Option<&str>,
+) -> std::result::Result<(OAuth2State, String), LoginRejection> {
+    let (Some(state), Some(cookie_state)) = (query.state.as_deref(), cookie_state) else {
+        warn!("Login callback without a state, or without a state cookie");
+        return Err(LoginRejection::LoginExpired);
+    };
+    if state != cookie_state {
+        warn!("Login callback state does not match the state cookie");
+        return Err(LoginRejection::LoginExpired);
+    }
+    let decoded_state: OAuth2State = match decode_state(state_key, state).await {
+        Ok(decoded_state) => decoded_state,
+        Err(error) => {
+            warn!("Login callback state is not valid: {error:#}");
+            return Err(LoginRejection::LoginExpired);
+        }
+    };
+    if let Some(error) = &query.error {
+        warn!(
+            "The login identity provider sent back an error: {error} {0}",
+            query.error_description.as_deref().unwrap_or_default()
+        );
+        return Err(if error == "access_denied" {
+            LoginRejection::LoginCancelled
+        } else {
+            LoginRejection::LoginFailed
+        });
+    }
+    match &query.code {
+        Some(code) => Ok((decoded_state, code.clone())),
+        None => {
+            warn!("Login callback without a code or an error");
+            Err(LoginRejection::LoginFailed)
+        }
+    }
+}
+
+/*
+The portal's sign in page (its home page), with ?error=<code> when a login was refused,
+so the page can say why.
+ */
+pub fn get_signin_url(http_config: &HttpConfig, rejection: Option<LoginRejection>) -> String {
+    let signin_url = http_config.make_tms_url(&http_config.base_url, "/");
+    match rejection {
+        Some(rejection) => match Url::parse(&signin_url) {
+            Ok(mut url) => {
+                url.query_pairs_mut().append_pair("error", rejection.error_code());
+                url.to_string()
+            }
+            Err(_) => signin_url,
+        },
+        None => signin_url,
+    }
+}
+
+// whether the error is a ServiceError::BadRequest (e.g. an unusable institution)
+fn is_bad_request(error: &anyhow::Error) -> bool {
+    matches!(error.downcast_ref::<ServiceError>(), Some(ServiceError::BadRequest(_)))
 }
 
 // how far the identity provider's clock may be behind ours

@@ -3,8 +3,15 @@ use std::collections::HashMap;
 use chrono::Utc;
 use serde_json::{Value, json};
 
-use super::{LoginRejection, check_login_identity, get_login_authorize_url};
+use super::{
+    LoginRejection, check_login_callback, check_login_identity, get_login_authorize_url,
+    get_signin_url,
+};
+use crate::obj_model::configuration::{HttpConfig, StateKey};
 use crate::obj_model::identity_provider::{IdentityProvider, IdentityProviderType};
+use crate::obj_model::key::Key;
+use crate::utils::oauth2_authorization_code_utils::{LoginCallbackQueryParams, OAuth2State};
+use crate::utils::state_utils::encode_state;
 
 const LOGIN_STARTED: u64 = 1_800_000_000;
 
@@ -163,4 +170,175 @@ fn other_providers_get_no_globus_parameters() {
     assert!(!query.contains_key("prompt"));
     assert!(!query.contains_key("redirect_idp_domain"));
     assert!(!query.contains_key("session_required_single_domain"));
+}
+
+fn state_key() -> StateKey {
+    StateKey {
+        kid: "state-kid".into(),
+        key: Key {
+            kid: "state-kid".into(),
+            jwt_public_key: include_str!("../../utils/test_keys/public.pem").into(),
+            jwt_private_key: include_str!("../../utils/test_keys/private.pem").into(),
+            ..Default::default()
+        },
+    }
+}
+
+// a signed login state that expires in the given number of seconds (negative: expired)
+async fn signed_state(expires_in: i64) -> String {
+    let now = Utc::now().timestamp();
+    let state = OAuth2State {
+        tms_identity: String::default(),
+        idp_id: "globus".into(),
+        client_id: "tms".into(),
+        exp: (now + expires_in) as u64,
+        redirect_uri: "https://tms.example.edu/".into(),
+        client_state: None,
+        nonce: 7,
+        institution_id: Some("utexas".into()),
+        login_started: now as u64,
+    };
+    encode_state(&state_key(), state).await.expect("the test state should be signed")
+}
+
+fn callback(code: Option<&str>, state: Option<&str>, error: Option<&str>) -> LoginCallbackQueryParams {
+    LoginCallbackQueryParams {
+        code: code.map(String::from),
+        state: state.map(String::from),
+        error: error.map(String::from),
+        error_description: None,
+    }
+}
+
+async fn rejection(query: LoginCallbackQueryParams, cookie: Option<&str>) -> LoginRejection {
+    check_login_callback(&state_key(), &query, cookie)
+        .await
+        .expect_err("the callback should be rejected")
+}
+
+#[tokio::test]
+async fn a_callback_with_the_cookies_state_and_a_code_is_valid() {
+    let state = signed_state(300).await;
+
+    let (decoded, code) = check_login_callback(
+        &state_key(),
+        &callback(Some("the-code"), Some(&state), None),
+        Some(&state),
+    )
+    .await
+    .expect("the callback should be valid");
+
+    assert_eq!(code, "the-code");
+    assert_eq!(decoded.institution_id.as_deref(), Some("utexas"));
+}
+
+#[tokio::test]
+async fn a_callback_without_a_state_cookie_has_expired() {
+    let state = signed_state(300).await;
+
+    let rejection = rejection(callback(Some("the-code"), Some(&state), None), None).await;
+
+    assert_eq!(rejection, LoginRejection::LoginExpired);
+}
+
+#[tokio::test]
+async fn a_callback_whose_state_isnt_the_cookies_has_expired() {
+    let state = signed_state(300).await;
+    // another login's state (it expires at a different time, so it's a different token)
+    let other_state = signed_state(299).await;
+
+    let rejection =
+        rejection(callback(Some("the-code"), Some(&state), None), Some(&other_state)).await;
+
+    assert_eq!(rejection, LoginRejection::LoginExpired);
+}
+
+#[tokio::test]
+async fn a_callback_with_an_expired_state_has_expired() {
+    let state = signed_state(-600).await;
+
+    let rejection = rejection(callback(Some("the-code"), Some(&state), None), Some(&state)).await;
+
+    assert_eq!(rejection, LoginRejection::LoginExpired);
+}
+
+#[tokio::test]
+async fn a_callback_with_a_forged_state_has_expired() {
+    let rejection =
+        rejection(callback(Some("the-code"), Some("not-a-jwt"), None), Some("not-a-jwt")).await;
+
+    assert_eq!(rejection, LoginRejection::LoginExpired);
+}
+
+#[tokio::test]
+async fn access_denied_from_the_identity_provider_is_a_cancelled_login() {
+    let state = signed_state(300).await;
+
+    let rejection = rejection(callback(None, Some(&state), Some("access_denied")), Some(&state)).await;
+
+    assert_eq!(rejection, LoginRejection::LoginCancelled);
+}
+
+#[tokio::test]
+async fn another_error_from_the_identity_provider_is_a_failed_login() {
+    let state = signed_state(300).await;
+
+    let rejection = rejection(callback(None, Some(&state), Some("server_error")), Some(&state)).await;
+
+    assert_eq!(rejection, LoginRejection::LoginFailed);
+}
+
+#[tokio::test]
+async fn a_callback_without_a_code_or_an_error_is_a_failed_login() {
+    let state = signed_state(300).await;
+
+    let rejection = rejection(callback(None, Some(&state), None), Some(&state)).await;
+
+    assert_eq!(rejection, LoginRejection::LoginFailed);
+}
+
+fn http_config(base_url: &str) -> HttpConfig {
+    HttpConfig { base_url: base_url.into(), ..Default::default() }
+}
+
+#[test]
+fn the_sign_in_page_is_the_portals_home_page() {
+    assert_eq!(get_signin_url(&http_config("https://tms.example.edu"), None), "https://tms.example.edu/");
+}
+
+#[test]
+fn a_refused_login_goes_to_the_sign_in_page_with_its_error_code() {
+    let url = get_signin_url(
+        &http_config("https://tms.example.edu/"),
+        Some(LoginRejection::UnapprovedInstitution),
+    );
+
+    assert_eq!(url, "https://tms.example.edu/?error=unapproved_institution");
+}
+
+#[test]
+fn each_rejection_has_its_own_error_code() {
+    let rejections = [
+        LoginRejection::InstitutionRequired,
+        LoginRejection::UnapprovedInstitution,
+        LoginRejection::StaleAuthentication,
+        LoginRejection::LoginCancelled,
+        LoginRejection::LoginExpired,
+        LoginRejection::LoginFailed,
+        LoginRejection::LoginUnavailable,
+    ];
+    let codes: Vec<&str> = rejections.iter().map(LoginRejection::error_code).collect();
+
+    assert_eq!(
+        codes,
+        [
+            "institution_required",
+            "unapproved_institution",
+            "stale_authentication",
+            "login_cancelled",
+            "login_expired",
+            "login_failed",
+            "login_unavailable",
+        ]
+    );
 }
