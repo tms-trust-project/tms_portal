@@ -5,13 +5,14 @@ use axum::extract::{Query, State};
 use axum_extra::extract::CookieJar;
 use axum_extra::extract::cookie::Cookie;
 use http::StatusCode;
+use http::header::LOCATION;
 use serde::Deserialize;
 use tms_lib::utils::service_error::ServiceError;
 use tms_lib::utils::service_error::ServiceError::BadRequest;
 
 use crate::AppState;
 use crate::presentation::http::v1::utils::tms_response::TmsResponse;
-use crate::services::oauth2_service::authorize_code;
+use crate::services::oauth2_service::{AuthorizeCodeRequest, AuthorizeOutcome, authorize_code};
 use crate::utils::app_error::AppError;
 use crate::utils::oauth2_authorization_code_utils::{ROOT_COOKIE_PATH, STATE_COOKIE_NAME};
 
@@ -48,9 +49,11 @@ pub(crate) struct OAuthAuthorizeRequest {
     response_type: ResponseType,
     client_id: String,
     redirect_uri: String,
-    #[allow(dead_code)]
     scope: Option<String>,
     state: Option<String>,
+    // an institution from /institutions.  Without one the browser goes to the portal's
+    // institution picker, which sends the request back with it.
+    institution: Option<String>,
 }
 
 #[axum::debug_handler]
@@ -63,30 +66,47 @@ pub async fn authorize_oauth(
     match query_params.response_type {
         // code - oauth authorization code flow
         ResponseType::Code => {
-            let authorization_result = authorize_code(
+            let request = AuthorizeCodeRequest {
+                client_id: &query_params.client_id,
+                redirect_uri: &query_params.redirect_uri,
+                state: &query_params.state,
+                scope: &query_params.scope,
+                institution: &query_params.institution,
+            };
+            let outcome = authorize_code(
                 &app_state.config,
                 &app_state.db_pool,
-                &query_params.state,
-                &query_params.client_id,
-                &query_params.redirect_uri,
+                &app_state.institution_service,
+                &request,
             )
             .await?;
 
-            let updated_jar = jar.add(
-                Cookie::build((STATE_COOKIE_NAME, authorization_result.encoded_state))
-                    .path(ROOT_COOKIE_PATH)
-                    .http_only(true),
-            );
-
-            let mut headers = HashMap::new();
-            headers.insert("location".to_string(), authorization_result.location);
-
-            Ok((
-                updated_jar,
-                TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT)
-                    .headers(headers)
-                    .build(),
-            ))
+            match outcome {
+                AuthorizeOutcome::Login { location, encoded_state } => {
+                    let updated_jar = jar.add(
+                        Cookie::build((STATE_COOKIE_NAME, encoded_state))
+                            .path(ROOT_COOKIE_PATH)
+                            .http_only(true)
+                            .secure(app_state.config.http_config.uses_https()),
+                    );
+                    let headers = HashMap::from([(LOCATION.to_string(), location)]);
+                    Ok((
+                        updated_jar,
+                        TmsResponse::builder(StatusCode::TEMPORARY_REDIRECT)
+                            .headers(headers)
+                            .build(),
+                    ))
+                }
+                AuthorizeOutcome::Redirect { location } => {
+                    let headers = HashMap::from([(LOCATION.to_string(), location)]);
+                    Ok((
+                        jar,
+                        TmsResponse::builder(StatusCode::SEE_OTHER)
+                            .headers(headers)
+                            .build(),
+                    ))
+                }
+            }
         } // TODO:  at some point we probably need to handle refresh tokens
     }
 }

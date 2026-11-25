@@ -1,5 +1,7 @@
-import { fireEvent, screen } from "@testing-library/react"
+import { fireEvent, screen, waitFor } from "@testing-library/react"
 import Cookies from "js-cookie"
+import { delay, http, HttpResponse } from "msw"
+import { server } from "@/stubs/server"
 import { UserMenu } from "../UserMenu"
 import { renderWithQueryClient } from "./renderWithQueryClient"
 
@@ -7,16 +9,37 @@ beforeEach(() => Cookies.remove("tmstoken"))
 afterEach(() => Cookies.remove("tmstoken"))
 
 describe("UserMenu", () => {
-  test("shows Log In when the tmstoken cookie is absent", async () => {
+  test("leaves Log In to the sign in card when logged out", async () => {
     renderWithQueryClient(<UserMenu />)
 
-    expect(
-      await screen.findByRole("link", { name: /Log In/i })
-    ).toHaveAttribute(
-      "href",
-      "/login?idp_id=globus_idp&redirect_uri=https://tms-portal.savanna.tacc.cloud/"
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("link", { name: /Log In/i })
+      ).not.toBeInTheDocument()
     )
     expect(screen.queryByText("Jake Rosenberg")).not.toBeInTheDocument()
+  })
+
+  test("shows nothing, not Log In, while whoami loads", async () => {
+    Cookies.set("tmstoken", "test-token")
+    let asked = false
+    server.use(
+      http.get("/login/whoami", async () => {
+        asked = true
+        await delay("infinite")
+        return HttpResponse.json({})
+      })
+    )
+    renderWithQueryClient(<UserMenu />)
+
+    // the cookie was read and whoami is in flight
+    await waitFor(() => expect(asked).toBe(true))
+    expect(
+      screen.queryByRole("link", { name: /Log In/i })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Jake Rosenberg" })
+    ).not.toBeInTheDocument()
   })
 
   test("shows the user menu when the tmstoken cookie is present", async () => {
@@ -34,9 +57,121 @@ describe("UserMenu", () => {
     expect(
       await screen.findByText("Provider: University of Texas at Austin")
     ).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: /Log Out/i })).toHaveAttribute(
-      "href",
-      "/logout"
+    expect(
+      screen.getByRole("menuitem", { name: /Log Out/i })
+    ).toBeInTheDocument()
+  })
+
+  test("logs out with a POST to /logout", async () => {
+    Cookies.set("tmstoken", "test-token")
+    // jsdom can't navigate, so catch the submit instead
+    const requestSubmit = vi
+      .spyOn(HTMLFormElement.prototype, "requestSubmit")
+      .mockImplementation(() => {})
+    renderWithQueryClient(<UserMenu />)
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Jake Rosenberg" })
+    )
+    fireEvent.click(await screen.findByRole("menuitem", { name: /Log Out/i }))
+
+    expect(requestSubmit).toHaveBeenCalledTimes(1)
+    const form = requestSubmit.mock.contexts[0] as HTMLFormElement
+    expect(form.method).toBe("post")
+    expect(form.getAttribute("action")).toBe("/logout")
+    requestSubmit.mockRestore()
+  })
+
+  test("shows the token's claims from View token claims", async () => {
+    const claims = {
+      sub: "jrosenberg@utexas.edu",
+      tms_institution: "utexas",
+      name: "Jake Rosenbérg",
+      exp: 1794337246,
+    }
+    // base64url, from UTF-8 bytes, without padding
+    const payload = btoa(
+      String.fromCharCode(...new TextEncoder().encode(JSON.stringify(claims)))
+    )
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "")
+    Cookies.set("tmstoken", `eyJhbGciOiJSUzI1NiJ9.${payload}.signature`)
+    renderWithQueryClient(<UserMenu />)
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Jake Rosenberg" })
+    )
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "View token claims" })
+    )
+    const dialog = await screen.findByRole("dialog", { name: "Token claims" })
+    expect(JSON.parse(dialog.querySelector("pre")!.textContent!)).toEqual(
+      claims
+    )
+  })
+
+  test("says when the token can't be decoded", async () => {
+    Cookies.set("tmstoken", "test-token")
+    renderWithQueryClient(<UserMenu />)
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Jake Rosenberg" })
+    )
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "View token claims" })
+    )
+    expect(
+      await screen.findByText("The token could not be decoded.")
+    ).toBeInTheDocument()
+  })
+
+  test("drops a token cookie the portal no longer accepts", async () => {
+    Cookies.set("tmstoken", "revoked-token")
+    server.use(
+      http.get("/login/whoami", () =>
+        HttpResponse.json(
+          {
+            status: "401 Unauthorized",
+            result: "Unauthorized: Token not found",
+          },
+          { status: 401 }
+        )
+      )
+    )
+    renderWithQueryClient(<UserMenu />)
+
+    await waitFor(() => expect(Cookies.get("tmstoken")).toBeUndefined())
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Jake Rosenberg" })
+      ).not.toBeInTheDocument()
+    )
+  })
+
+  test("sends a failed whoami to the sign in card, keeping the token until asked", async () => {
+    Cookies.set("tmstoken", "test-token")
+    server.use(
+      http.get("/login/whoami", () => HttpResponse.json({}, { status: 500 }))
+    )
+    const { queryClient } = renderWithQueryClient(<UserMenu />)
+
+    const logIn = await screen.findByRole("button", { name: /Log In/i })
+    // every login needs an institution, so there's no login link here
+    expect(screen.queryByRole("link")).not.toBeInTheDocument()
+    // the cookie is only dropped on the user's say-so, not by the 500 itself
+    expect(Cookies.get("tmstoken")).toBe("test-token")
+
+    fireEvent.click(logIn)
+    expect(Cookies.get("tmstoken")).toBeUndefined()
+    // App shows the sign in card once the auth-cookie query says logged out
+    await waitFor(() =>
+      expect(queryClient.getQueryData(["auth-cookie"])).toBeNull()
+    )
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: /Log In/i })
+      ).not.toBeInTheDocument()
     )
   })
 })

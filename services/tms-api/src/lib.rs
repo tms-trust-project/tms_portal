@@ -42,19 +42,38 @@ pub fn database_url() -> anyhow::Result<String> {
     let database_password =
         std::env::var("TMS_PORTAL_DB_PASSWORD").expect("TMS_PORTAL_DB_PASSWORD must be set");
 
-    let database_url_string = format!(
-        "postgres://{0}:{1}@{2}:{3}/{4}",
-        &database_user, &database_password, &database_host, &database_port, &database_name
-    );
+    build_database_url(
+        &database_user,
+        &database_password,
+        &database_host,
+        &database_port,
+        &database_name,
+    )
+}
+
+/*
+The Postgres connection url.  It holds the password, so an error about it shows the url
+with the password masked (it ends up in the startup output and the logs).
+ */
+fn build_database_url(
+    user: &str,
+    password: &str,
+    host: &str,
+    port: &str,
+    name: &str,
+) -> anyhow::Result<String> {
+    let database_url_string = format!("postgres://{user}:{password}@{host}:{port}/{name}");
 
     // just parsing the db url to determine if it seems valid.  We actually use database_url_string.
     let _database_url = Url::parse(database_url_string.as_str()).map_err(|e| {
-        anyhow::anyhow!(format!(
-            "The database url {0} is not valid (error: {1})",
-            &database_url_string,
-            e
-        ))
+        anyhow::anyhow!(
+            "The database url postgres://{user}:***@{host}:{port}/{name} is not valid (error: {e})"
+        )
     })?;
 
     Ok(database_url_string)
 }
+
+#[cfg(test)]
+#[path = "lib.test.rs"]
+mod lib_test;

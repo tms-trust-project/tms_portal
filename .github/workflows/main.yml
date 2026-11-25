@@ -38,6 +38,8 @@ jobs:
     with:
       image_name: tapis/tms-api
       image_tag: ${{ needs.resolve-image-tag.outputs.image_tag }}
+      # a repository (or environment) variable, e.g. https://tms-portal.savanna.tacc.cloud/
+      redirect_uri: ${{ vars.TMS_PORTAL_REDIRECT_URI }}
       
   tms-ui:
       uses: ./.github/workflows/client-ci.yml
