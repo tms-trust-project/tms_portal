@@ -151,8 +151,11 @@ check the issued_tokens table, so a revoked token still decodes (logout uses tha
 pub async fn decode_tms_token(jwt_config: &JwtConfig, token: &str) -> Result<TmsTokenClaims> {
     let token_header = decode_header(token).map_err(|e| Unauthorized(e.to_string()))?;
     let key = get_signing_key(jwt_config, token_header.kid.as_deref())?;
+    // aud is the client the token was issued to: any client's token is accepted here, and
+    // handlers authorize the client through SecurityContext.client_id.
     JwtDecoderBuilder::builder()
         .public_key(key.jwt_public_key.as_bytes())
+        .validate_aud(false)
         .decode(token)
         .await
         .map_err(|e| Unauthorized(e.to_string()).into())

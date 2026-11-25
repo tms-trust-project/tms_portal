@@ -207,8 +207,11 @@ pub async fn get_resource_provider_token(
     let access_token = reponse.result.access_token;
     let refresh_token = reponse.result.refresh_token;
 
+    // TODO: check the aud once it's confirmed what Tapis puts in it (probably the client
+    // id).  Until JwtDecoderBuilder's audience check was fixed it was never checked here.
     let decoded_token: Value = JwtDecoderBuilder::builder()
         .jwks_url(&rp.oauth2_jwks_url)
+        .validate_aud(false)
         .decode(&access_token.id_token)
         .await?;
 

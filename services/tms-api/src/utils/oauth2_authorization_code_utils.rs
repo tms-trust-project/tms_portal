@@ -1,5 +1,6 @@
 use crate::obj_model;
-use crate::obj_model::identity_provider::IdentityProvider;
+use crate::constants::GLOBUS_ISSUER;
+use crate::obj_model::identity_provider::{IdentityProvider, IdentityProviderType};
 use anyhow::{Context, Result};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -84,10 +85,14 @@ pub async fn decode_access_token<T>(
 where
     T: for<'a> Deserialize<'a>,
 {
+    // an id token must be for our client, and a Globus one from Globus
     let audience = HashSet::from([idp.client_id.to_owned()]);
     let mut builder = JwtDecoderBuilder::builder().jwks_url(&idp.oauth2_jwks_url);
     if let Some(key) = &idp.oauth2_public_key {
         builder = builder.public_key(key.as_bytes());
+    }
+    if idp.identity_provider_type == IdentityProviderType::Globus {
+        builder = builder.issuer(GLOBUS_ISSUER);
     }
     builder
         .audience(audience)
