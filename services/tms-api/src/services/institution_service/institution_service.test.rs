@@ -100,7 +100,10 @@ fn bad_request_message(error: anyhow::Error) -> String {
 async fn gives_the_globus_login_domain_of_an_enabled_institution() {
     let service = InstitutionService::new(Arc::new(MockInstitutionRepo::new(vec![utexas()])));
 
-    let domain = service.globus_login_domain("utexas").await.expect("a login domain");
+    let domain = service
+        .globus_login_domain("utexas")
+        .await
+        .expect("a login domain");
 
     assert_eq!(domain, "utexas.edu");
 }
@@ -109,7 +112,10 @@ async fn gives_the_globus_login_domain_of_an_enabled_institution() {
 async fn an_unknown_institution_is_a_bad_request() {
     let service = InstitutionService::new(Arc::new(MockInstitutionRepo::new(vec![utexas()])));
 
-    let error = service.globus_login_domain("nope").await.expect_err("an error");
+    let error = service
+        .globus_login_domain("nope")
+        .await
+        .expect_err("an error");
 
     assert_eq!(bad_request_message(error), "Unknown institution 'nope'");
 }
@@ -120,7 +126,10 @@ async fn a_disabled_institution_is_a_bad_request() {
     disabled.enabled = false;
     let service = InstitutionService::new(Arc::new(MockInstitutionRepo::new(vec![disabled])));
 
-    let error = service.globus_login_domain("utexas").await.expect_err("an error");
+    let error = service
+        .globus_login_domain("utexas")
+        .await
+        .expect_err("an error");
 
     assert_eq!(bad_request_message(error), "Institution 'utexas' is not enabled for login");
 }
@@ -131,8 +140,15 @@ async fn other_repository_errors_are_not_turned_into_bad_requests() {
         MockInstitutionRepo::new(vec![utexas()]).with_error("database unavailable"),
     ));
 
-    let error = service.globus_login_domain("utexas").await.expect_err("an error");
+    let error = service
+        .globus_login_domain("utexas")
+        .await
+        .expect_err("an error");
 
-    assert!(error.downcast_ref::<tms_lib::utils::service_error::ServiceError>().is_none());
+    assert!(
+        error
+            .downcast_ref::<tms_lib::utils::service_error::ServiceError>()
+            .is_none()
+    );
     assert_eq!(error.to_string(), "database unavailable");
 }

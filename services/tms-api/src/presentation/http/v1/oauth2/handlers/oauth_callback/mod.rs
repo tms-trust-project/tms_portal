@@ -24,7 +24,9 @@ pub async fn oauth_callback(
     Query(query_params): Query<LoginCallbackQueryParams>,
 ) -> anyhow::Result<(CookieJar, TmsResponse<()>), AppError> {
     // Get the state cookie set during the login process.
-    let cookie_state = jar.get(STATE_COOKIE_NAME).map(|cookie| cookie.value().to_owned());
+    let cookie_state = jar
+        .get(STATE_COOKIE_NAME)
+        .map(|cookie| cookie.value().to_owned());
 
     // handle the callback logic
     let location = process_authorization_callback(

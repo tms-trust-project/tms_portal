@@ -31,7 +31,10 @@ pub async fn logout(
         .and_then(|value| value.to_str().ok())
         .and_then(|value| value.strip_prefix("Bearer "))
         .map(String::from)
-        .or_else(|| jar.get(TOKEN_COOKIE_NAME).map(|cookie| cookie.value().to_string()));
+        .or_else(|| {
+            jar.get(TOKEN_COOKIE_NAME)
+                .map(|cookie| cookie.value().to_string())
+        });
 
     let location = app_state
         .login_service
@@ -43,7 +46,12 @@ pub async fn logout(
         jar.remove(Cookie::build((TOKEN_COOKIE_NAME, String::from(""))).path(ROOT_COOKIE_PATH));
 
     let headers = HashMap::from([(LOCATION.to_string(), location)]);
-    Ok((updated_jar, TmsResponse::builder(StatusCode::SEE_OTHER).headers(headers).build()))
+    Ok((
+        updated_jar,
+        TmsResponse::builder(StatusCode::SEE_OTHER)
+            .headers(headers)
+            .build(),
+    ))
 }
 
 #[derive(Debug, Deserialize)]
@@ -61,7 +69,12 @@ pub async fn logout_idp(
     State(app_state): State<AppState>,
     Query(request): Query<LogoutIdpRequest>,
 ) -> anyhow::Result<TmsResponse<()>, AppError> {
-    let location = app_state.login_service.get_idp_logout_url(&request.institution).await;
+    let location = app_state
+        .login_service
+        .get_idp_logout_url(&request.institution)
+        .await;
     let headers = HashMap::from([(LOCATION.to_string(), location)]);
-    Ok(TmsResponse::builder(StatusCode::SEE_OTHER).headers(headers).build())
+    Ok(TmsResponse::builder(StatusCode::SEE_OTHER)
+        .headers(headers)
+        .build())
 }

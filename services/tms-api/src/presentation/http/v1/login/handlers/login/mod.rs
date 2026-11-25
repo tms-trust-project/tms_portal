@@ -56,7 +56,12 @@ pub async fn login(
     // 303, so the browser loads the sign in page with a GET (the login may have been a POST)
     let location = get_signin_url(&app_state.config.http_config, Some(rejection));
     let headers = HashMap::from([(LOCATION.to_string(), location)]);
-    Ok((jar, TmsResponse::builder(StatusCode::SEE_OTHER).headers(headers).build()))
+    Ok((
+        jar,
+        TmsResponse::builder(StatusCode::SEE_OTHER)
+            .headers(headers)
+            .build(),
+    ))
 }
 
 async fn start_login(
@@ -97,11 +102,17 @@ async fn start_login(
         warn!("Institution logins need a Globus login idp, and {0} isn't one", idp.id);
         return Ok(Err(LoginRejection::LoginUnavailable));
     }
-    let login_domain = match app_state.institution_service.globus_login_domain(institution_id).await
+    let login_domain = match app_state
+        .institution_service
+        .globus_login_domain(institution_id)
+        .await
     {
         Ok(domain) => domain,
         Err(error)
-            if matches!(error.downcast_ref::<ServiceError>(), Some(ServiceError::BadRequest(_))) =>
+            if matches!(
+                error.downcast_ref::<ServiceError>(),
+                Some(ServiceError::BadRequest(_))
+            ) =>
         {
             warn!("Login started with an unusable institution: {error:#}");
             return Ok(Err(LoginRejection::UnapprovedInstitution));
@@ -133,7 +144,9 @@ async fn start_login(
             .append_pair("client_name", client_name.as_str());
     }
 
-    let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?.as_secs();
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)?
+        .as_secs();
     // sent to Globus as the OIDC nonce, and checked against the id token's
     let nonce = generate_nonce();
     let oauth_state = OAuth2State {
@@ -149,7 +162,9 @@ async fn start_login(
     };
     let encoded_state = encode_state(&configuration.state_key, oauth_state).await?;
 
-    let callback_url = &configuration.http_config.get_identity_provider_callback_url();
+    let callback_url = &configuration
+        .http_config
+        .get_identity_provider_callback_url();
     let location = get_login_authorize_url(
         &idp,
         callback_url,

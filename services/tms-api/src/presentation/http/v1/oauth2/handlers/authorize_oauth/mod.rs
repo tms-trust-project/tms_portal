@@ -99,7 +99,12 @@ pub async fn authorize_oauth(
                 }
                 AuthorizeOutcome::Redirect { location } => {
                     let headers = HashMap::from([(LOCATION.to_string(), location)]);
-                    Ok((jar, TmsResponse::builder(StatusCode::SEE_OTHER).headers(headers).build()))
+                    Ok((
+                        jar,
+                        TmsResponse::builder(StatusCode::SEE_OTHER)
+                            .headers(headers)
+                            .build(),
+                    ))
                 }
             }
         } // TODO:  at some point we probably need to handle refresh tokens

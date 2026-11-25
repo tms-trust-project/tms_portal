@@ -1,5 +1,5 @@
-use crate::obj_model;
 use crate::constants::GLOBUS_ISSUER;
+use crate::obj_model;
 use crate::obj_model::identity_provider::{IdentityProvider, IdentityProviderType};
 use anyhow::{Context, Result};
 use serde::de::DeserializeOwned;

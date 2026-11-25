@@ -155,7 +155,9 @@ pub async fn get_authenticate_redirect_info(
         nonce: generate_nonce(),
         client_state: client_state.clone(),
         institution_id: None,
-        login_started: SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?.as_secs(),
+        login_started: SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)?
+            .as_secs(),
     };
 
     let encoded_state = match encode_state(&configuration.state_key, oauth_state).await {
@@ -183,10 +185,7 @@ pub async fn get_authenticate_redirect_info(
 
     let identity_redirect_url = Url::parse_with_params(&rp.identity_redirect_url, query_params)?;
 
-    Ok(ResourceProviderAuthorizeInfo {
-        encoded_state,
-        identity_redirect_url,
-    })
+    Ok(ResourceProviderAuthorizeInfo { encoded_state, identity_redirect_url })
 }
 
 pub async fn get_resource_provider_token(

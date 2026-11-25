@@ -1,17 +1,18 @@
 mod login_rejection;
 pub use login_rejection::LoginRejection;
 
+use crate::constants::{DEFAULT_ALGORITHM, GLOBUS_LOGOUT_URL, TMS_ISSUER};
 use crate::infra::auth::globus_token_provider::GlobusTokenProvider;
 use crate::obj_model::configuration::{HttpConfig, JwtConfig, StateKey};
 use crate::obj_model::identity_provider::{IdentityProvider, IdentityProviderType};
 use crate::obj_model::institutions::{Institution, identity_is_from_domain};
-use crate::services::institution_service::InstitutionService;
 use crate::obj_model::login::WhoAmIResponse;
 use crate::ports::authorization_code_gateway::{AuthorizationCodeExchangeGateway, ExchangeInput};
 use crate::ports::identity_porvider::IdentityProviderRepository;
 use crate::ports::issued_token::IssuedTokenRepository;
 use crate::ports::tms_identity::TmsIdentityRepository;
 use crate::ports::token_provider::TokenProvider;
+use crate::services::institution_service::InstitutionService;
 use crate::utils::app_error::AppError;
 use crate::utils::configuration::Configuration;
 use crate::utils::jwt_utils::{SecurityContext, decode_tms_token, get_tms_token_claims};
@@ -19,16 +20,15 @@ use crate::utils::oauth2_authorization_code_utils::{
     LoginCallbackQueryParams, OAuth2State, decode_access_token,
 };
 use crate::utils::state_utils::decode_state;
-use log::warn;
-use crate::constants::{DEFAULT_ALGORITHM, GLOBUS_LOGOUT_URL, TMS_ISSUER};
 use anyhow::{Context, Result};
-use url::Url;
+use log::warn;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tms_lib::utils::jwt_encoder::JwtEncoderBuilder;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use tms_lib::utils::jwt_encoder::JwtEncoderBuilder;
 use tms_lib::utils::service_error::ServiceError;
+use url::Url;
 
 #[derive(Clone)]
 pub struct LoginService {
@@ -126,9 +126,11 @@ impl LoginService {
             .find_institution_by_id(&tms_token_claims.tms_institution)
             .await
             .ok();
-        let (return_url, return_name) =
-            get_logout_return(&self.http_config, institution.as_ref())?;
-        let idp = self.identity_provider_repo.get_login_provider_by_id(login_idp_id).await?;
+        let (return_url, return_name) = get_logout_return(&self.http_config, institution.as_ref())?;
+        let idp = self
+            .identity_provider_repo
+            .get_login_provider_by_id(login_idp_id)
+            .await?;
         get_globus_logout_url(&idp.client_id, &return_url, &return_name)
     }
 
@@ -139,7 +141,10 @@ impl LoginService {
     institutions list are used, so this isn't an open redirect.
      */
     pub async fn get_idp_logout_url(&self, institution_id: &str) -> String {
-        let institution = self.institution_service.find_institution_by_id(institution_id).await;
+        let institution = self
+            .institution_service
+            .find_institution_by_id(institution_id)
+            .await;
         let idp_logout_url = match institution {
             Ok(institution) => institution_idp_logout_url(&institution).map(String::from),
             Err(error) => {
@@ -206,8 +211,10 @@ impl LoginService {
         claims.insert("iss".to_string(), Value::from(TMS_ISSUER));
 
         // check_login_claims has already refused a state without an institution
-        let institution_id =
-            decoded_state.institution_id.as_deref().context("The login has no institution")?;
+        let institution_id = decoded_state
+            .institution_id
+            .as_deref()
+            .context("The login has no institution")?;
         let tms_token_claims = get_tms_token_claims(
             configuration,
             &decoded_state.client_id,
@@ -269,7 +276,11 @@ impl LoginService {
             warn!("Login callback for a login without an institution");
             return Ok(Err(LoginRejection::InstitutionRequired));
         };
-        let domain = match self.institution_service.globus_login_domain(institution_id).await {
+        let domain = match self
+            .institution_service
+            .globus_login_domain(institution_id)
+            .await
+        {
             Ok(domain) => domain,
             Err(error) if is_bad_request(&error) => {
                 warn!("Login callback for an unusable institution: {error:#}");
@@ -291,11 +302,7 @@ impl LoginService {
 
 pub enum CallbackResult {
     // the TMS token, its lifetime in seconds, and where to send the browser
-    LoggedIn {
-        token: String,
-        expires_in: i64,
-        redirect_uri: String,
-    },
+    LoggedIn { token: String, expires_in: i64, redirect_uri: String },
     Rejected(LoginRejection),
 }
 
@@ -356,7 +363,8 @@ pub fn get_signin_url(http_config: &HttpConfig, rejection: Option<LoginRejection
     match rejection {
         Some(rejection) => match Url::parse(&signin_url) {
             Ok(mut url) => {
-                url.query_pairs_mut().append_pair("error", rejection.error_code());
+                url.query_pairs_mut()
+                    .append_pair("error", rejection.error_code());
                 url.to_string()
             }
             Err(_) => signin_url,
@@ -460,7 +468,9 @@ pub fn check_login_identity(
     let from_domain: Vec<&LoginIdentity> = candidates
         .iter()
         .filter(|identity| {
-            identity.username.is_some_and(|name| identity_is_from_domain(name, domain))
+            identity
+                .username
+                .is_some_and(|name| identity_is_from_domain(name, domain))
         })
         .collect();
     if from_domain.is_empty() {
@@ -514,7 +524,9 @@ pub fn get_logout_return(
         Some(institution) if institution_idp_logout_url(institution).is_some() => {
             let mut idp_logout =
                 Url::parse(&http_config.make_tms_url(&http_config.base_url, "logout/idp"))?;
-            idp_logout.query_pairs_mut().append_pair("institution", &institution.id);
+            idp_logout
+                .query_pairs_mut()
+                .append_pair("institution", &institution.id);
             Ok((idp_logout.to_string(), format!("{} sign-out", institution.name)))
         }
         _ => Ok((get_signin_url(http_config, None), String::from("TMS Portal"))),

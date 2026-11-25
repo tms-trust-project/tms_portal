@@ -32,14 +32,15 @@ impl InstitutionService {
     Other repository errors pass through unchanged.
      */
     pub async fn globus_login_domain(&self, institution_id: &str) -> anyhow::Result<String> {
-        let institution =
-            self.institution_repo.get_by_id(institution_id).await.map_err(|error| {
-                match error.downcast_ref::<ServiceError>() {
-                    Some(ServiceError::NotFound(_)) => {
-                        BadRequest(format!("Unknown institution '{}'", institution_id)).into()
-                    }
-                    _ => error,
+        let institution = self
+            .institution_repo
+            .get_by_id(institution_id)
+            .await
+            .map_err(|error| match error.downcast_ref::<ServiceError>() {
+                Some(ServiceError::NotFound(_)) => {
+                    BadRequest(format!("Unknown institution '{}'", institution_id)).into()
                 }
+                _ => error,
             })?;
         Ok(institution.globus_login_domain()?.to_string())
     }

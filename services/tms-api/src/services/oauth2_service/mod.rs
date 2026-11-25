@@ -20,6 +20,7 @@ use crate::utils::redirect_utils::check_allowed_redirects;
 use crate::utils::state_utils::encode_state;
 use anyhow::Context;
 use chrono::TimeDelta;
+use log::warn;
 use rand::RngExt;
 use rand::distr::Alphanumeric;
 use rand::rngs::ThreadRng;
@@ -27,7 +28,6 @@ use serde_json::{Value, from_value};
 use sqlx::PgPool;
 use std::time::SystemTime;
 use tms_lib::utils::oauth_utils::generate_nonce;
-use log::warn;
 use tms_lib::utils::service_error::ServiceError::{self, Internal};
 use url::Url;
 
@@ -114,10 +114,16 @@ pub async fn authorize_code(
         warn!("Institution logins need a Globus login idp, and {0} isn't one", idp.id);
         return reject(LoginRejection::LoginUnavailable);
     }
-    let domain = match institution_service.globus_login_domain(institution_id).await {
+    let domain = match institution_service
+        .globus_login_domain(institution_id)
+        .await
+    {
         Ok(domain) => domain,
         Err(error)
-            if matches!(error.downcast_ref::<ServiceError>(), Some(ServiceError::BadRequest(_))) =>
+            if matches!(
+                error.downcast_ref::<ServiceError>(),
+                Some(ServiceError::BadRequest(_))
+            ) =>
         {
             warn!("OAuth2 login started with an unusable institution: {error:#}");
             return reject(LoginRejection::UnapprovedInstitution);
@@ -197,7 +203,10 @@ pub async fn generate_code_and_redirect(
     // TODO: get iss from config
     claims.insert("iss".to_string(), Value::from(TMS_ISSUER));
     // check_login_claims has already refused a state without an institution
-    let institution_id = state.institution_id.as_deref().context("The login has no institution")?;
+    let institution_id = state
+        .institution_id
+        .as_deref()
+        .context("The login has no institution")?;
     let tms_token_claims = get_tms_token_claims(
         configuration,
         &state.client_id,
@@ -236,7 +245,9 @@ async fn get_state(
     institution_id: &str,
     nonce: u32,
 ) -> anyhow::Result<String> {
-    let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?.as_secs();
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)?
+        .as_secs();
     // populate state structure
     let oauth_state = OAuth2State {
         tms_identity: String::default(), // we don't have a tms identity at this point
