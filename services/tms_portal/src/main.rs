@@ -11,21 +11,18 @@ use tms_portal::infra::persistence::{
     client_repository::PostgresClientRepository,
     delegation_repository::PostgresDelegationRepository,
     identity_provider_repository::PostgresIdentityProviderRepository,
-    institution_repository::PostgresInstitutionRepository,
+    institution_repository::InMemoryInstitutionRepository,
     issued_token_repository::PostgresIssuedTokenRepository,
-    issued_token_repository::issued_tokens_dao, key_repository::PostgresKeyRepository,
+    issued_token_repository::issued_tokens_dao,
+    key_repository::PostgresKeyRepository,
     resource_provider_login_repository::PostgresResourceProviderLoginRepository,
     tms_identity_repository::PostgresTmsIdentityRepository,
 };
 use tms_portal::presentation::http::v1::{
-    delegations::router as delegations_router,
-    institutions::router as institutions_router,
-    login::router as login_router,
-    oauth2::router as oauth_router,
-    openapi::ApiDoc,
-    resources::router as resources_router,
+    clients::router as clients_router, delegations::router as delegations_router,
+    institutions::router as institutions_router, login::router as login_router,
+    oauth2::router as oauth_router, openapi::ApiDoc, resources::router as resources_router,
     well_known::router as well_known_router,
-    clients::router as clients_router,
 };
 use tms_portal::services::client_service::ClientService;
 use tms_portal::services::delegation_service::DelegationService;
@@ -67,7 +64,6 @@ async fn main() -> anyhow::Result<()> {
         PostgresResourceProviderLoginRepository::new(db_pool.clone());
     let identity_provider_repo = PostgresIdentityProviderRepository::new(db_pool.clone());
     let issued_token_repo = PostgresIssuedTokenRepository::new(db_pool.clone());
-    let institution_repo = PostgresInstitutionRepository::new(db_pool.clone());
     let tms_identity_repo = PostgresTmsIdentityRepository::new(db_pool.clone());
     let key_repo = PostgresKeyRepository::new(db_pool.clone());
     let allowed_redirect_repo = PostgresAllowedRedirectRepository::new(db_pool.clone());
@@ -83,7 +79,12 @@ async fn main() -> anyhow::Result<()> {
 
     let client_service = ClientService::new(client_repo, Arc::new(allowed_redirect_repo));
 
-    let institution_service = InstitutionService::new(Arc::new(institution_repo));
+    let institution_service = match std::env::var("TMS_PORTAL_INSTITUTIONS_CONFIG_FILE") {
+        Ok(config_path) => {
+            InstitutionService::new(Arc::new(InMemoryInstitutionRepository::new(config_path)?))
+        }
+        Err(error) => return Err(error.into()),
+    };
 
     // Initialize Login Service
     let login_service = LoginService::new(

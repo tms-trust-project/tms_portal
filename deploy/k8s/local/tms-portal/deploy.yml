@@ -24,6 +24,8 @@ spec:
           value: "1"
         - name: TMS_PORTAL_CONFIG_DIR
           value: "/etc/tms-portal"
+        - name: TMS_PORTAL_INSTITUTIONS_CONFIG_FILE
+          value: "/etc/tms-portal/institutions.json"
         - name: TMS_PORTAL_DB_HOST
           value: "host.minikube.internal"
         - name: TMS_PORTAL_DB_NAME

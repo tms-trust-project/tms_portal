@@ -10,7 +10,7 @@ async fn lists_institutions() {
     let first = InstitutionBuilder::new()
         .with_id("first-institution".into())
         .with_enabled(true)
-        .with_federated_identity_config(FederatedIdentityConfig {
+        .with_ipd_config(FederatedIdentityConfig {
             globus: Some(GlobusConfiguration {
                 redirect_idp_domain: "first.example.edu".into(),
                 idp_logout_url: "https://first.example.edu/logout".into(),
@@ -33,7 +33,7 @@ async fn lists_institutions() {
     assert!(institutions[0].enabled);
     assert_eq!(
         institutions[0]
-            .federated_identity_config
+            .ipd_config
             .globus
             .as_ref()
             .expect("the first institution should have Globus configuration")
@@ -42,7 +42,7 @@ async fn lists_institutions() {
     );
     assert_eq!(institutions[1].id, "second-institution");
     assert!(!institutions[1].enabled);
-    assert!(institutions[1].federated_identity_config.globus.is_none());
+    assert!(institutions[1].ipd_config.globus.is_none());
 }
 
 #[tokio::test]
@@ -51,7 +51,7 @@ async fn finds_institution_by_id() {
         .with_id("requested-institution".into())
         .with_name("Requested Institution".into())
         .with_enabled(false)
-        .with_federated_identity_config(FederatedIdentityConfig {
+        .with_ipd_config(FederatedIdentityConfig {
             globus: Some(GlobusConfiguration {
                 redirect_idp_domain: "requested.example.edu".into(),
                 idp_logout_url: "https://requested.example.edu/logout".into(),
@@ -69,7 +69,7 @@ async fn finds_institution_by_id() {
     assert_eq!(institution.name, "Requested Institution");
     assert!(!institution.enabled);
     let globus = institution
-        .federated_identity_config
+        .ipd_config
         .globus
         .expect("the institution should have Globus configuration");
     assert_eq!(globus.redirect_idp_domain, "requested.example.edu");

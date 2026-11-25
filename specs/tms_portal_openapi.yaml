@@ -410,14 +410,14 @@ components:
       - id
       - name
       - enabled
-      - federated_identity_config
+      - ipd_config
       properties:
         enabled:
           type: boolean
-        federated_identity_config:
-          $ref: '#/components/schemas/FederatedIdentityConfig'
         id:
           type: string
+        ipd_config:
+          $ref: '#/components/schemas/FederatedIdentityConfig'
         name:
           type: string
     TmsErrorResponse:

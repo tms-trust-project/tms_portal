@@ -3,12 +3,12 @@ pub mod test_fixtures;
 
 use serde::Deserialize;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Institution {
     pub id: String,
     pub name: String,
     pub enabled: bool,
-    pub federated_identity_config: FederatedIdentityConfig,
+    pub ipd_config: FederatedIdentityConfig,
 }
 
 #[derive(Debug, Clone, Deserialize)]

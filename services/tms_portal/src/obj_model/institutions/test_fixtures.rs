@@ -4,17 +4,12 @@ pub struct InstitutionBuilder {
     id: Option<String>,
     name: Option<String>,
     enabled: Option<bool>,
-    federated_identity_config: Option<FederatedIdentityConfig>,
+    ipd_config: Option<FederatedIdentityConfig>,
 }
 
 impl InstitutionBuilder {
     pub fn new() -> Self {
-        Self {
-            id: None,
-            name: None,
-            enabled: None,
-            federated_identity_config: None,
-        }
+        Self { id: None, name: None, enabled: None, ipd_config: None }
     }
 
     pub fn with_id(mut self, id: String) -> Self {
@@ -32,11 +27,8 @@ impl InstitutionBuilder {
         self
     }
 
-    pub fn with_federated_identity_config(
-        mut self,
-        federated_identity_config: FederatedIdentityConfig,
-    ) -> Self {
-        self.federated_identity_config = Some(federated_identity_config);
+    pub fn with_ipd_config(mut self, ipd_config: FederatedIdentityConfig) -> Self {
+        self.ipd_config = Some(ipd_config);
         self
     }
 
@@ -51,8 +43,8 @@ impl InstitutionBuilder {
                 .clone()
                 .unwrap_or_else(|| "Test Institution".into()),
             enabled: self.enabled.unwrap_or(true),
-            federated_identity_config: self
-                .federated_identity_config
+            ipd_config: self
+                .ipd_config
                 .clone()
                 .unwrap_or(FederatedIdentityConfig { globus: None }),
         }

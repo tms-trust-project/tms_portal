@@ -37,7 +37,7 @@ use tms_lib::http::requests::TmsErrorResponse;
 pub async fn get_institution_by_id(
     State(AppState { institution_service, .. }): State<AppState>,
     Path(institution_id): Path<String>,
-    JwtValidator(_security_context): JwtValidator,
+    // JwtValidator(_security_context): JwtValidator,
 ) -> anyhow::Result<TmsResponse<Institution>, AppError> {
     let institution = institution_service
         .find_institution_by_id(&institution_id)

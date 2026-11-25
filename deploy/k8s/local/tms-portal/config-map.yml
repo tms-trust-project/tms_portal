@@ -23,3 +23,85 @@ data:
       level: info
       appenders:
         - stdout
+  institutions.json: |
+    {
+      "institutions": [
+        {
+          "id": "utexas",
+          "name": "The University of Texas at Austin",
+          "enabled": true,
+          "ipd_config": {
+            "globus": {
+              "redirect_idp_domain": "utexas.edu",
+              "idp_logout_url": "https://enterprise.login.utexas.edu/idp/profile/Logout"
+            }
+          }
+        },
+        {
+          "id": "uchicago",
+          "name": "University of Chicago",
+          "enabled": true,
+          "ipd_config": {
+            "globus": {
+              "redirect_idp_domain": "uchicago.edu",
+              "idp_logout_url": "https://uchicago.okta.com/login/signout"
+            }
+          }
+        },
+        {
+          "id": "illinois",
+          "name": "University of Illinois Urbana-Champaign",
+          "enabled": true,
+          "ipd_config": {
+            "globus": {
+              "redirect_idp_domain": "illinois.edu",
+              "idp_logout_url": "https://shibboleth.illinois.edu/idp/profile/Logout"
+            }
+          }
+        },
+        {
+          "id": "sdsc",
+          "name": "San Diego Supercomputer Center",
+          "enabled": true,
+          "ipd_config": {
+            "globus": {
+              "redirect_idp_domain": "ucsd.edu",
+              "idp_logout_url": "https://a5.ucsd.edu/tritON/profile/Logout"
+            }
+          }
+        },
+        {
+          "id": "stanford",
+          "name": "Stanford University",
+          "enabled": true,
+          "ipd_config": {
+            "globus": {
+              "redirect_idp_domain": "stanford.edu",
+              "idp_logout_url": "https://login.stanford.edu/idp/profile/Logout"
+            }
+          }
+        },
+        {
+          "id": "usc",
+          "name": "University of Southern California",
+          "enabled": true,
+          "ipd_config": {
+            "globus": {
+              "redirect_idp_domain": "usc.edu",
+              "idp_logout_url": "https://shibboleth.usc.edu/idp/profile/Logout"
+            }
+          }
+        },
+        {
+          "id": "mit",
+          "name": "Massachusetts Institute of Technology",
+          "enabled": true,
+          "ipd_config": {
+            "globus": {
+              "redirect_idp_domain": "mit.edu",
+              "idp_logout_url": "https://okta.mit.edu/login/signout"
+            }
+          }
+        }
+      ]
+    }
