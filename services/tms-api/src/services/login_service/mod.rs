@@ -1,23 +1,21 @@
 use crate::infra::auth::globus_token_provider::GlobusTokenProvider;
-use crate::obj_model::configuration::{HttpConfig, StateKey};
+use crate::obj_model::configuration::{HttpConfig, JwtConfig, StateKey};
 use crate::obj_model::identity_provider::{IdentityProvider, IdentityProviderType};
 use crate::obj_model::institutions::identity_is_from_domain;
 use crate::obj_model::login::WhoAmIResponse;
 use crate::ports::authorization_code_gateway::{AuthorizationCodeExchangeGateway, ExchangeInput};
 use crate::ports::identity_porvider::IdentityProviderRepository;
 use crate::ports::issued_token::IssuedTokenRepository;
-use crate::ports::key::KeyRepository;
 use crate::ports::tms_identity::TmsIdentityRepository;
 use crate::ports::token_provider::TokenProvider;
 use crate::utils::app_error::AppError;
 use crate::utils::configuration::Configuration;
-use crate::utils::jwt_utils::{SecurityContext, TmsTokenClaims, get_tms_token_claims};
+use crate::utils::jwt_utils::{SecurityContext, decode_tms_token, get_tms_token_claims};
 use crate::utils::oauth2_authorization_code_utils::{
     OAuth2State, decode_access_token,
 };
 use crate::constants::{DEFAULT_ALGORITHM, TMS_ISSUER};
-use anyhow::{Context, Result};
-use jsonwebtoken::decode_header;
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tms_lib::utils::jwt_encoder::JwtEncoderBuilder;
@@ -26,7 +24,7 @@ use std::sync::Arc;
 use tms_lib::utils::jwt_decoder::JwtDecoderBuilder;
 use tms_lib::utils::service_error::{
     ServiceError,
-    ServiceError::{BadRequest, Unauthorized},
+    ServiceError::Unauthorized,
 };
 
 #[derive(Clone)]
@@ -36,7 +34,7 @@ pub struct LoginService {
     identity_provider_repo: Arc<dyn IdentityProviderRepository>,
     issued_token_repo: Arc<dyn IssuedTokenRepository>,
     tms_identity_repo: Arc<dyn TmsIdentityRepository>,
-    key_repo: Arc<dyn KeyRepository>,
+    jwt_config: JwtConfig,
     authorization_code_exchange_gateway: Arc<dyn AuthorizationCodeExchangeGateway>,
 }
 
@@ -47,7 +45,7 @@ impl LoginService {
         identity_provider_repo: Arc<dyn IdentityProviderRepository>,
         issued_token_repo: Arc<dyn IssuedTokenRepository>,
         tms_identity_repo: Arc<dyn TmsIdentityRepository>,
-        key_repo: Arc<dyn KeyRepository>,
+        jwt_config: JwtConfig,
         authorization_code_exchange_gateway: Arc<dyn AuthorizationCodeExchangeGateway>,
     ) -> Self {
         Self {
@@ -56,7 +54,7 @@ impl LoginService {
             identity_provider_repo,
             issued_token_repo,
             tms_identity_repo,
-            key_repo,
+            jwt_config,
             authorization_code_exchange_gateway,
         }
     }
@@ -66,19 +64,8 @@ impl LoginService {
     }
 
     pub async fn whoami(&self, ctx: &SecurityContext) -> anyhow::Result<WhoAmIResponse, AppError> {
-        let token_header = decode_header(&ctx.token)?;
-        
-        let key = match token_header.kid {
-            Some(kid) => self.key_repo.get_by_id(&kid).await,
-            None => return Err(BadRequest(String::from("Unable to find key for jwt")).into()),
-        }?;
-    
-        let tms_token_claims: TmsTokenClaims = JwtDecoderBuilder::builder()
-            .public_key(key.jwt_public_key.as_bytes())
-            .decode(&ctx.token)
-            .await
-            .context("Error decoding JWT")?;
-    
+        let tms_token_claims = decode_tms_token(&self.jwt_config, &ctx.token).await?;
+
         let idp_provider = &tms_token_claims.tms_idp_provider;
         let token_provider = match idp_provider {
             IdentityProviderType::Globus => GlobusTokenProvider {},

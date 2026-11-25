@@ -2,8 +2,9 @@ use crate::AppState;
 use crate::infra::persistence::issued_token_repository::issued_tokens_dao::{
     db_get_token, db_insert_token,
 };
-use crate::infra::persistence::key_repository::keys_dao::get_key_by_id;
+use crate::obj_model::configuration::JwtConfig;
 use crate::obj_model::identity_provider::IdentityProviderType;
+use crate::obj_model::key::Key;
 use crate::utils::app_error::AppError;
 use crate::utils::configuration::Configuration;
 use crate::utils::oauth2_authorization_code_utils::CLIENT_ID_TMS;
@@ -24,7 +25,7 @@ use std::collections::HashMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tms_lib::utils::jwt_decoder::JwtDecoderBuilder;
 use tms_lib::utils::jwt_encoder::JwtEncoderBuilder;
-use tms_lib::utils::service_error::ServiceError::{BadRequest, Internal, Unauthorized};
+use tms_lib::utils::service_error::ServiceError::{Internal, Unauthorized};
 use tracing::{Level, enabled};
 use uuid::Uuid;
 
@@ -128,35 +129,48 @@ impl TmsTokenClaims {
     }
 }
 
-async fn get_token_claims(db_pool: &PgPool, token: &String) -> Result<TmsTokenClaims> {
-    let token_header = match decode_header(token) {
-        Ok(header) => header,
-        Err(e) => return Err(Unauthorized(e.to_string()).into()),
-    };
-
-    let mut tx = db_pool.begin().await?;
-    let issued_token = db_get_token(&mut tx, token).await?;
-    if issued_token.is_revoked() || issued_token.is_expired() {
-        return Err(Unauthorized("Token is expired or revoked".to_string()).into());
+/*
+The key TMS tokens are signed with (jwt_config, from the configuration table), picked by
+the token's kid.  Tokens are only ever signed with this one key, so a token with any other
+kid, or none, is rejected.
+ */
+pub fn get_signing_key<'a>(jwt_config: &'a JwtConfig, kid: Option<&str>) -> Result<&'a Key> {
+    match kid {
+        Some(kid) if kid == jwt_config.signing_key_kid => Ok(&jwt_config.key),
+        Some(kid) => {
+            Err(Unauthorized(format!("The TMS token is signed with an unknown key '{kid}'")).into())
+        }
+        None => Err(Unauthorized(String::from("The TMS token has no key id (kid)")).into()),
     }
-    let key = match token_header.kid {
-        Some(kid) => get_key_by_id(&mut tx, &kid).await,
-        None => return Err(BadRequest(String::from("Unable to find key for jwt")).into()),
-    }?;
-    tx.commit().await?;
+}
 
-    let tms_token_claims: TmsTokenClaims = match JwtDecoderBuilder::builder()
+/*
+Verify a TMS token's signature with the signing key and return its claims.  This doesn't
+check the issued_tokens table, so a revoked token still decodes (logout uses that).
+ */
+pub async fn decode_tms_token(jwt_config: &JwtConfig, token: &str) -> Result<TmsTokenClaims> {
+    let token_header = decode_header(token).map_err(|e| Unauthorized(e.to_string()))?;
+    let key = get_signing_key(jwt_config, token_header.kid.as_deref())?;
+    JwtDecoderBuilder::builder()
         .public_key(key.jwt_public_key.as_bytes())
         .decode(token)
         .await
-    {
-        Ok(t) => t,
-        Err(e) => {
-            return Err(Unauthorized(e.to_string()).into());
-        }
-    };
+        .map_err(|e| Unauthorized(e.to_string()).into())
+}
 
-    Ok(tms_token_claims)
+async fn get_token_claims(
+    jwt_config: &JwtConfig,
+    db_pool: &PgPool,
+    token: &String,
+) -> Result<TmsTokenClaims> {
+    let mut tx = db_pool.begin().await?;
+    let issued_token = db_get_token(&mut tx, token).await?;
+    tx.commit().await?;
+    if issued_token.is_revoked() || issued_token.is_expired() {
+        return Err(Unauthorized("Token is expired or revoked".to_string()).into());
+    }
+
+    decode_tms_token(jwt_config, token).await
 }
 impl FromRequestParts<AppState> for JwtValidator {
     type Rejection = AppError;
@@ -185,7 +199,7 @@ impl FromRequestParts<AppState> for JwtValidator {
         if bearer.is_empty() {
             Err(Unauthorized(String::from("Unable to find TMS token")).into())
         } else {
-            let jwt_claims = get_token_claims(&app_state.db_pool, &bearer).await?;
+            let jwt_claims = get_token_claims(&app_state.config.jwt_config, &app_state.db_pool, &bearer).await?;
             let tms_identity = jwt_claims.get_sub()?;
             info!("Request uri: {} TMS Identity: {}", req_parts.uri, tms_identity);
             if enabled!(Level::TRACE) {
@@ -307,3 +321,7 @@ fn get_datetime_from_value(value: &Value) -> Result<DateTime<Utc>> {
     };
     Ok(datetime)
 }
+
+#[cfg(test)]
+#[path = "jwt_utils.test.rs"]
+mod jwt_utils_test;

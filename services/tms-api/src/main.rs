@@ -14,7 +14,6 @@ use tms_api::infra::persistence::{
     institution_repository::InMemoryInstitutionRepository,
     issued_token_repository::PostgresIssuedTokenRepository,
     issued_token_repository::issued_tokens_dao,
-    key_repository::PostgresKeyRepository,
     resource_provider_login_repository::PostgresResourceProviderLoginRepository,
     tms_identity_repository::PostgresTmsIdentityRepository,
 };
@@ -65,7 +64,6 @@ async fn main() -> anyhow::Result<()> {
     let identity_provider_repo = PostgresIdentityProviderRepository::new(db_pool.clone());
     let issued_token_repo = PostgresIssuedTokenRepository::new(db_pool.clone());
     let tms_identity_repo = PostgresTmsIdentityRepository::new(db_pool.clone());
-    let key_repo = PostgresKeyRepository::new(db_pool.clone());
     let allowed_redirect_repo = PostgresAllowedRedirectRepository::new(db_pool.clone());
     let authorization_code_exchange_gateway = ReqwestAuthorizationCodeExchangeGateway::new();
 
@@ -93,7 +91,7 @@ async fn main() -> anyhow::Result<()> {
         Arc::new(identity_provider_repo),
         Arc::new(issued_token_repo),
         Arc::new(tms_identity_repo),
-        Arc::new(key_repo),
+        config.jwt_config.clone(),
         Arc::new(authorization_code_exchange_gateway),
     );
 
